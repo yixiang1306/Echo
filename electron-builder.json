@@ -1,0 +1,16 @@
+{
+    "appId": "Askvox.app",
+    "files": ["dist-electron", "dist-react"],
+    "icon":"./public/icon.jpg",
+    "extraResources":["dist-electron/preload.cjs"],
+    "mac":{
+        "target": "dmg"
+    },
+    "win":{
+        "target": ["portable","msi"]
+    },
+    "linux":{ 
+        "target": "AppImage",
+        "category": "Utility"
+     }
+}
