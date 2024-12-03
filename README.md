@@ -12,7 +12,7 @@ Follow these steps to set up and run the project on your local machine.
 2. Install the necessary Node.js dependencies:
   ```bash
    npm i
-
+  ```
 
 ## 2. Create Python Virtual Environment
 
