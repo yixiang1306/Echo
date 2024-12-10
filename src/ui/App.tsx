@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 function App() {
   const [messages, setMessages] = useState([
@@ -6,6 +6,8 @@ function App() {
   ]);
   const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
 
   // Handle text message submission
   const sendMessage = async () => {
@@ -37,7 +39,47 @@ function App() {
   const handleRecord = () => {
     //@ts-ignore
     window.electronAPI.toggleRecording(!isRecording);
+
+    if (!isRecording) {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+        const recorder = new MediaRecorder(stream);
+        const audioChunks: Blob[] = [];
+
+        recorder.ondataavailable = (event) => {
+          audioChunks.push(event.data);
+        };
+
+        recorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: "audio/wav" });
+          sendAudio(blob);
+        };
+
+        recorder.start();
+        mediaRecorder.current = recorder;
+      });
+    } else if (mediaRecorder.current) {
+      mediaRecorder.current.stop();
+      mediaRecorder.current.stream.getTracks().forEach((track) => track.stop());
+    }
+
     setIsRecording((prev) => !prev);
+  };
+
+  const sendAudio = async (audioBlob: Blob) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(audioBlob);
+    reader.onloadend = () => {
+      if (reader.result === null) return;
+      const base64Audio = (reader.result as string).split(",")[1]; // Extract base64 data
+
+      //@ts-ignore
+      window.electronAPI.sendAudio(base64Audio).then((response) => {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: response },
+        ]);
+      });
+    };
   };
 
   return (

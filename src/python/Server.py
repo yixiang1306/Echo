@@ -1,8 +1,54 @@
 import os
 import logging
+import base64
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from langchain_ollama import OllamaLLM
+from google.cloud import speech
+
+
+load_dotenv()
+
+# Ensure GOOGLE_APPLICATION_CREDENTIALS is set
+credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+if not credentials_path or not os.path.exists(credentials_path):
+    raise EnvironmentError("GOOGLE_APPLICATION_CREDENTIALS environment variable is not set or the file does not exist.")
+
+
+
+@app.route('/transcribe', methods=['POST'])
+def transcribe_audio():
+    """
+    Transcribe audio using Google Cloud Speech-to-Text.
+    Expects JSON: { "audio": "<base64-encoded-audio>" }
+    """
+    data = request.json
+    audio_base64 = data.get("audio")
+
+    if not audio_base64:
+        return jsonify({"error": "Audio data is required"}), 400
+
+    # Decode the Base64 audio
+    audio_content = base64.b64decode(audio_base64)
+
+    # Configure Google Cloud Speech client
+    client = speech.SpeechClient()
+    audio = speech.RecognitionAudio(content=audio_content)
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=16000,  # Ensure this matches your recording
+        language_code="en-US",
+    )
+
+    try:
+        # Perform speech-to-text
+        response = client.recognize(config=config, audio=audio)
+        transcript = " ".join([result.alternatives[0].transcript for result in response.results])
+        return jsonify({"transcription": transcript})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 # Initialize Flask app
 app = Flask(__name__)

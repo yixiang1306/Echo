@@ -15,7 +15,8 @@ const pythonInterpreterPath = path.join(app.getAppPath(), './.venv/Scripts/pytho
 let pythonProcess: any = null;
 
 app.on('ready', () => {
-  const iconPath = path.join(app.getAppPath(), 'dist-react', 'icon.jpg'); // Path to tray icon
+
+  const iconPath = !isDev() ? path.join(app.getAppPath(), 'dist-react', 'icon.jpg') : path.join(app.getAppPath(), 'public', 'icon.jpg');
 
   app.commandLine.appendSwitch('disable-features', 'ChunkedDataPipe');
 
@@ -154,6 +155,12 @@ app.on('before-quit', () => {
 // Handle IPC to toggle recording for google-text-to-speech
 ipcMain.on('toggle-recording', (_,isRecording:boolean) => {
   console.log(isRecording);
+
+  if (isRecording) { 
+
+  }
+
+
 });
 
 // Handle IPC to toggle recording for google-text-to-speech
@@ -173,10 +180,32 @@ ipcMain.handle('text-input', async (_,text:string) => {
   } catch (error) {
     console.error('Error communicating with the Python server:');
     return "Error communicating with the server. Pls Try Again :3";
+  } 
+});
+
+
+ipcMain.handle("send-audio", async (_, audioData) => {
+  try {
+    // Send audio to Speech-to-Text endpoint
+    const sttResponse = await axios.post("http://localhost:8000/transcribe", {
+      audio: audioData,
+    });
+
+    const transcription = sttResponse.data.transcription;
+    console.log("Transcription:", transcription);
+
+    // Send transcription to LLM
+    const llmResponse = await axios.post("http://localhost:8000/llm", {
+      text: transcription,
+    });
+
+    console.log("LLM Response:", llmResponse.data.llm_response);
+
+    return llmResponse.data.llm_response;
+  } catch (error) {
+    console.error("Error processing audio:");
+    return "Error processing your request. Please try again.";
   }
-
-
-  
 });
 
 // Handle IPC to show the main window
