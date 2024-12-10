@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function App() {
   const [messages, setMessages] = useState([
@@ -8,6 +8,15 @@ function App() {
   const [isRecording, setIsRecording] = useState(false);
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
+
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Scroll to the latest message
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   // Handle text message submission
   const sendMessage = async () => {
@@ -47,38 +56,59 @@ function App() {
 
         recorder.ondataavailable = (event) => {
           audioChunks.push(event.data);
+          // console.log("Audio chunk received:", event.data);
         };
 
         recorder.onstop = () => {
           const blob = new Blob(audioChunks, { type: "audio/wav" });
+          // console.log("Final audio blob:", blob);
           sendAudio(blob);
         };
 
         recorder.start();
+        // console.log("Recording started...");
         mediaRecorder.current = recorder;
       });
     } else if (mediaRecorder.current) {
       mediaRecorder.current.stop();
+      // console.log("Recording stopped.");
       mediaRecorder.current.stream.getTracks().forEach((track) => track.stop());
     }
 
     setIsRecording((prev) => !prev);
   };
 
+  // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
+    // Convert audio blob to base64
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
       if (reader.result === null) return;
+
       const base64Audio = (reader.result as string).split(",")[1]; // Extract base64 data
 
-      //@ts-ignore
-      window.electronAPI.sendAudio(base64Audio).then((response) => {
+      try {
+        //@ts-ignore
+        const response = await window.electronAPI.sendAudio(base64Audio);
+
+        setMessages((prev) => [...prev, { role: "user", content: response }]);
+
+        // Send text to backend and wait for the response
+        //@ts-ignore
+        const llm_response = await window.electronAPI.textInput(response);
+
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: response },
+          { role: "assistant", content: llm_response },
         ]);
-      });
+      } catch (error) {
+        console.error("Error processing audio or sending message:", error);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "Error processing your request." },
+        ]);
+      }
     };
   };
 
@@ -88,9 +118,8 @@ function App() {
       <div className="p-4">
         <h1 className="text-2xl font-bold">AskVox</h1>
       </div>
-
       {/* Chat Area */}
-      <div className="overflow-y-auto p-4 space-y-4  max-h-[70vh]">
+      <div className="flex-grow overflow-y-auto p-4 space-y-4 max-h-[70vh] scrollbar-hide">
         {messages.map((message, index) => (
           <div
             key={index}
@@ -109,8 +138,8 @@ function App() {
             </div>
           </div>
         ))}
+        <div ref={chatEndRef} />
       </div>
-
       {/* Input Area */}
       <div className="p-4 bg-gray-800 rounded-lg w-full max-w-md">
         <div className="flex items-center space-x-4">

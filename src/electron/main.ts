@@ -5,6 +5,7 @@ import { getPreloadPath } from './pathResolver.js';
 import { isDev } from './util.js';
 import axios from 'axios';
 
+
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false; // Track whether the app is being quit explicitly
@@ -32,8 +33,6 @@ app.on('ready', () => {
       contextIsolation: true, // Ensure context isolation is enabled
     nodeIntegration: false,
     },
-
-
   });
 
 
@@ -186,6 +185,8 @@ ipcMain.handle('text-input', async (_,text:string) => {
 
 ipcMain.handle("send-audio", async (_, audioData) => {
   try {
+
+    console.log("Audio Data:", audioData.length);
     // Send audio to Speech-to-Text endpoint
     const sttResponse = await axios.post("http://localhost:8000/transcribe", {
       audio: audioData,
@@ -194,16 +195,10 @@ ipcMain.handle("send-audio", async (_, audioData) => {
     const transcription = sttResponse.data.transcription;
     console.log("Transcription:", transcription);
 
-    // Send transcription to LLM
-    const llmResponse = await axios.post("http://localhost:8000/llm", {
-      text: transcription,
-    });
+    return transcription;
 
-    console.log("LLM Response:", llmResponse.data.llm_response);
-
-    return llmResponse.data.llm_response;
   } catch (error) {
-    console.error("Error processing audio:");
+    console.error("Error processing audio:",error);
     return "Error processing your request. Please try again.";
   }
 });
