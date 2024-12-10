@@ -1,9 +1,9 @@
-import { app, BrowserWindow, Tray, Menu, ipcMain } from 'electron';
 import { spawn } from 'child_process';
+import { app, BrowserWindow, ipcMain, Menu, Tray } from 'electron';
 import path from 'path';
-import { isDev } from './util.js';
-import { Hello } from './HelloWorld.js';
 import { getPreloadPath } from './pathResolver.js';
+import { isDev } from './util.js';
+import axios from 'axios';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -19,14 +19,23 @@ app.on('ready', () => {
 
   app.commandLine.appendSwitch('disable-features', 'ChunkedDataPipe');
 
+
+  console.log("Resolved preload path:", getPreloadPath());
+
   // Create the main window
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
       preload: getPreloadPath(),
+      contextIsolation: true, // Ensure context isolation is enabled
+    nodeIntegration: false,
     },
+
+
   });
+
+
 
   // Load React/Vite app
   if (isDev()) {
@@ -41,6 +50,16 @@ app.on('ready', () => {
       event.preventDefault();
       mainWindow?.hide(); // Hide the window instead of quitting
     }
+  });
+
+  // Handle showing the main window
+  mainWindow.on('show', () => {
+    pauseListening(); // Pause the Python process when the window is shown
+  });
+
+  // Handle hiding the main window
+  mainWindow.on('hide', () => {
+    resumeListening(); // Resume the Python process when the window is hidden
   });
 
   // Create the tray icon
@@ -68,12 +87,15 @@ app.on('ready', () => {
   // Restore app window on tray icon double-click
   tray.on('double-click', () => {
     mainWindow?.show();
+    pauseListening();
   });
 
-  Hello(mainWindow);
+
 
   // Spawn the Python process
-  pythonProcess = spawn(pythonInterpreterPath, [pythonScriptPath]);
+  pythonProcess = spawn(pythonInterpreterPath, [pythonScriptPath], {
+    stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the Python process
+  });
 
   // Listen for messages from Python
   pythonProcess.stdout.on('data', (data: Buffer) => {
@@ -85,9 +107,9 @@ app.on('ready', () => {
     }
   });
 
-  // Handle Python errors
+  // Log messages from Python's stderr
   pythonProcess.stderr.on('data', (data: Buffer) => {
-    console.error('Error from Python:', data.toString());
+    console.error('Python Log:', data.toString());
   });
 
   pythonProcess.on('close', (code: number) => {
@@ -95,7 +117,24 @@ app.on('ready', () => {
   });
 });
 
+// Pause Python listening
+const pauseListening = () => {
+  if (pythonProcess) {
+    pythonProcess.stdin.write('pause\n'); // Send a "pause" command to the Python process
+    console.log('Sent pause signal to Python process.');
+  }
+};
+
+// Resume Python listening
+const resumeListening = () => {
+  if (pythonProcess) {
+    pythonProcess.stdin.write('resume\n'); // Send a "resume" command to the Python process
+    console.log('Sent resume signal to Python process.');
+  }
+};
+
 // Handle when all windows are closed
+
 //@ts-ignore
 app.on('window-all-closed', (event) => {
   if (!isQuitting) {
@@ -111,7 +150,42 @@ app.on('before-quit', () => {
   }
 });
 
+
+// Handle IPC to toggle recording for google-text-to-speech
+ipcMain.on('toggle-recording', (_,isRecording:boolean) => {
+  console.log(isRecording);
+});
+
+// Handle IPC to toggle recording for google-text-to-speech
+ipcMain.handle('text-input', async (_,text:string) => {
+  console.log(text);
+
+  try {
+    // Send the text input to the Python server
+    const response = await axios.post('http://localhost:8000/llm', {
+      text: text, // Send the text input as JSON
+    });
+
+    // Log the response from the Python server
+    console.log('Response from LLM:', response.data.llm_response);
+
+    return response.data.llm_response;
+  } catch (error) {
+    console.error('Error communicating with the Python server:');
+    return "Error communicating with the server. Pls Try Again :3";
+  }
+
+
+  
+});
+
 // Handle IPC to show the main window
 ipcMain.on('show-main-window', () => {
   mainWindow?.show();
+  pauseListening();
 });
+
+
+
+
+
