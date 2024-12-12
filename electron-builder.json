@@ -2,7 +2,23 @@
     "appId": "Askvox.app",
     "files": ["dist-electron", "dist-react"],
     "icon":"./public/icon.jpg",
-    "extraResources":["dist-electron/preload.cjs"],
+    "extraResources":[
+        "dist-electron/preload.cjs",
+        {
+            "from": "src/python",
+            "to": "python",
+            "filter": ["**/*"]
+        },
+        {
+            "from":".venv",
+            "to":".venv",
+            "filter":["**/*"]
+        }
+    ],
+    "asar": {
+        "unpack": "**/python/**/*"
+    },
+
     "mac":{
         "target": "dmg"
     },

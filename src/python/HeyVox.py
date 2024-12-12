@@ -5,8 +5,28 @@ from vosk import Model, KaldiRecognizer
 import pyaudio
 import threading
 
-# Path to the Vosk model directory
-MODEL_PATH = "src/python/vosk-model"
+
+
+# Resolve the base directory
+if hasattr(sys, '_MEIPASS'):  # Packaged environment (_MEIPASS is created by PyInstaller)
+    BASE_DIR = sys._MEIPASS
+else:  # Development environment (script running directly)
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+
+# Define the Vosk model path
+MODEL_PATH = os.path.join(BASE_DIR, "public", "vosk-model")
+
+
+
+
+print(f"BASE_DIR: {BASE_DIR}")
+print(f"MODEL_PATH: {MODEL_PATH}")
+print(f"Files in BASE_DIR: {os.listdir(BASE_DIR)}")
+if os.path.exists(MODEL_PATH):
+    print(f"Files in MODEL_PATH: {os.listdir(MODEL_PATH)}")
+else:
+    print(f"Model not found at {MODEL_PATH}")
+# Set the Vosk model path relative to the project root
 
 def verify_model_path():
     """Check if the Vosk model directory exists."""
@@ -120,3 +140,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

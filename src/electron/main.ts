@@ -13,7 +13,12 @@ let isQuitting = false; // Track whether the app is being quit explicitly
 // Path to the Python script and interpreter in the virtual environment
 const pythonScriptPath = path.join(app.getAppPath(), './src/python/HeyVox.py');
 const pythonInterpreterPath = path.join(app.getAppPath(), './.venv/Scripts/python.exe'); // Adjust for Windows: ../python/venv/Scripts/python
+
+const pythonExecutablePath = path.join(app.getAppPath(), './dist/HeyVox/HeyVox.exe'); // Adjust the path if necessary
+
 let pythonProcess: any = null;
+
+
 
 app.on('ready', () => {
 
@@ -92,29 +97,56 @@ app.on('ready', () => {
 
 
 
-  // Spawn the Python process
-  pythonProcess = spawn(pythonInterpreterPath, [pythonScriptPath], {
-    stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the Python process
-  });
+  // // Spawn the Python process
+  // pythonProcess = spawn(pythonInterpreterPath, [pythonScriptPath], {
+  //   stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the Python process
+  // });
 
-  // Listen for messages from Python
-  pythonProcess.stdout.on('data', (data: Buffer) => {
-    const message = data.toString().trim();
-    console.log('Message from Python:', message);
+  // // Listen for messages from Python
+  // pythonProcess.stdout.on('data', (data: Buffer) => {
+  //   const message = data.toString().trim();
+  //   console.log('Message from Python:', message);
 
-    if (message === 'wake-up') {
-      mainWindow?.show(); // Wake up the Electron window
-    }
-  });
+  //   if (message === 'wake-up') {
+  //     mainWindow?.show(); // Wake up the Electron window
+  //   }
+  // });
 
-  // Log messages from Python's stderr
-  pythonProcess.stderr.on('data', (data: Buffer) => {
-    console.error('Python Log:', data.toString());
-  });
+  // // Log messages from Python's stderr
+  // pythonProcess.stderr.on('data', (data: Buffer) => {
+  //   console.error('Python Log:', data.toString());
+  // });
 
-  pythonProcess.on('close', (code: number) => {
-    console.log(`Python process exited with code ${code}`);
-  });
+  // pythonProcess.on('close', (code: number) => {
+  //   console.log(`Python process exited with code ${code}`);
+  // });
+
+// Spawn the Python executable process
+pythonProcess = spawn(pythonExecutablePath, [], {
+  stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the process
+});
+
+// Listen for messages from the Python executable
+pythonProcess.stdout.on('data', (data: Buffer) => {
+  const message = data.toString().trim();
+  console.log('Message from Python Executable:', message);
+
+  if (message === 'wake-up') {
+    mainWindow?.show(); // Wake up the Electron window
+  }
+});
+
+// Log messages from the executable's stderr
+pythonProcess.stderr.on('data', (data: Buffer) => {
+  console.error('Python Executable Log:', data.toString());
+});
+
+// Handle the process exit
+pythonProcess.on('close', (code: number) => {
+  console.log(`Python Executable process exited with code ${code}`);
+});
+
+
 });
 
 // Pause Python listening
@@ -191,6 +223,8 @@ ipcMain.handle("send-audio", async (_, audioData) => {
     const sttResponse = await axios.post("http://localhost:8000/transcribe", {
       audio: audioData,
     });
+
+    
 
     const transcription = sttResponse.data.transcription;
     console.log("Transcription:", transcription);
