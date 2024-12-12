@@ -35,10 +35,6 @@ except Exception as e:
     exit(1)
 
 
-
-
-
-
 @app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
     """
@@ -73,8 +69,8 @@ def transcribe_audio():
 
 
     # Save the decoded (or converted) audio to a file (optional, for debugging)
-    with open("decoded_audio.wav", "wb") as audio_file:
-        audio_file.write(audio_content)
+    # with open("decoded_audio.wav", "wb") as audio_file:
+    #     audio_file.write(audio_content)
 
     # Configure Google Cloud Speech client
     client = speech.SpeechClient()
@@ -102,8 +98,6 @@ def transcribe_audio():
 @app.route('/llm', methods=['POST'])
 def llm_response():
     try:
-  
-
         # Validate input
         text_input = request.json.get('text', '')
         if not text_input:
