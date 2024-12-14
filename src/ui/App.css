@@ -1,163 +1,42 @@
-\/* General Layout */
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  color: #333;
-}
-
-.app-container {
-  display: flex;
-  height: 100vh;
-}
-
-/* Sidebar */
-.sidebar {
-  background-color: #111827;
-  color: white;
-  padding: 1rem;
-  width: 250px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.sidebar h2 {
-  font-size: 1.5rem;
-}
-
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-}
-
-.sidebar li {
-  margin-bottom: 1rem;
-  cursor: pointer;
-}
-
-.upgrade-plan {
-  font-weight: bold;
-  cursor: pointer;
-}
-
-/* Main Content */
-.main-content {
-  flex-grow: 1;
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
   padding: 2rem;
-  position: relative;
-  background-color: #f9fafb;
+  text-align: center;
 }
 
-/* Greeting */
-.greeting h1 {
-  font-size: 2rem;
-  font-weight: 400;
-  margin: 2rem 0;
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
-/* Profile Icon & Dropdown */
-.profile-icon {
-  position: absolute;
-  top: 1rem;
-  right: 2rem;
-  cursor: pointer;
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.profile-icon .icon {
-  width: 50%; /* Icon scales to 50% of the container's width */
-  max-width: 50px; /* Sets an upper limit for the size */
-  height: auto;
-  border-radius: 50%;
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
 }
 
-.dropdown-menu {
-  position: absolute;
-  top: 3rem;
-  right: 0;
-  background: white;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  overflow: hidden;
-  z-index: 1000;
+.card {
+  padding: 2em;
 }
 
-.dropdown-menu ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.dropdown-menu li {
-  padding: 0.75rem 1.5rem;
-  cursor: pointer;
-}
-
-.dropdown-menu li:hover {
-  background-color: #f3f4f6;
-}
-
-/* Chat Area */
-.chat-area {
-  background-color: white;
-  padding: 1rem;
-  height: 60vh;
-  overflow-y: auto;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-.chat-message {
-  display: flex;
-  margin-bottom: 0.5rem;
-}
-
-.chat-bubble {
-  padding: 0.5rem 1rem;
-  border-radius: 12px;
-  max-width: 60%;
-}
-
-.chat-bubble.user {
-  background-color: #2563eb;
-  color: white;
-  margin-left: auto;
-}
-
-.chat-bubble.assistant {
-  background-color: #e5e7eb;
-  color: #111827;
-  margin-right: auto;
-}
-
-/* Input Area */
-.input-area {
-  display: flex;
-  gap: 1rem;
-}
-
-.input-area input {
-  flex-grow: 1;
-  padding: 0.75rem;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  font-size: 1rem;
-}
-
-.input-area input:focus {
-  outline: none;
-  border-color: #2563eb;
-}
-
-.send-button {
-  background-color: #2563eb;
-  color: white;
-  border: none;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.send-button:hover {
-  background-color: #1d4ed8;
+.read-the-docs {
+  color: #888;
 }

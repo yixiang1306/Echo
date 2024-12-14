@@ -1,15 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import "./App.css"; // Import the CSS file
 
 function App() {
   const [messages, setMessages] = useState([
-    { role: "Vox", content: "Hello! How can I assist you today?" },
+    { role: "assistant", content: "Hello! How can I assist you today?" },
   ]);
   const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
+
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   // Scroll to the latest message
@@ -19,104 +18,152 @@ function App() {
     }
   }, [messages]);
 
-  const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
-
+  // Handle text message submission
   const sendMessage = async () => {
     if (userInput.trim() === "") return;
 
+    // Add user message to chat
     setMessages((prev) => [...prev, { role: "user", content: userInput }]);
     setUserInput("");
 
+    // Send text to backend and wait for the response
     try {
       //@ts-ignore
       const response = await window.electronAPI.textInput(userInput);
-      setMessages((prev) => [...prev, { role: "assistant", content: response }]);
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: response },
+      ]);
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => [
         ...prev,
-        { role: "Vox", content: "Error processing your request." },
+        { role: "assistant", content: "Error processing your request." },
       ]);
-    } finally {
-      setIsLoading(false); // Stop loading animation
     }
   };
 
-  const handleLogout = () => {
-    // Show confirmation dialog
-    const confirmLogout = window.confirm("Are you sure you want to log out?");
-    if (confirmLogout) {
-      // Redirect to the homepage (assuming the homepage is the root)
-      window.location.href = "/";
+  // Handle recording toggle
+  const handleRecord = () => {
+    //@ts-ignore
+    window.electronAPI.toggleRecording(!isRecording);
+
+    if (!isRecording) {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+        const recorder = new MediaRecorder(stream);
+        const audioChunks: Blob[] = [];
+
+        recorder.ondataavailable = (event) => {
+          audioChunks.push(event.data);
+          // console.log("Audio chunk received:", event.data);
+        };
+
+        recorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: "audio/wav" });
+          // console.log("Final audio blob:", blob);
+          sendAudio(blob);
+        };
+
+        recorder.start();
+        // console.log("Recording started...");
+        mediaRecorder.current = recorder;
+      });
+    } else if (mediaRecorder.current) {
+      mediaRecorder.current.stop();
+      // console.log("Recording stopped.");
+      mediaRecorder.current.stream.getTracks().forEach((track) => track.stop());
     }
+
+    setIsRecording((prev) => !prev);
+  };
+
+  // Handle audio submission
+  const sendAudio = async (audioBlob: Blob) => {
+    // Convert audio blob to base64
+    const reader = new FileReader();
+    reader.readAsDataURL(audioBlob);
+    reader.onloadend = async () => {
+      if (reader.result === null) return;
+
+      const base64Audio = (reader.result as string).split(",")[1]; // Extract base64 data
+
+      try {
+        //@ts-ignore
+        const response = await window.electronAPI.sendAudio(base64Audio);
+
+        setMessages((prev) => [...prev, { role: "user", content: response }]);
+
+        // Send text to backend and wait for the response
+        //@ts-ignore
+        const llm_response = await window.electronAPI.textInput(response);
+
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: llm_response },
+        ]);
+      } catch (error) {
+        console.error("Error processing audio or sending message:", error);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "Error processing your request." },
+        ]);
+      }
+    };
   };
 
   return (
-    <div className="app-container">
-      {/* Sidebar */}
-      <div className="sidebar">
-        <h2>History</h2>
-        <ul>
-          <li>Composite bow stats</li>
-          <li>How do I beat Battlemage</li>
-          <li>How do I get to Abyssal Woods</li>
-        </ul>
-        <div className="upgrade-plan">Upgrade plan</div>
+    <div className="flex flex-col h-screen items-center justify-center bg-gray-900 text-white">
+      {/* Header */}
+      <div className="p-4">
+        <h1 className="text-2xl font-bold">AskVox</h1>
       </div>
-
-      {/* Main Content */}
-      <div className="main-content">
-        {/* Top-right Dropdown */}
-        <div className="profile-icon" onClick={toggleDropdown}>
-          <img
-            src="https://via.placeholder.com/32"
-            alt="Profile"
-            className="icon"
-          />
-          {dropdownOpen && (
-            <div className="dropdown-menu">
-              <ul>
-                <li>Settings</li>
-                <li>Upgrade Plan</li>
-                <li onClick={handleLogout}>Logout</li> {/* Attach handleLogout here */}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        {/* Greeting */}
-        <div className="greeting">
-          <h1>
-            Hi, <b>&lt;username&gt;</b>
-          </h1>
-        </div>
-
-        {/* Chat Area */}
-        <div className="chat-area">
-          {messages.map((message, index) => (
+      {/* Chat Area */}
+      <div className="flex-grow overflow-y-auto p-4 space-y-4 max-h-[70vh] scrollbar-hide">
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={`flex ${
+              message.role === "user" ? "justify-end" : "justify-start"
+            }`}
+          >
             <div
-              key={index}
-              className={`chat-message ${message.role === "user" ? "user" : "assistant"}`}
+              className={`max-w-xs px-4 py-2 rounded-lg ${
+                message.role === "user"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-700 text-gray-200"
+              }`}
             >
-              <div className={`chat-bubble ${message.role}`}>
-                {message.content}
-              </div>
+              {message.content}
             </div>
-          ))}
-          <div ref={chatEndRef} />
-        </div>
-
-        {/* Input Area */}
-        <div className="input-area">
+          </div>
+        ))}
+        <div ref={chatEndRef} />
+      </div>
+      {/* Input Area */}
+      <div className="p-4 bg-gray-800 rounded-lg w-full max-w-md">
+        <div className="flex items-center space-x-4">
           <input
             type="text"
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            placeholder="Ask me anything"
+            className="flex-grow p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Type a message..."
           />
-          <button onClick={sendMessage} className="send-button">
+          <button
+            onClick={sendMessage}
+            className="px-4 py-2 bg-blue-500 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
             Send
+          </button>
+          <button
+            onClick={handleRecord}
+            className={`px-4 py-2 rounded-lg ${
+              isRecording ? "bg-red-600" : "bg-green-600"
+            } hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+          >
+            {isRecording ? "Stop" : "Record"}
           </button>
         </div>
       </div>
@@ -125,7 +172,3 @@ function App() {
 }
 
 export default App;
-function setIsLoading(arg0: boolean) {
-  throw new Error("Function not implemented.");
-}
-
