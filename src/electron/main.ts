@@ -4,6 +4,8 @@ import path from 'path';
 import { getPreloadPath } from './pathResolver.js';
 import { isDev } from './util.js';
 import axios from 'axios';
+import sound from 'sound-play';
+import { writeFileSync } from 'fs';
 
 
 let mainWindow: BrowserWindow | null = null;
@@ -23,6 +25,8 @@ app.on('ready', () => {
 
 
   console.log("Resolved preload path:", getPreloadPath());
+
+ 
 
   // Create the main window
   mainWindow = new BrowserWindow({
@@ -97,6 +101,9 @@ app.on('ready', () => {
     stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the Python process
   });
 
+
+  pauseListening();
+
   // Listen for messages from Python
   pythonProcess.stdout.on('data', (data: Buffer) => {
     const message = data.toString().trim();
@@ -162,6 +169,30 @@ ipcMain.on('toggle-recording', (_,isRecording:boolean) => {
 
 });
 
+
+// Function to play audio from Base64 string
+const playAudio = (audioBase64: string) => {
+  try {
+    // Decode Base64 audio and save it to a temporary file
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+    const tempAudioPath = path.join(app.getPath('temp'), 'response_audio.mp3');
+    writeFileSync(tempAudioPath, audioBuffer);
+
+    // Play the audio file
+    sound.play(tempAudioPath)
+      .then(() => {
+        console.log('Audio playback completed.');
+      })
+      .catch((err) => {
+        console.error('Error during audio playback:', err);
+      });
+  } catch (error) {
+    console.error('Error in playAudio:', error);
+  }
+};
+
+
+
 // Handle IPC to toggle recording for google-text-to-speech
 ipcMain.handle('text-input', async (_,text:string) => {
   console.log(text);
@@ -174,6 +205,14 @@ ipcMain.handle('text-input', async (_,text:string) => {
 
     // Log the response from the Python server
     console.log('Response from LLM:', response.data.llm_response);
+
+
+    // Send the response text to the Python server for TTS
+    const ttsResponse = await axios.post('http://localhost:8000/tts', { text: response.data.llm_response });
+    const audioBase64 = ttsResponse.data.audio_base64;
+
+    console.log('Playing audio for response...');
+    playAudio(audioBase64); // Play the audio
 
     return response.data.llm_response;
   } catch (error) {
@@ -194,6 +233,7 @@ ipcMain.handle("send-audio", async (_, audioData) => {
 
     const transcription = sttResponse.data.transcription;
     console.log("Transcription:", transcription);
+
 
     return transcription;
 

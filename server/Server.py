@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from langchain_ollama import OllamaLLM
 from google.cloud import speech
+from google.cloud import texttospeech
 from pydub import AudioSegment
 import io
 load_dotenv()
@@ -95,6 +96,56 @@ def transcribe_audio():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/tts', methods=['POST'])
+def text_to_speech():
+    """
+    Convert text to speech using Google Cloud Text-to-Speech.
+    Expects JSON: { "text": "<text-to-convert>" }
+    """
+    data = request.json
+    text_input = data.get("text")
+
+    if not text_input:
+        logging.warning("No text input provided.")
+        return jsonify({"error": "Text input is required"}), 400
+
+    try:
+        # Configure Google Cloud Text-to-Speech client
+        client = texttospeech.TextToSpeechClient()
+
+        # Prepare the synthesis input
+        synthesis_input = texttospeech.SynthesisInput(text=text_input)
+
+        # Configure voice parameters
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="en-US",
+            name="en-US-Wavenet-D",  # Choose a preferred voice
+            ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+        )
+
+        # Configure audio output format
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3  # Output as MP3
+        )
+
+        # Perform the text-to-speech request
+        response = client.synthesize_speech(
+            input=synthesis_input,
+            voice=voice,
+            audio_config=audio_config
+        )
+
+        # Encode the audio to Base64
+        audio_base64 = base64.b64encode(response.audio_content).decode('utf-8')
+
+        logging.info("Text-to-Speech conversion successful.")
+        return jsonify({"audio_base64": audio_base64})
+
+    except Exception as e:
+        logging.error(f"Error processing /tts request: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/llm', methods=['POST'])
 def llm_response():
     try:
@@ -104,34 +155,50 @@ def llm_response():
             logging.warning("No text input provided.")
             return jsonify({"status": "error", "message": "No text input provided"}), 400
 
+        # Append user input to conversation history
+        conversation_history.append(f"User: {text_input}")
 
-         # Append user message to conversation history
-        conversation_history.append({"role": "user", "content": text_input})
-   
-        # Format the conversation history for the LLM
-        context_input = "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation_history])
-        llm_response = modal.invoke(context_input)
+        # Prepare structured input for the LLM
+        context_input = "\n".join(conversation_history[:-1])  # All but the latest user input
+        query = f"User: {text_input}"  # The latest user input
 
-        # Append LLM's response to conversation history
-        conversation_history.append({"role": "assistant", "content": llm_response})
+        # Advanced prompt with detailed instructions
+        advanced_prompt = (
+            "You are an AI assistant called Vox and you are an expert in topic regarding gaming and technology. Answer the user based on the following conversation history. "
+            "Provide short answers without unnecessary elaboration. Ensure your responses are unambiguous and easy to understand. "
+            "Avoid showing emotions, opinions, or preferences in your answers. Be clear and concise.\n\n"
+        )
 
-        # Append LLM's response to conversation history
-        llm_response = modal.invoke(context_input);
+        structured_prompt = (
+            f"{advanced_prompt}"
+            f"Context:\n{context_input}\n\n"
+            f"Current Question:\n{query}\n\n"
+            "Your Response:"
+        )
 
-        # Trim the conversation history to the last 20 messages for memory efficiency
-        if len(conversation_history) > 20:
-            conversation_history[:] = conversation_history[-20:]
+        # Debug log for structured prompt
+        logging.debug(f"Structured Prompt Sent to LLM:\n{structured_prompt}")
 
+        # Send structured prompt to the LLM
+        llm_response = modal.invoke(structured_prompt)
+
+        # Ensure response is valid
+        if not llm_response:
+            raise ValueError("LLM returned an empty response.")
+
+        # Append LLM response to conversation history
+        conversation_history.append(f"Assistant: {llm_response}")
+
+        # Trim conversation history to the last 20 messages (10 exchanges)
+        if len(conversation_history) > 40:
+            conversation_history[:] = conversation_history[-40:]
 
         logging.info("LLM response generated successfully.")
-        print(llm_response)
         return jsonify({"llm_response": llm_response})
 
     except Exception as e:
         logging.error(f"Error processing /llm request: {e}")
         return jsonify({"status": "error", "message": "Internal Server Error"}), 500
-
-
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8000))
     logging.info(f"Starting server on port {port}.")
