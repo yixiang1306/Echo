@@ -1,0 +1,66 @@
+.signup-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #1f2937; /* bg-gray-900 */
+    color: white;
+    height: 100vh;
+  }
+  
+  .signup-title {
+    font-size: 2rem; /* text-3xl */
+    margin-bottom: 1rem; /* mb-4 */
+  }
+  
+  .signup-input {
+    padding: 0.5rem 1rem; /* p-2 */
+    margin-bottom: 1rem; /* mb-4 */
+    border-radius: 0.5rem; /* rounded-lg */
+  }
+  
+  .signup-button {
+    padding: 0.75rem 1.5rem; /* px-6 py-3 */
+    border-radius: 0.5rem; /* rounded-lg */
+    background-color: #10b981; /* bg-green-500 */
+    transition: background-color 0.2s;
+  }
+  
+  .signup-button:hover {
+    background-color: #059669; /* hover:bg-green-700 */
+  }
+  
+  .signup-error {
+    color: #ef4444; /* text-red-500 */
+  }
+  
+  .signup-login {
+    margin-top: 1rem; /* mt-4 */
+    font-size: 0.875rem; /* text-sm */
+    color: #d1d5db; /* text-gray-400 */
+  }
+  
+  .signup-login a {
+    color: #3b82f6; /* text-blue-500 */
+    transition: color 0.2s;
+  }
+  
+  .signup-login a:hover {
+    color: #2563eb; /* hover:text-blue-700 */
+  }
+  
+  .askvox-link {
+    cursor: pointer;
+    margin-bottom: 2rem; /* mb-8 */
+    font-size: 2.5rem; /* text-4xl */
+    font-weight: bold; /* font-bold */
+    text-align: center; /* text-center */
+  }
+  
+  .askvox-text-ask {
+    color: #3b82f6; /* text-blue-500 */
+  }
+  
+  .askvox-text-vox {
+    color: #10b981; /* text-green-500 */
+  }

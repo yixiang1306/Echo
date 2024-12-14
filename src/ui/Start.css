@@ -1,0 +1,37 @@
+.start-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #1f2937; /* bg-gray-900 */
+    color: white;
+    height: 100vh;
+  }
+  
+  .start-title {
+    font-size: 2rem; /* text-3xl */
+    margin-bottom: 1rem; /* mb-4 */
+  }
+  
+  .start-button {
+    padding: 0.75rem 1.5rem; /* px-6 py-3 */
+    border-radius: 0.5rem; /* rounded-lg */
+    font-size: 1rem;
+    transition: background-color 0.2s;
+  }
+  
+  .start-button-login {
+    background-color: #3b82f6; /* bg-blue-500 */
+  }
+  
+  .start-button-login:hover {
+    background-color: #2563eb; /* hover:bg-blue-700 */
+  }
+  
+  .start-button-signup {
+    background-color: #10b981; /* bg-green-500 */
+  }
+  
+  .start-button-signup:hover {
+    background-color: #059669; /* hover:bg-green-700 */
+  }

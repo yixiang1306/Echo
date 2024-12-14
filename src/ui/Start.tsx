@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import './Start.css'; // Import the CSS file
 
 function Start() {
   const navigate = useNavigate();
@@ -12,18 +13,18 @@ function Start() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center bg-gray-900 text-white h-screen">
-      <h1 className="text-3xl mb-4">Welcome to AskVox!</h1>
+    <div className="start-container">
+      <h1 className="start-title">Welcome to AskVox!</h1>
       <div className="space-y-4">
         <button
           onClick={handleLogin}
-          className="px-6 py-3 bg-blue-500 rounded-lg hover:bg-blue-700"
+          className="start-button start-button-login"
         >
           Login
         </button>
         <button
           onClick={handleSignup}
-          className="px-6 py-3 bg-green-500 rounded-lg hover:bg-green-700"
+          className="start-button start-button-signup"
         >
           Sign Up
         </button>
@@ -33,7 +34,3 @@ function Start() {
 }
 
 export default Start;
-
-
-
-

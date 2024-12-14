@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import './Signup.css'; // Import the CSS file
 
 function Signup() {
   const navigate = useNavigate();
@@ -48,58 +49,58 @@ function Signup() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center bg-gray-900 text-white h-screen">
+    <div className="signup-container">
       {/* AskVox Link */}
       <div
         onClick={() => navigate("/")}
-        className="cursor-pointer mb-8 text-4xl font-bold text-center"
+        className="askvox-link"
       >
-        <span className="text-blue-500">Ask</span>
-        <span className="text-green-500">Vox</span>
+        <span className="askvox-text-ask">Ask</span>
+        <span className="askvox-text-vox">Vox</span>
       </div>
 
-      <h1 className="text-3xl mb-4">Sign Up</h1>
+      <h1 className="signup-title">Sign Up</h1>
       <input
         type="text"
         value={username}
         onChange={(e) => setUsername(e.target.value)}
         placeholder="Username"
-        className="p-2 mb-4 rounded-lg"
+        className="signup-input"
       />
       <input
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Email"
-        className="p-2 mb-4 rounded-lg"
+        className="signup-input"
       />
       <input
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Password"
-        className="p-2 mb-4 rounded-lg"
+        className="signup-input"
       />
       <input
         type="password"
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
         placeholder="Confirm Password"
-        className="p-2 mb-4 rounded-lg"
+        className="signup-input"
       />
-      {errorMessage && <div className="text-red-500">{errorMessage}</div>}
+      {errorMessage && <div className="signup-error">{errorMessage}</div>}
       <button
         onClick={handleSignup}
-        className="px-6 py-3 bg-green-500 rounded-lg hover:bg-green-700"
+        className="signup-button"
       >
         Sign Up
       </button>
 
-      <div className="mt-4 text-sm text-gray-400">
+      <div className="signup-login">
         <span>Already have an account? </span>
         <button
           onClick={() => navigate("/login")}
-          className="text-blue-500 hover:text-blue-700"
+          className="signup-login-link"
         >
           Log In
         </button>
