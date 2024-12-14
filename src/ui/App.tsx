@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from "react";
 
 function App() {
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hello! How can I assist you today?" },
+    { role: "Vox", content: "Hello! How can I assist you today?" },
   ]);
   const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Loading state
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
-
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   // Scroll to the latest message
@@ -26,6 +26,8 @@ function App() {
     setMessages((prev) => [...prev, { role: "user", content: userInput }]);
     setUserInput("");
 
+    setIsLoading(true); // Start loading animation
+
     // Send text to backend and wait for the response
     try {
       //@ts-ignore
@@ -39,8 +41,10 @@ function App() {
       console.error("Error sending message:", error);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Error processing your request." },
+        { role: "Vox", content: "Error processing your request." },
       ]);
+    } finally {
+      setIsLoading(false); // Stop loading animation
     }
   };
 
@@ -56,22 +60,18 @@ function App() {
 
         recorder.ondataavailable = (event) => {
           audioChunks.push(event.data);
-          // console.log("Audio chunk received:", event.data);
         };
 
         recorder.onstop = () => {
           const blob = new Blob(audioChunks, { type: "audio/wav" });
-          // console.log("Final audio blob:", blob);
           sendAudio(blob);
         };
 
         recorder.start();
-        // console.log("Recording started...");
         mediaRecorder.current = recorder;
       });
     } else if (mediaRecorder.current) {
       mediaRecorder.current.stop();
-      // console.log("Recording stopped.");
       mediaRecorder.current.stream.getTracks().forEach((track) => track.stop());
     }
 
@@ -80,7 +80,8 @@ function App() {
 
   // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
-    // Convert audio blob to base64
+    setIsLoading(true); // Start loading animation
+
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
@@ -94,7 +95,6 @@ function App() {
 
         setMessages((prev) => [...prev, { role: "user", content: response }]);
 
-        // Send text to backend and wait for the response
         //@ts-ignore
         const llm_response = await window.electronAPI.textInput(response);
 
@@ -108,6 +108,8 @@ function App() {
           ...prev,
           { role: "assistant", content: "Error processing your request." },
         ]);
+      } finally {
+        setIsLoading(false); // Stop loading animation
       }
     };
   };
@@ -138,6 +140,14 @@ function App() {
             </div>
           </div>
         ))}
+        {/* Loading Animation */}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="max-w-xs px-4 py-2 rounded-lg bg-gray-700 text-gray-200">
+              <span className="animate-pulse">...</span>
+            </div>
+          </div>
+        )}
         <div ref={chatEndRef} />
       </div>
       {/* Input Area */}

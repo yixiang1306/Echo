@@ -166,7 +166,7 @@ def llm_response():
         advanced_prompt = (
             "You are an AI assistant called Vox and you are an expert in topic regarding gaming and technology. Answer the user based on the following conversation history. "
             "Provide short answers without unnecessary elaboration. Ensure your responses are unambiguous and easy to understand. "
-            "Avoid showing emotions, opinions, or preferences in your answers. Be clear and concise.\n\n"
+            "Avoid showing emojis, opinions, or preferences in your answers. Be clear and concise. Avoid repeating conversation. \n\n"
         )
 
         structured_prompt = (
@@ -190,8 +190,8 @@ def llm_response():
         conversation_history.append(f"Assistant: {llm_response}")
 
         # Trim conversation history to the last 20 messages (10 exchanges)
-        if len(conversation_history) > 40:
-            conversation_history[:] = conversation_history[-40:]
+        if len(conversation_history) > 20:
+            conversation_history[:] = conversation_history[-20:]
 
         logging.info("LLM response generated successfully.")
         return jsonify({"llm_response": llm_response})
