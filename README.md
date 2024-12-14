@@ -14,6 +14,11 @@ Follow these steps to set up and run the project on your local machine.
    npm i
   ```
 
+3. Install the necessary python requirements:
+  ```bash
+   pip install -r python_requirement.txt
+  ```
+
 ## 2. Create Python Virtual Environment
 
 1. Create a vitural environment
@@ -40,3 +45,6 @@ pip install -r python_requirement.txt
 ```bash
 npm run dev
 ```
+
+
+npm install react-router-dom regenerator-runtime
