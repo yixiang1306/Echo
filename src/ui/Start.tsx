@@ -1,28 +1,33 @@
-import { useState } from "react";
-import "./Start.css";
+import { useNavigate } from "react-router-dom";
 
+function Start() {
+  const navigate = useNavigate();
 
-function Start({ onLogin }: { onLogin: () => void }) {
-  const [isLogin, setIsLogin] = useState(true);
+  const handleLogin = () => {
+    navigate("/login");
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (isLogin) {
-      alert("Logged in successfully!");
-      onLogin(); // Navigate to main app
-    } else {
-      alert("Account created successfully!");
-      setIsLogin(true); // Switch back to login mode
-    }
+  const handleSignup = () => {
+    navigate("/signup");
   };
 
   return (
-    <div className="home-page">
-      <h2>{isLogin ? "Log In" : "Sign Up"}</h2>
-      <form onSubmit={handleSubmit}>
-        <button type="submit">{isLogin ? "Log In" : "Sign Up"}</button>
-      </form>
+    <div className="flex flex-col items-center justify-center bg-gray-900 text-white h-screen">
+      <h1 className="text-3xl mb-4">Welcome to AskVox!</h1>
+      <div className="space-y-4">
+        <button
+          onClick={handleLogin}
+          className="px-6 py-3 bg-blue-500 rounded-lg hover:bg-blue-700"
+        >
+          Login
+        </button>
+        <button
+          onClick={handleSignup}
+          className="px-6 py-3 bg-green-500 rounded-lg hover:bg-green-700"
+        >
+          Sign Up
+        </button>
+      </div>
     </div>
   );
 }

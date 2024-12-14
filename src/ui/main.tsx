@@ -1,22 +1,21 @@
-import "regenerator-runtime/runtime";
-import { StrictMode, useState } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./main.css";
-import App from "./App.tsx";
 import Start from "./Start.tsx";
+import Login from "./Login.tsx";
+import Signup from "./Signup.tsx";
+import App from "./App.tsx";
 
-function Main() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  const handleLogin = () => {
-    setIsAuthenticated(true); // Authenticate user
-  };
-
-  return (
-    <StrictMode>
-      {isAuthenticated ? <App /> : <Start onLogin={handleLogin} />}
-    </StrictMode>
-  );
-}
-
-createRoot(document.getElementById("root")!).render(<Main />);
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Start />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/app" element={<App />} />
+      </Routes>
+    </BrowserRouter>
+  </StrictMode>
+);
