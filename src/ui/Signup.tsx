@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import './Signup.css'; // Import the CSS file
+import "./Signup.css"; // Import the CSS file
 
 function Signup() {
   const navigate = useNavigate();
@@ -50,52 +50,53 @@ function Signup() {
 
   return (
     <div className="signup-container">
-      {/* AskVox Link */}
-      <div
-        onClick={() => navigate("/")}
-        className="askvox-link"
-      >
-        <span className="askvox-text-ask">Ask</span>
-        <span className="askvox-text-vox">Vox</span>
+      {/* Header */}
+      <div className="logo" onClick={() => navigate("/")}>
+        <span className="ask">Ask</span>
+        <span className="vox">Vox</span>
       </div>
 
-      <h1 className="signup-title">Sign Up</h1>
-      <input
-        type="text"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder="Username"
-        className="signup-input"
-      />
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email"
-        className="signup-input"
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        className="signup-input"
-      />
-      <input
-        type="password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        placeholder="Confirm Password"
-        className="signup-input"
-      />
-      {errorMessage && <div className="signup-error">{errorMessage}</div>}
-      <button
-        onClick={handleSignup}
-        className="signup-button"
-      >
-        Sign Up
-      </button>
+      <div className="signup-box">
+        <h2><b>Sign up Here</b></h2>
 
+        {/* Input Fields */}
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Username"
+          className="input-field"
+        />
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          className="input-field"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          className="input-field"
+        />
+        <input
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Re-type Password"
+          className="input-field"
+        />
+
+        {/* Error Message */}
+        {errorMessage && <div className="error-message">{errorMessage}</div>}
+
+        {/* Button */}
+        <button onClick={handleSignup} className="signup-button">
+          Sign Up
+        </button>
+      </div>
       <div className="signup-login">
         <span>Already have an account? </span>
         <button

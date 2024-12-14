@@ -1,6 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import './Login.css'; // Import the CSS file
+import "./Login.css"; // Import the external CSS file
+
 
 function Login() {
   const navigate = useNavigate();
@@ -14,7 +15,6 @@ function Login() {
       return;
     }
 
-    // Assuming there's an API for user authentication
     const isAuthenticated = await mockLogin(username, password);
 
     if (isAuthenticated) {
@@ -24,54 +24,49 @@ function Login() {
     }
   };
 
-  // This is a mock login function; replace it with real login logic
   const mockLogin = (username: string, password: string) => {
     return new Promise<boolean>((resolve) => {
       setTimeout(() => {
-        resolve(username === "user123" && password === "password123"); // Example check
+        resolve(username === "u" && password === "p");
       }, 1000);
     });
   };
 
   return (
     <div className="login-container">
-      {/* AskVox Link */}
-      <div
-        onClick={() => navigate("/")}
-        className="askvox-link"
-      >
-        <span className="askvox-text-ask">Ask</span>
-        <span className="askvox-text-vox">Vox</span>
+      {/* Header */}
+      <div className="logo" onClick={() => navigate("/")}>
+        <span className="ask">Ask</span>
+        <span className="vox">Vox</span>
       </div>
 
-      <h1 className="login-title">Log In</h1>
-      <input
-        type="text"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder="Username"
-        className="login-input"
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        className="login-input"
-      />
-      {errorMessage && <div className="login-error">{errorMessage}</div>}
-      <button
-        onClick={handleLogin}
-        className="login-button"
-      >
-        Log In
-      </button>
-
-      <div className="login-signup">
-        <span>Don't have an account? </span>
+      {/* Login Card */}
+      <div className="login-card">
+        <h1 className="login-title">Login Here</h1>
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Username"
+          className="input-field"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          className="input-field"
+        />
+        {errorMessage && <div className="error-message">{errorMessage}</div>}
+        <button onClick={handleLogin} className="login-button">
+          Login
+        </button>
+        <div className="divider">
+          <span>------------ Or ------------</span>
+        </div>
         <button
           onClick={() => navigate("/signup")}
-          className="login-signup-link"
+          className="signup-button"
         >
           Sign Up
         </button>

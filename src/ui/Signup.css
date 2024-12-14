@@ -1,66 +1,111 @@
-.signup-container {
+/* Signup Page Styling */
+@import url('https://fonts.googleapis.com/css2?family=Lexend+Deca&display=swap');   /* For the font */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Lexend Deca', sans-serif;
+    background-color: #f8f8f8;
+  }
+  
+  .signup-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background-color: #1f2937; /* bg-gray-900 */
-    color: white;
     height: 100vh;
+    background-color: #ffffff;
   }
   
-  .signup-title {
-    font-size: 2rem; /* text-3xl */
-    margin-bottom: 1rem; /* mb-4 */
+  .logo {
+    position: absolute; /* Position the logo absolutely */
+    top: 20px;          /* 20px from the top of the screen */
+    left: 40px;         /* 20px from the left of the screen */
+    cursor: pointer;
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 20px; /* Optional, can be removed */
   }
   
-  .signup-input {
-    padding: 0.5rem 1rem; /* p-2 */
-    margin-bottom: 1rem; /* mb-4 */
-    border-radius: 0.5rem; /* rounded-lg */
+  .ask {
+    color: #000000;
+  }
+  
+  .vox {
+    color: #4b4efc;
+  }
+  
+  .signup-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #ffffff;
+    padding: 2rem;
+    border-radius: 10px;
+    width: 350px;
+  }
+  
+  .signup-box h2 {
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    color: #000000;
+  }
+  
+  .input-field {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    font-size: 1rem;
+    outline: none;
+    background-color: #f6f6f6;
+  }
+  
+  .input-field::placeholder {
+    color: #b0b0b0;
   }
   
   .signup-button {
-    padding: 0.75rem 1.5rem; /* px-6 py-3 */
-    border-radius: 0.5rem; /* rounded-lg */
-    background-color: #10b981; /* bg-green-500 */
-    transition: background-color 0.2s;
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #000000;
+    border: none;
+    border-radius: 5px;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
   }
   
   .signup-button:hover {
-    background-color: #059669; /* hover:bg-green-700 */
+    background-color: #404046;
   }
   
-  .signup-error {
-    color: #ef4444; /* text-red-500 */
+  .error-message {
+    color: #e74c3c;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
   }
-  
+
   .signup-login {
-    margin-top: 1rem; /* mt-4 */
-    font-size: 0.875rem; /* text-sm */
-    color: #d1d5db; /* text-gray-400 */
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #555; /* Default text color */
+    text-align: center;
   }
   
-  .signup-login a {
-    color: #3b82f6; /* text-blue-500 */
-    transition: color 0.2s;
-  }
-  
-  .signup-login a:hover {
-    color: #2563eb; /* hover:text-blue-700 */
-  }
-  
-  .askvox-link {
+  .signup-login-link {
+    font-weight: bold; /* Make the text bold */
+    color: #4b4efc; /* Default link color */
+    background: none; /* Remove button background */
+    border: none; /* Remove button border */
     cursor: pointer;
-    margin-bottom: 2rem; /* mb-8 */
-    font-size: 2.5rem; /* text-4xl */
-    font-weight: bold; /* font-bold */
-    text-align: center; /* text-center */
+    text-decoration: none; /* Remove underline */
+    transition: color 0.3s ease; /* Smooth color transition */
   }
   
-  .askvox-text-ask {
-    color: #3b82f6; /* text-blue-500 */
+  .signup-login-link:hover {
+    color: #20216e; /* Change color on hover */
   }
   
-  .askvox-text-vox {
-    color: #10b981; /* text-green-500 */
-  }

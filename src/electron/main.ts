@@ -31,13 +31,16 @@ app.on('ready', () => {
 
   // Create the main window
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 800,         // Initial window width
+    height: 600,        // Initial window height
+    minWidth: 800,      // Minimum window width (absolute size)
+    minHeight: 600,     // Minimum window height (absolute size)
     webPreferences: {
-      preload: getPreloadPath(),
-      contextIsolation: true, // Ensure context isolation is enabled
-    nodeIntegration: false,
+      preload: getPreloadPath(), // Assuming you have a preload script path
+      contextIsolation: true,     // Ensure context isolation is enabled
+      nodeIntegration: false,     // Disable Node.js integration for security
     },
+    resizable: true,    // Allow resizing within the defined bounds
   });
 
 

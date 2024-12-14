@@ -1,37 +1,91 @@
+/* Overall Page Layout */
+@import url('https://fonts.googleapis.com/css2?family=Lexend+Deca&display=swap');   /* For the font */
 .start-container {
     display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
-    background-color: #1f2937; /* bg-gray-900 */
-    color: white;
+    align-items: center;
     height: 100vh;
+    background-color: #f9f9f9;
+    font-family: 'Lexend Deca', sans-serif;
   }
   
-  .start-title {
-    font-size: 2rem; /* text-3xl */
-    margin-bottom: 1rem; /* mb-4 */
+  /* Main Circle */
+  .circle {
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    border: 2px solid #6b5bff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    background: white;
   }
   
-  .start-button {
-    padding: 0.75rem 1.5rem; /* px-6 py-3 */
-    border-radius: 0.5rem; /* rounded-lg */
+  /* Header (AskVox) */
+  .header {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .ask {
+    color: black;
+  }
+  
+  .vox {
+    color: #6b5bff;
+  }
+  
+  /* Subtitle */
+  .subtitle {
     font-size: 1rem;
-    transition: background-color 0.2s;
+    color: #666;
+    margin-bottom: 20px;
   }
   
-  .start-button-login {
-    background-color: #3b82f6; /* bg-blue-500 */
+  /* Microphone Icon */
+  .icon {
+    margin-bottom: 20px;
   }
   
-  .start-button-login:hover {
-    background-color: #2563eb; /* hover:bg-blue-700 */
+  .mic-icon {
+    width: 50px;
+    height: 50px;
+    opacity: 0.8;
   }
   
-  .start-button-signup {
-    background-color: #10b981; /* bg-green-500 */
+  /* Buttons */
+  .button-group {
+    display: flex;
+    gap: 20px;
   }
   
-  .start-button-signup:hover {
-    background-color: #059669; /* hover:bg-green-700 */
+  .btn {
+    padding: 10px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .login-btn {
+    background-color: #6b5bff;
+    color: white;
+  }
+  
+  .signup-btn {
+    background-color: black;
+    color: white;
+  }
+  
+  .login-btn:hover {
+    background-color: #5848d6;
+  }
+  
+  .signup-btn:hover {
+    background-color: #333;
   }
