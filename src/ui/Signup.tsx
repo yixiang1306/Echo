@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "./Signup.css"; // Import the CSS file
 
 function Signup() {
   const navigate = useNavigate();
@@ -48,58 +49,59 @@ function Signup() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center bg-gray-900 text-white h-screen">
-      {/* AskVox Link */}
-      <div
-        onClick={() => navigate("/")}
-        className="cursor-pointer mb-8 text-4xl font-bold text-center"
-      >
-        <span className="text-blue-500">Ask</span>
-        <span className="text-green-500">Vox</span>
+    <div className="signup-container">
+      {/* Header */}
+      <div className="logo" onClick={() => navigate("/")}>
+        <span className="ask">Ask</span>
+        <span className="vox">Vox</span>
       </div>
 
-      <h1 className="text-3xl mb-4">Sign Up</h1>
-      <input
-        type="text"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder="Username"
-        className="p-2 mb-4 rounded-lg"
-      />
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email"
-        className="p-2 mb-4 rounded-lg"
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        className="p-2 mb-4 rounded-lg"
-      />
-      <input
-        type="password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        placeholder="Confirm Password"
-        className="p-2 mb-4 rounded-lg"
-      />
-      {errorMessage && <div className="text-red-500">{errorMessage}</div>}
-      <button
-        onClick={handleSignup}
-        className="px-6 py-3 bg-green-500 rounded-lg hover:bg-green-700"
-      >
-        Sign Up
-      </button>
+      <div className="signup-box">
+        <h2><b>Sign up Here</b></h2>
 
-      <div className="mt-4 text-sm text-gray-400">
+        {/* Input Fields */}
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Username"
+          className="input-field"
+        />
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          className="input-field"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          className="input-field"
+        />
+        <input
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Re-type Password"
+          className="input-field"
+        />
+
+        {/* Error Message */}
+        {errorMessage && <div className="error-message">{errorMessage}</div>}
+
+        {/* Button */}
+        <button onClick={handleSignup} className="signup-button">
+          Sign Up
+        </button>
+      </div>
+      <div className="signup-login">
         <span>Already have an account? </span>
         <button
           onClick={() => navigate("/login")}
-          className="text-blue-500 hover:text-blue-700"
+          className="signup-login-link"
         >
           Log In
         </button>

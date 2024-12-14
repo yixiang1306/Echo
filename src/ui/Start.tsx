@@ -1,4 +1,7 @@
+import React from "react";
 import { useNavigate } from "react-router-dom";
+import "./Start.css"; // Import the CSS file
+
 
 function Start() {
   const navigate = useNavigate();
@@ -12,28 +15,40 @@ function Start() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center bg-gray-900 text-white h-screen">
-      <h1 className="text-3xl mb-4">Welcome to AskVox!</h1>
-      <div className="space-y-4">
-        <button
-          onClick={handleLogin}
-          className="px-6 py-3 bg-blue-500 rounded-lg hover:bg-blue-700"
-        >
-          Login
-        </button>
-        <button
-          onClick={handleSignup}
-          className="px-6 py-3 bg-green-500 rounded-lg hover:bg-green-700"
-        >
-          Sign Up
-        </button>
+    <div className="start-container">
+      {/* Main Circle */}
+      <div className="circle">
+        {/* Header */}
+        <div className="header">
+          <span className="ask">Ask</span>
+          <span className="vox">Vox</span>
+        </div>
+        <p className="subtitle">Ask anything about blah blah</p>
+
+        {/* Microphone Icon */}
+        <div className="icon">
+          <img
+            src="/src/ui/Assets/Images/mic.png"
+            alt="microphone"
+            className="mic-icon"
+          />
+        </div>
+
+        {/* Buttons */}
+        <div className="button-group">
+          <button className="btn login-btn" onClick={handleLogin}>
+            Login
+          </button>
+          <button className="btn signup-btn" onClick={handleSignup}>
+            Sign Up
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
 export default Start;
-
 
 
 

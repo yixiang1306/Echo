@@ -1,0 +1,91 @@
+/* Overall Page Layout */
+@import url('https://fonts.googleapis.com/css2?family=Lexend+Deca&display=swap');   /* For the font */
+.start-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f9f9f9;
+    font-family: 'Lexend Deca', sans-serif;
+  }
+  
+  /* Main Circle */
+  .circle {
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    border: 2px solid #6b5bff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    background: white;
+  }
+  
+  /* Header (AskVox) */
+  .header {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .ask {
+    color: black;
+  }
+  
+  .vox {
+    color: #6b5bff;
+  }
+  
+  /* Subtitle */
+  .subtitle {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 20px;
+  }
+  
+  /* Microphone Icon */
+  .icon {
+    margin-bottom: 20px;
+  }
+  
+  .mic-icon {
+    width: 50px;
+    height: 50px;
+    opacity: 0.8;
+  }
+  
+  /* Buttons */
+  .button-group {
+    display: flex;
+    gap: 20px;
+  }
+  
+  .btn {
+    padding: 10px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .login-btn {
+    background-color: #6b5bff;
+    color: white;
+  }
+  
+  .signup-btn {
+    background-color: black;
+    color: white;
+  }
+  
+  .login-btn:hover {
+    background-color: #5848d6;
+  }
+  
+  .signup-btn:hover {
+    background-color: #333;
+  }

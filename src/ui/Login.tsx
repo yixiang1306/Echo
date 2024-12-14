@@ -1,5 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "./Login.css"; // Import the external CSS file
+
 
 function Login() {
   const navigate = useNavigate();
@@ -13,7 +15,6 @@ function Login() {
       return;
     }
 
-    // Assuming there's an API for user authentication
     const isAuthenticated = await mockLogin(username, password);
 
     if (isAuthenticated) {
@@ -23,54 +24,49 @@ function Login() {
     }
   };
 
-  // This is a mock login function; replace it with real login logic
   const mockLogin = (username: string, password: string) => {
     return new Promise<boolean>((resolve) => {
       setTimeout(() => {
-        resolve(username === "user123" && password === "password123"); // Example check
+        resolve(username === "u" && password === "p");
       }, 1000);
     });
   };
 
   return (
-    <div className="flex flex-col items-center justify-center bg-gray-900 text-white h-screen">
-      {/* AskVox Link */}
-      <div
-        onClick={() => navigate("/")}
-        className="cursor-pointer mb-8 text-4xl font-bold text-center"
-      >
-        <span className="text-blue-500">Ask</span>
-        <span className="text-green-500">Vox</span>
+    <div className="login-container">
+      {/* Header */}
+      <div className="logo" onClick={() => navigate("/")}>
+        <span className="ask">Ask</span>
+        <span className="vox">Vox</span>
       </div>
 
-      <h1 className="text-3xl mb-4">Log In</h1>
-      <input
-        type="text"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder="Username"
-        className="p-2 mb-4 rounded-lg"
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        className="p-2 mb-4 rounded-lg"
-      />
-      {errorMessage && <div className="text-red-500">{errorMessage}</div>}
-      <button
-        onClick={handleLogin}
-        className="px-6 py-3 bg-green-500 rounded-lg hover:bg-green-700"
-      >
-        Log In
-      </button>
-
-      <div className="mt-4 text-sm text-gray-400">
-        <span>Don't have an account? </span>
+      {/* Login Card */}
+      <div className="login-card">
+        <h1 className="login-title">Login Here</h1>
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Username"
+          className="input-field"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          className="input-field"
+        />
+        {errorMessage && <div className="error-message">{errorMessage}</div>}
+        <button onClick={handleLogin} className="login-button">
+          Login
+        </button>
+        <div className="divider">
+          <span>------------ Or ------------</span>
+        </div>
         <button
           onClick={() => navigate("/signup")}
-          className="text-blue-500 hover:text-blue-700"
+          className="signup-button"
         >
           Sign Up
         </button>

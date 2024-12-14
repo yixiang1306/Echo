@@ -4,9 +4,6 @@ import path from 'path';
 import { getPreloadPath } from './pathResolver.js';
 import { isDev } from './util.js';
 import axios from 'axios';
-import sound from 'sound-play';
-import { writeFileSync } from 'fs';
-
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -15,6 +12,9 @@ let isQuitting = false; // Track whether the app is being quit explicitly
 // Path to the Python script and interpreter in the virtual environment
 const pythonScriptPath = path.join(app.getAppPath(), './src/python/HeyVox.py');
 const pythonInterpreterPath = path.join(app.getAppPath(), './.venv/Scripts/python.exe'); // Adjust for Windows: ../python/venv/Scripts/python
+
+const pythonExecutablePath = path.join(app.getAppPath(), './dist/HeyVox/HeyVox.exe'); // Adjust the path if necessary
+
 let pythonProcess: any = null;
 
 app.on('ready', () => {
@@ -23,23 +23,21 @@ app.on('ready', () => {
 
   app.commandLine.appendSwitch('disable-features', 'ChunkedDataPipe');
 
-
   console.log("Resolved preload path:", getPreloadPath());
-
- 
 
   // Create the main window
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 800,         // Initial window width
+    height: 600,        // Initial window height
+    minWidth: 800,      // Minimum window width (absolute size)
+    minHeight: 600,     // Minimum window height (absolute size)
     webPreferences: {
-      preload: getPreloadPath(),
-      contextIsolation: true, // Ensure context isolation is enabled
-    nodeIntegration: false,
+      preload: getPreloadPath(), // Assuming you have a preload script path
+      contextIsolation: true,     // Ensure context isolation is enabled
+      nodeIntegration: false,     // Disable Node.js integration for security
     },
+    resizable: true,    // Allow resizing within the defined bounds
   });
-
-
 
   // Load React/Vite app
   if (isDev()) {
@@ -94,33 +92,29 @@ app.on('ready', () => {
     pauseListening();
   });
 
-
-
-  // Spawn the Python process
-  pythonProcess = spawn(pythonInterpreterPath, [pythonScriptPath], {
-    stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the Python process
+  // Spawn the Python executable process
+  pythonProcess = spawn(pythonExecutablePath, [], {
+    stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the process
   });
 
-
-  pauseListening();
-
-  // Listen for messages from Python
+  // Listen for messages from the Python executable
   pythonProcess.stdout.on('data', (data: Buffer) => {
     const message = data.toString().trim();
-    console.log('Message from Python:', message);
+    console.log('Message from Python Executable:', message);
 
     if (message === 'wake-up') {
       mainWindow?.show(); // Wake up the Electron window
     }
   });
 
-  // Log messages from Python's stderr
+  // Log messages from the executable's stderr
   pythonProcess.stderr.on('data', (data: Buffer) => {
-    console.error('Python Log:', data.toString());
+    console.error('Python Executable Log:', data.toString());
   });
 
+  // Handle the process exit
   pythonProcess.on('close', (code: number) => {
-    console.log(`Python process exited with code ${code}`);
+    console.log(`Python Executable process exited with code ${code}`);
   });
 });
 
@@ -141,7 +135,6 @@ const resumeListening = () => {
 };
 
 // Handle when all windows are closed
-
 //@ts-ignore
 app.on('window-all-closed', (event) => {
   if (!isQuitting) {
@@ -157,44 +150,16 @@ app.on('before-quit', () => {
   }
 });
 
-
 // Handle IPC to toggle recording for google-text-to-speech
-ipcMain.on('toggle-recording', (_,isRecording:boolean) => {
+ipcMain.on('toggle-recording', (_, isRecording: boolean) => {
   console.log(isRecording);
-
-  if (isRecording) { 
-
+  if (isRecording) {
+    // Handle the logic when recording is toggled on
   }
-
-
 });
 
-
-// Function to play audio from Base64 string
-const playAudio = (audioBase64: string) => {
-  try {
-    // Decode Base64 audio and save it to a temporary file
-    const audioBuffer = Buffer.from(audioBase64, 'base64');
-    const tempAudioPath = path.join(app.getPath('temp'), 'response_audio.mp3');
-    writeFileSync(tempAudioPath, audioBuffer);
-
-    // Play the audio file
-    sound.play(tempAudioPath)
-      .then(() => {
-        console.log('Audio playback completed.');
-      })
-      .catch((err) => {
-        console.error('Error during audio playback:', err);
-      });
-  } catch (error) {
-    console.error('Error in playAudio:', error);
-  }
-};
-
-
-
-// Handle IPC to toggle recording for google-text-to-speech
-ipcMain.handle('text-input', async (_,text:string) => {
+// Handle IPC to process text input
+ipcMain.handle('text-input', async (_, text: string) => {
   console.log(text);
 
   try {
@@ -206,25 +171,15 @@ ipcMain.handle('text-input', async (_,text:string) => {
     // Log the response from the Python server
     console.log('Response from LLM:', response.data.llm_response);
 
-
-    // Send the response text to the Python server for TTS
-    const ttsResponse = await axios.post('http://localhost:8000/tts', { text: response.data.llm_response });
-    const audioBase64 = ttsResponse.data.audio_base64;
-
-    console.log('Playing audio for response...');
-    playAudio(audioBase64); // Play the audio
-
     return response.data.llm_response;
   } catch (error) {
     console.error('Error communicating with the Python server:');
-    return "Error communicating with the server. Pls Try Again :3";
-  } 
+    return "Error communicating with the server. Please Try Again :3";
+  }
 });
-
 
 ipcMain.handle("send-audio", async (_, audioData) => {
   try {
-
     console.log("Audio Data:", audioData.length);
     // Send audio to Speech-to-Text endpoint
     const sttResponse = await axios.post("http://localhost:8000/transcribe", {
@@ -234,11 +189,9 @@ ipcMain.handle("send-audio", async (_, audioData) => {
     const transcription = sttResponse.data.transcription;
     console.log("Transcription:", transcription);
 
-
     return transcription;
-
   } catch (error) {
-    console.error("Error processing audio:",error);
+    console.error("Error processing audio:", error);
     return "Error processing your request. Please try again.";
   }
 });
@@ -248,8 +201,3 @@ ipcMain.on('show-main-window', () => {
   mainWindow?.show();
   pauseListening();
 });
-
-
-
-
-
