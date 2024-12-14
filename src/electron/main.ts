@@ -1,10 +1,9 @@
 import { spawn } from 'child_process';
-import { app, BrowserWindow, ipcMain, Menu, Tray } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray,screen } from 'electron';
 import path from 'path';
 import { getPreloadPath } from './pathResolver.js';
 import { isDev } from './util.js';
 import axios from 'axios';
-
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -18,29 +17,33 @@ const pythonExecutablePath = path.join(app.getAppPath(), './dist/HeyVox/HeyVox.e
 
 let pythonProcess: any = null;
 
+<<<<<<< HEAD
+app.on('ready', async() => {
+=======
 
 
 app.on('ready', () => {
+>>>>>>> 1fe4f8060cee6ac96ea68165d4ecca19d9146967
 
   const iconPath = !isDev() ? path.join(app.getAppPath(), 'dist-react', 'icon.jpg') : path.join(app.getAppPath(), 'public', 'icon.jpg');
 
   app.commandLine.appendSwitch('disable-features', 'ChunkedDataPipe');
 
-
   console.log("Resolved preload path:", getPreloadPath());
+
+ 
 
   // Create the main window
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
-      preload: getPreloadPath(),
-      contextIsolation: true, // Ensure context isolation is enabled
-    nodeIntegration: false,
+      preload: getPreloadPath(), // Assuming you have a preload script path
+      contextIsolation: true,     // Ensure context isolation is enabled
+      nodeIntegration: false,     // Disable Node.js integration for security
     },
+    resizable: true,    // Allow resizing within the defined bounds
   });
-
-
 
   // Load React/Vite app
   if (isDev()) {
@@ -49,22 +52,43 @@ app.on('ready', () => {
     mainWindow.loadFile(path.join(app.getAppPath(), 'dist-react', 'index.html'));
   }
 
+  // Wait for the content to load before sliding in
+  mainWindow.webContents.once('did-finish-load', async () => {
+    console.log('Content fully loaded. Sliding in...');
+    await slideIn();
+  });
+
+
   // Prevent app from quitting when window is closed
-  mainWindow.on('close', (event) => {
+  mainWindow.on('close', async(event) => {
     if (!isQuitting) {
       event.preventDefault();
+      await slideOut();
       mainWindow?.hide(); // Hide the window instead of quitting
     }
   });
 
+  mainWindow.on('blur', async () => {
+    console.log('Window lost focus. Checking if we should hide...');
+    // Slide out and hide the window
+    
+    await slideOut();
+
+    console.log('Slide-out complete. Hiding window...');
+    
+    mainWindow?.hide();
+  });
+
   // Handle showing the main window
-  mainWindow.on('show', () => {
+  mainWindow.on('show', async() => {
     pauseListening(); // Pause the Python process when the window is shown
+    await slideIn();
   });
 
   // Handle hiding the main window
-  mainWindow.on('hide', () => {
+  mainWindow.on('hide', async() => {
     resumeListening(); // Resume the Python process when the window is hidden
+    await slideOut();
   });
 
   // Create the tray icon
@@ -90,63 +114,40 @@ app.on('ready', () => {
   tray.setContextMenu(trayMenu);
 
   // Restore app window on tray icon double-click
-  tray.on('double-click', () => {
+  tray.on('double-click', async() => {
     mainWindow?.show();
     pauseListening();
+    await slideIn();
   });
 
 
 
-  // // Spawn the Python process
-  // pythonProcess = spawn(pythonInterpreterPath, [pythonScriptPath], {
-  //   stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the Python process
-  // });
+  // Spawn the Python process
+  pythonProcess = spawn(pythonInterpreterPath, [pythonScriptPath], {
+    stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the Python process
+  });
 
-  // // Listen for messages from Python
-  // pythonProcess.stdout.on('data', (data: Buffer) => {
-  //   const message = data.toString().trim();
-  //   console.log('Message from Python:', message);
 
-  //   if (message === 'wake-up') {
-  //     mainWindow?.show(); // Wake up the Electron window
-  //   }
-  // });
+  pauseListening();
 
-  // // Log messages from Python's stderr
-  // pythonProcess.stderr.on('data', (data: Buffer) => {
-  //   console.error('Python Log:', data.toString());
-  // });
-
-  // pythonProcess.on('close', (code: number) => {
-  //   console.log(`Python process exited with code ${code}`);
-  // });
-
-// Spawn the Python executable process
-pythonProcess = spawn(pythonExecutablePath, [], {
-  stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the process
-});
-
-// Listen for messages from the Python executable
-pythonProcess.stdout.on('data', (data: Buffer) => {
-  const message = data.toString().trim();
-  console.log('Message from Python Executable:', message);
+  // Listen for messages from the Python executable
+  pythonProcess.stdout.on('data', (data: Buffer) => {
+    const message = data.toString().trim();
+    console.log('Message from Python:', message);
 
   if (message === 'wake-up') {
     mainWindow?.show(); // Wake up the Electron window
   }
 });
 
-// Log messages from the executable's stderr
-pythonProcess.stderr.on('data', (data: Buffer) => {
-  console.error('Python Executable Log:', data.toString());
-});
+  // Log messages from Python's stderr
+  pythonProcess.stderr.on('data', (data: Buffer) => {
+    console.error('Python Log:', data.toString());
+  });
 
-// Handle the process exit
-pythonProcess.on('close', (code: number) => {
-  console.log(`Python Executable process exited with code ${code}`);
-});
-
-
+  pythonProcess.on('close', (code: number) => {
+    console.log(`Python process exited with code ${code}`);
+  });
 });
 
 // Pause Python listening
@@ -194,6 +195,30 @@ ipcMain.on('toggle-recording', (_,isRecording:boolean) => {
 
 });
 
+
+// Function to play audio from Base64 string
+const playAudio = (audioBase64: string) => {
+  try {
+    // Decode Base64 audio and save it to a temporary file
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+    const tempAudioPath = path.join(app.getPath('temp'), 'response_audio.mp3');
+    writeFileSync(tempAudioPath, audioBuffer);
+
+    // Play the audio file
+    sound.play(tempAudioPath)
+      .then(() => {
+        console.log('Audio playback completed.');
+      })
+      .catch((err) => {
+        console.error('Error during audio playback:', err);
+      });
+  } catch (error) {
+    console.error('Error in playAudio:', error);
+  }
+};
+
+
+
 // Handle IPC to toggle recording for google-text-to-speech
 ipcMain.handle('text-input', async (_,text:string) => {
   console.log(text);
@@ -210,14 +235,12 @@ ipcMain.handle('text-input', async (_,text:string) => {
     return response.data.llm_response;
   } catch (error) {
     console.error('Error communicating with the Python server:');
-    return "Error communicating with the server. Pls Try Again :3";
-  } 
+    return "Error communicating with the server. Please Try Again :3";
+  }
 });
-
 
 ipcMain.handle("send-audio", async (_, audioData) => {
   try {
-
     console.log("Audio Data:", audioData.length);
     // Send audio to Speech-to-Text endpoint
     const sttResponse = await axios.post("http://localhost:8000/transcribe", {
@@ -230,9 +253,8 @@ ipcMain.handle("send-audio", async (_, audioData) => {
     console.log("Transcription:", transcription);
 
     return transcription;
-
   } catch (error) {
-    console.error("Error processing audio:",error);
+    console.error("Error processing audio:", error);
     return "Error processing your request. Please try again.";
   }
 });
