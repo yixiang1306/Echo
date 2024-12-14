@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { app, BrowserWindow, ipcMain, Menu, Tray } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray,screen } from 'electron';
 import path from 'path';
 import { getPreloadPath } from './pathResolver.js';
 import { isDev } from './util.js';
@@ -17,7 +17,13 @@ const pythonExecutablePath = path.join(app.getAppPath(), './dist/HeyVox/HeyVox.e
 
 let pythonProcess: any = null;
 
+<<<<<<< HEAD
+app.on('ready', async() => {
+=======
+
+
 app.on('ready', () => {
+>>>>>>> 1fe4f8060cee6ac96ea68165d4ecca19d9146967
 
   const iconPath = !isDev() ? path.join(app.getAppPath(), 'dist-react', 'icon.jpg') : path.join(app.getAppPath(), 'public', 'icon.jpg');
 
@@ -25,12 +31,12 @@ app.on('ready', () => {
 
   console.log("Resolved preload path:", getPreloadPath());
 
+ 
+
   // Create the main window
   mainWindow = new BrowserWindow({
-    width: 800,         // Initial window width
-    height: 600,        // Initial window height
-    minWidth: 800,      // Minimum window width (absolute size)
-    minHeight: 600,     // Minimum window height (absolute size)
+    width: 800,
+    height: 600,
     webPreferences: {
       preload: getPreloadPath(), // Assuming you have a preload script path
       contextIsolation: true,     // Ensure context isolation is enabled
@@ -46,22 +52,43 @@ app.on('ready', () => {
     mainWindow.loadFile(path.join(app.getAppPath(), 'dist-react', 'index.html'));
   }
 
+  // Wait for the content to load before sliding in
+  mainWindow.webContents.once('did-finish-load', async () => {
+    console.log('Content fully loaded. Sliding in...');
+    await slideIn();
+  });
+
+
   // Prevent app from quitting when window is closed
-  mainWindow.on('close', (event) => {
+  mainWindow.on('close', async(event) => {
     if (!isQuitting) {
       event.preventDefault();
+      await slideOut();
       mainWindow?.hide(); // Hide the window instead of quitting
     }
   });
 
+  mainWindow.on('blur', async () => {
+    console.log('Window lost focus. Checking if we should hide...');
+    // Slide out and hide the window
+    
+    await slideOut();
+
+    console.log('Slide-out complete. Hiding window...');
+    
+    mainWindow?.hide();
+  });
+
   // Handle showing the main window
-  mainWindow.on('show', () => {
+  mainWindow.on('show', async() => {
     pauseListening(); // Pause the Python process when the window is shown
+    await slideIn();
   });
 
   // Handle hiding the main window
-  mainWindow.on('hide', () => {
+  mainWindow.on('hide', async() => {
     resumeListening(); // Resume the Python process when the window is hidden
+    await slideOut();
   });
 
   // Create the tray icon
@@ -87,34 +114,39 @@ app.on('ready', () => {
   tray.setContextMenu(trayMenu);
 
   // Restore app window on tray icon double-click
-  tray.on('double-click', () => {
+  tray.on('double-click', async() => {
     mainWindow?.show();
     pauseListening();
+    await slideIn();
   });
 
-  // Spawn the Python executable process
-  pythonProcess = spawn(pythonExecutablePath, [], {
-    stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the process
+
+
+  // Spawn the Python process
+  pythonProcess = spawn(pythonInterpreterPath, [pythonScriptPath], {
+    stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the Python process
   });
+
+
+  pauseListening();
 
   // Listen for messages from the Python executable
   pythonProcess.stdout.on('data', (data: Buffer) => {
     const message = data.toString().trim();
-    console.log('Message from Python Executable:', message);
+    console.log('Message from Python:', message);
 
-    if (message === 'wake-up') {
-      mainWindow?.show(); // Wake up the Electron window
-    }
-  });
+  if (message === 'wake-up') {
+    mainWindow?.show(); // Wake up the Electron window
+  }
+});
 
-  // Log messages from the executable's stderr
+  // Log messages from Python's stderr
   pythonProcess.stderr.on('data', (data: Buffer) => {
-    console.error('Python Executable Log:', data.toString());
+    console.error('Python Log:', data.toString());
   });
 
-  // Handle the process exit
   pythonProcess.on('close', (code: number) => {
-    console.log(`Python Executable process exited with code ${code}`);
+    console.log(`Python process exited with code ${code}`);
   });
 });
 
@@ -135,6 +167,7 @@ const resumeListening = () => {
 };
 
 // Handle when all windows are closed
+
 //@ts-ignore
 app.on('window-all-closed', (event) => {
   if (!isQuitting) {
@@ -150,16 +183,44 @@ app.on('before-quit', () => {
   }
 });
 
+
 // Handle IPC to toggle recording for google-text-to-speech
-ipcMain.on('toggle-recording', (_, isRecording: boolean) => {
+ipcMain.on('toggle-recording', (_,isRecording:boolean) => {
   console.log(isRecording);
-  if (isRecording) {
-    // Handle the logic when recording is toggled on
+
+  if (isRecording) { 
+
   }
+
+
 });
 
-// Handle IPC to process text input
-ipcMain.handle('text-input', async (_, text: string) => {
+
+// Function to play audio from Base64 string
+const playAudio = (audioBase64: string) => {
+  try {
+    // Decode Base64 audio and save it to a temporary file
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+    const tempAudioPath = path.join(app.getPath('temp'), 'response_audio.mp3');
+    writeFileSync(tempAudioPath, audioBuffer);
+
+    // Play the audio file
+    sound.play(tempAudioPath)
+      .then(() => {
+        console.log('Audio playback completed.');
+      })
+      .catch((err) => {
+        console.error('Error during audio playback:', err);
+      });
+  } catch (error) {
+    console.error('Error in playAudio:', error);
+  }
+};
+
+
+
+// Handle IPC to toggle recording for google-text-to-speech
+ipcMain.handle('text-input', async (_,text:string) => {
   console.log(text);
 
   try {
@@ -186,6 +247,8 @@ ipcMain.handle("send-audio", async (_, audioData) => {
       audio: audioData,
     });
 
+    
+
     const transcription = sttResponse.data.transcription;
     console.log("Transcription:", transcription);
 
@@ -201,3 +264,8 @@ ipcMain.on('show-main-window', () => {
   mainWindow?.show();
   pauseListening();
 });
+
+
+
+
+

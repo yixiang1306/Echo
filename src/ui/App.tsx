@@ -3,7 +3,7 @@ import "./App.css"; // Import the CSS file
 
 function App() {
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hello! How can I assist you today?" },
+    { role: "Vox", content: "Hello! How can I assist you today?" },
   ]);
   const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -35,8 +35,10 @@ function App() {
       console.error("Error sending message:", error);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Error processing your request." },
+        { role: "Vox", content: "Error processing your request." },
       ]);
+    } finally {
+      setIsLoading(false); // Stop loading animation
     }
   };
 
@@ -123,3 +125,7 @@ function App() {
 }
 
 export default App;
+function setIsLoading(arg0: boolean) {
+  throw new Error("Function not implemented.");
+}
+
