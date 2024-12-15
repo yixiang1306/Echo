@@ -49,6 +49,7 @@ app.on('ready', async() => {
     y: 0, // Adjust Y position if needed
     alwaysOnTop: true, // Keep the window on top
     resizable: false,
+    skipTaskbar: true,
     webPreferences: {
       preload: getPreloadPath(),
       contextIsolation: true, // Ensure context isolation is enabled
