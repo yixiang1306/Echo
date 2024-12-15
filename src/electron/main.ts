@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { app, BrowserWindow, ipcMain, Menu, Tray,screen } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray,screen, globalShortcut } from 'electron';
 import path from 'path';
 import { getPreloadPath } from './pathResolver.js';
 import { isDev } from './util.js';
@@ -65,20 +65,47 @@ app.on('ready', async() => {
   mainWindow.on('close', async(event) => {
     if (!isQuitting) {
       event.preventDefault();
-      await slideOut();
       mainWindow?.hide(); // Hide the window instead of quitting
     }
   });
 
-  mainWindow.on('blur', async () => {
-    console.log('Window lost focus. Checking if we should hide...');
-    // Slide out and hide the window
-    
-    await slideOut();
 
-    console.log('Slide-out complete. Hiding window...');
-    
-    mainWindow?.hide();
+  // Custom hide function with animation
+  async function customHide() {
+    if (mainWindow?.isVisible()) {
+      console.log('Hiding window with animation...');
+  
+      // Get the current position of the window
+      const { x, y } = mainWindow.getBounds();
+      console.log(`Window position before hiding: x=${x}, y=${y}`);
+  
+      // Wait for the slide-out animation to finish
+      await slideOut();
+
+      // Get the new position of the window
+      const { x: newX, y: newY } = mainWindow.getBounds();
+      console.log(`Window position after hiding: x=${newX}, y=${newY}`);
+
+      mainWindow.setBounds({ x: newX, y: newY});
+  
+      // Now hide the window
+      mainWindow.hide();
+      console.log('Window hidden.');
+    }
+  }
+
+  // Register a global shortcut for Alt+V
+  globalShortcut.register('Alt+V', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        console.log('Alt+V pressed. Hiding the window...');
+        customHide(); // Hide the window
+      } else {
+        console.log('Alt+V pressed. Showing the window...');
+        
+        mainWindow.show(); // Show the window
+      }
+    }
   });
 
   // Handle showing the main window
@@ -121,8 +148,6 @@ app.on('ready', async() => {
     pauseListening();
     await slideIn();
   });
-
-
 
   // Spawn the Python process
   pythonProcess = spawn(pythonInterpreterPath, [pythonScriptPath], {
@@ -189,9 +214,6 @@ const playAudio = (audioBase64: string) => {
   }
 };
 
-
-
-
 // Handle IPC to toggle recording for google-text-to-speech
 ipcMain.handle('text-input', async (_,text:string) => {
   console.log(text);
@@ -220,7 +242,6 @@ ipcMain.handle('text-input', async (_,text:string) => {
   } 
 });
 
-
 ipcMain.handle("send-audio", async (_, audioData) => {
   try {
 
@@ -248,28 +269,25 @@ ipcMain.on('show-main-window', () => {
   pauseListening();
 });
 
-
-
-
 //SLIDER
 // Sliding Animations
 const slideIn = () => {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   let currentX = width; // Start off-screen
-  const targetX = width - 420; // Target position (visible on-screen)
+  const targetX = width - 400; // Target position (visible on-screen)
 
   return new Promise<void>((resolve) => {
     const interval = setInterval(() => {
       if (currentX > targetX) {
         currentX -= 10; // Adjust step for smoother animation
-        mainWindow?.setBounds({ x: currentX, y: 0, width: 420, height });
+        mainWindow?.setBounds({ x: currentX, y: 0, width: 400, height });
       } else {
         clearInterval(interval);
         resolve();
       }
     }, 2); 
   });
-};
+}; 
 
 const slideOut = () => {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -290,6 +308,7 @@ const slideOut = () => {
 };
 
 
+
 // Handle when all windows are closed
 
 //@ts-ignore
@@ -298,6 +317,7 @@ app.on('window-all-closed', (event) => {
     event.preventDefault();
   }
 });
+
 
 // Clean up resources before quitting
 app.on('before-quit', () => {
