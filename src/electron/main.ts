@@ -9,6 +9,7 @@ import { writeFileSync } from 'fs';
 
 
 let mainWindow: BrowserWindow | null = null;
+let overlayWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false; // Track whether the app is being quit explicitly
 
@@ -19,21 +20,31 @@ let pythonProcess: any = null;
 
 app.on('ready', async() => {
 
-  const iconPath = !isDev() ? path.join(app.getAppPath(), 'dist-react', 'icon.jpg') : path.join(app.getAppPath(), 'public', 'icon.jpg');
+  const iconPath = !isDev() ? path.join(app.getAppPath(), 'dist-react', 'askvoxIcon.ico') : path.join(app.getAppPath(), 'public', 'askvoxIcon.ico');
 
   app.commandLine.appendSwitch('disable-features', 'ChunkedDataPipe');
 
-
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
- 
-  const display = screen.getPrimaryDisplay();
-  console.log('Display Dimensions:', display.workAreaSize);
+
+  //----------------------------ELECTRON WINDOW SETUP----------------------------
+
   // Create the main window
   mainWindow = new BrowserWindow({
+    icon:iconPath,
+    webPreferences: {
+      preload: getPreloadPath(),
+      contextIsolation: true, // Ensure context isolation is enabled
+    nodeIntegration: false,
+    },
+  });
+
+  // Create the overlay window
+  overlayWindow = new BrowserWindow({
+    icon:iconPath,
     width: 400,
-    frame: false,
     height: height,
+    frame: false,
     x: width, // Start off-screen to the right
     y: 0, // Adjust Y position if needed
     alwaysOnTop: true, // Keep the window on top
@@ -46,20 +57,18 @@ app.on('ready', async() => {
   });
 
 
-
+  //-------------------------ENVIRONMENTAL PATHS-------------------------
   // Load React/Vite app
   if (isDev()) {
     mainWindow.loadURL('http://localhost:3000');
+    overlayWindow.loadURL('http://localhost:3000/overlay');
   } else {
     mainWindow.loadFile(path.join(app.getAppPath(), 'dist-react', 'index.html'));
+    //need to build overlay page
+    //overlayWindow.loadFile(path.join(app.getAppPath(), 'dist-react', 'overlay.html'));
   }
 
-  // Wait for the content to load before sliding in
-  mainWindow.webContents.once('did-finish-load', async () => {
-    console.log('Content fully loaded. Sliding in...');
-    await slideIn();
-  });
-
+  //-------------------MAIN WINDOW EVENT HANDLERS---------------------
 
   // Prevent app from quitting when window is closed
   mainWindow.on('close', async(event) => {
@@ -70,60 +79,81 @@ app.on('ready', async() => {
   });
 
 
+  //-------------------------OVERLAY WINDOW EVENT HANDLERS---------------------
+
   // Custom hide function with animation
   async function customHide() {
-    if (mainWindow?.isVisible()) {
+    if (overlayWindow?.isVisible()) {
       console.log('Hiding window with animation...');
   
-      // Get the current position of the window
-      const { x, y } = mainWindow.getBounds();
+      // Get the initial position of the window
+      const { x, y } = overlayWindow.getBounds();
       console.log(`Window position before hiding: x=${x}, y=${y}`);
   
       // Wait for the slide-out animation to finish
       await slideOut();
-
-      // Get the new position of the window
-      const { x: newX, y: newY } = mainWindow.getBounds();
-      console.log(`Window position after hiding: x=${newX}, y=${newY}`);
-
-      mainWindow.setBounds({ x: newX, y: newY});
   
-      // Now hide the window
-      mainWindow.hide();
+      // Hide the window
+      overlayWindow.hide();
       console.log('Window hidden.');
     }
   }
-
+  
   // Register a global shortcut for Alt+V
   globalShortcut.register('Alt+V', () => {
-    if (mainWindow) {
-      if (mainWindow.isVisible()) {
+    if (overlayWindow) {
+      if (overlayWindow.isVisible()) {
         console.log('Alt+V pressed. Hiding the window...');
         customHide(); // Hide the window
       } else {
         console.log('Alt+V pressed. Showing the window...');
         
-        mainWindow.show(); // Show the window
+        overlayWindow.show(); // Show the window
       }
     }
   });
 
   // Handle showing the main window
-  mainWindow.on('show', async() => {
+  overlayWindow.on('show', async() => {
     pauseListening(); // Pause the Python process when the window is shown
     await slideIn();
   });
 
   // Handle hiding the main window
-  mainWindow.on('hide', async() => {
+  overlayWindow.on('hide', async() => {
     resumeListening(); // Resume the Python process when the window is hidden
-    await slideOut();
   });
 
+//----------------------------SPAWN PYTHON PROCESS----------------------------
+
+  // Spawn the Python process
+  pythonProcess = spawn(pythonInterpreterPath, [pythonScriptPath], {
+    stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the Python process
+  });
+  // Listen for messages from Python
+  pythonProcess.stdout.on('data', (data: Buffer) => {
+    const message = data.toString().trim();
+    console.log('Message from Python:', message);
+
+    if (message === 'wake-up') {
+      overlayWindow?.show(); // Wake up the Electron window
+    }
+  });
+  // Log messages from Python's stderr
+  pythonProcess.stderr.on('data', (data: Buffer) => {
+    console.error('Python Log:', data.toString());
+  });
+  pythonProcess.on('close', (code: number) => {
+    console.log(`Python process exited with code ${code}`);
+  });
+
+  //----------------------------TRAY ICON SETUP----------------------------
   // Create the tray icon
   tray = new Tray(iconPath);
   tray.setToolTip('My Electron App'); // Tooltip for the tray icon
 
+
+  //tray icon
   const trayMenu = Menu.buildFromTemplate([
     {
       label: 'Show App',
@@ -145,36 +175,8 @@ app.on('ready', async() => {
   // Restore app window on tray icon double-click
   tray.on('double-click', async() => {
     mainWindow?.show();
-    pauseListening();
-    await slideIn();
   });
 
-  // Spawn the Python process
-  pythonProcess = spawn(pythonInterpreterPath, [pythonScriptPath], {
-    stdio: ['pipe', 'pipe', 'pipe'], // Enable communication with the Python process
-  });
-
-
-  pauseListening();
-
-  // Listen for messages from Python
-  pythonProcess.stdout.on('data', (data: Buffer) => {
-    const message = data.toString().trim();
-    console.log('Message from Python:', message);
-
-    if (message === 'wake-up') {
-      mainWindow?.show(); // Wake up the Electron window
-    }
-  });
-
-  // Log messages from Python's stderr
-  pythonProcess.stderr.on('data', (data: Buffer) => {
-    console.error('Python Log:', data.toString());
-  });
-
-  pythonProcess.on('close', (code: number) => {
-    console.log(`Python process exited with code ${code}`);
-  });
 });
 
 // Pause Python listening
@@ -265,7 +267,7 @@ ipcMain.handle("send-audio", async (_, audioData) => {
 
 // Handle IPC to show the main window
 ipcMain.on('show-main-window', () => {
-  mainWindow?.show();
+  overlayWindow?.show();
   pauseListening();
 });
 
@@ -280,7 +282,7 @@ const slideIn = () => {
     const interval = setInterval(() => {
       if (currentX > targetX) {
         currentX -= 10; // Adjust step for smoother animation
-        mainWindow?.setBounds({ x: currentX, y: 0, width: 400, height });
+        overlayWindow?.setBounds({ x: currentX, y: 0, width: 400, height });
       } else {
         clearInterval(interval);
         resolve();
@@ -298,7 +300,7 @@ const slideOut = () => {
     const interval = setInterval(() => {
       if (currentX < targetX) {
         currentX += 10; // Adjust step for smoother animation
-        mainWindow?.setBounds({ x: currentX, y: 0, width: 400, height });
+        overlayWindow?.setBounds({ x: currentX, y: 0, width: 400, height });
       } else {
         clearInterval(interval);
         resolve();
@@ -307,17 +309,13 @@ const slideOut = () => {
   });
 };
 
-
-
 // Handle when all windows are closed
-
 //@ts-ignore
 app.on('window-all-closed', (event) => {
   if (!isQuitting) {
     event.preventDefault();
   }
 });
-
 
 // Clean up resources before quitting
 app.on('before-quit', () => {
