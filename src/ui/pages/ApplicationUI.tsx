@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import "./ApplicationUI.css";
+import LogoutModal from "./LogoutModal";
+
 const ApplicationUI = () => {
   const [messages, setMessages] = useState([
     { role: "Vox", content: "Hello! How can I assist you today?" },
@@ -10,12 +13,41 @@ const ApplicationUI = () => {
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarVisible((prev) => !prev);
+  };
+
+  // Handle screen resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 800) {
+        // Only set isSidebarVisible to true if the window is large
+        setIsSidebarVisible(true);
+      }
+    };
+
+    // Initial check
+    handleResize();
+
+    // Attach event listener
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Scroll to the latest message
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
 
   // Handle text message submission
   const sendMessage = async () => {
@@ -113,57 +145,106 @@ const ApplicationUI = () => {
     };
   };
 
+  // Handle logout
+  const handleLogout = () => {
+    setIsModalVisible(true); // Show the modal
+  };
+
+  const handleConfirmLogout = () => {
+    setIsModalVisible(false); // Close the modal
+    window.location.href = "/"; // Redirect to homepage or logout page
+  };
+
+  const handleCancelLogout = () => {
+    setIsModalVisible(false); // Close the modal without doing anything
+  };
+
   return (
-    <div className="flex flex-col h-screen items-center justify-center bg-gray-900 text-white">
-      {/* Header */}
-      <div className="p-4">
-        <h1 className="text-2xl font-bold">AskVox</h1>
+    <div
+      className={`app-container ${!isSidebarVisible ? "sidebar-hidden" : ""}`}
+    >
+      <button className="sidebar-toggle" onClick={toggleSidebar}>
+        <img
+          src={
+            isSidebarVisible
+              ? "/public/sidebar_open.png"
+              : "/public/sidebar_close.png"
+          }
+          alt={isSidebarVisible ? "Close Sidebar" : "Open Sidebar"}
+          className="toggle-icon"
+        />
+      </button>
+
+      <div className={`sidebar ${!isSidebarVisible ? "hidden" : ""}`}>
+        <h2>History</h2>
+        <ul>
+          <li>Composite bow stats</li>
+          <li>How do I beat Battlemage</li>
+          <li>How do I get to Abyssal Woods</li>
+        </ul>
+        <div className="upgrade-plan">Upgrade plan</div>
       </div>
-      {/* Chat Area */}
-      <div className="flex-grow overflow-y-auto p-4 space-y-4 max-h-[70vh] scrollbar-hide">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${
-              message.role === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
+
+      {/* Main Content */}
+      <div className={`main-content ${!isSidebarVisible ? "centered" : ""}`}>
+        {/* Top-right Profile Dropdown */}
+        <div className="profile-container">
+          <div className="profile-icon" onClick={toggleDropdown}>
+            <img src="/public/user.png" alt="Profile" className="icon" />
+            {dropdownOpen && (
+              <div className="dropdown-menu">
+                <ul>
+                  <li>Settings</li>
+                  <li>Upgrade Plan</li>
+                  <li onClick={handleLogout}>Logout</li>
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Greeting */}
+        <div className="greeting">
+          <h1>
+            Hi, <b>&lt;username&gt;</b>
+          </h1>
+        </div>
+
+        {/* Chat Area */}
+        <div className="chat-area scrollbar-hide">
+          {messages.map((message, index) => (
             <div
-              className={`max-w-xs px-4 py-2 rounded-lg ${
-                message.role === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-700 text-gray-200"
+              key={index}
+              className={`chat-message ${
+                message.role === "user" ? "user" : "assistant"
               }`}
             >
-              {message.content}
+              <div className={`chat-bubble ${message.role}`}>
+                {message.content}
+              </div>
             </div>
-          </div>
-        ))}
-        {/* Loading Animation */}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="max-w-xs px-4 py-2 rounded-lg bg-gray-700 text-gray-200">
-              <span className="animate-pulse">...</span>
+          ))}
+          {/* Loading Animation */}
+          {isLoading && (
+            <div className="chat-message assistant">
+              <div className="chat-bubble assistant">
+                <span className="animate-pulse">...</span>
+              </div>
             </div>
-          </div>
-        )}
-        <div ref={chatEndRef} />
-      </div>
-      {/* Input Area */}
-      <div className="p-4 bg-gray-800 rounded-lg w-full max-w-md">
-        <div className="flex items-center space-x-4">
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Input Area */}
+        <div className="input-area">
           <input
             type="text"
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            className="flex-grow p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Type a message..."
+            placeholder="Ask me anything"
           />
-          <button
-            onClick={sendMessage}
-            className="px-4 py-2 bg-blue-500 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
+          <button onClick={sendMessage} className="send-button">
             Send
           </button>
           <button
@@ -176,6 +257,13 @@ const ApplicationUI = () => {
           </button>
         </div>
       </div>
+      {/* Logout Confirmation Modal */}
+      {isModalVisible && (
+        <LogoutModal
+          onConfirm={handleConfirmLogout}
+          onCancel={handleCancelLogout}
+        />
+      )}
     </div>
   );
 };

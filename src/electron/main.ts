@@ -31,6 +31,10 @@ app.on('ready', async() => {
 
   // Create the main window
   mainWindow = new BrowserWindow({
+    width: 800,         // Initial window width
+    height: 600,        // Initial window height
+    minWidth: 800,      // Minimum window width (absolute size)
+    minHeight: 600,     // Minimum window height (absolute size)
     icon:iconPath,
     webPreferences: {
       preload: getPreloadPath(),
@@ -42,7 +46,7 @@ app.on('ready', async() => {
   // Create the overlay window
   overlayWindow = new BrowserWindow({
     icon:iconPath,
-    width: 400,
+    width: 450,
     height: height,
     frame: false,
     x: width, // Start off-screen to the right
@@ -277,13 +281,13 @@ ipcMain.on('show-main-window', () => {
 const slideIn = () => {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   let currentX = width; // Start off-screen
-  const targetX = width - 400; // Target position (visible on-screen)
+  const targetX = width - 450; // Target position (visible on-screen)
 
   return new Promise<void>((resolve) => {
     const interval = setInterval(() => {
       if (currentX > targetX) {
         currentX -= 10; // Adjust step for smoother animation
-        overlayWindow?.setBounds({ x: currentX, y: 0, width: 400, height });
+        overlayWindow?.setBounds({ x: currentX, y: 0, width: 450, height });
       } else {
         clearInterval(interval);
         resolve();
@@ -294,14 +298,14 @@ const slideIn = () => {
 
 const slideOut = () => {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  let currentX = width - 400; // Start on-screen
+  let currentX = width - 450; // Start on-screen
   const targetX = width; // Move completely off-screen
 
   return new Promise<void>((resolve) => {
     const interval = setInterval(() => {
       if (currentX < targetX) {
         currentX += 10; // Adjust step for smoother animation
-        overlayWindow?.setBounds({ x: currentX, y: 0, width: 400, height });
+        overlayWindow?.setBounds({ x: currentX, y: 0, width: 450, height });
       } else {
         clearInterval(interval);
         resolve();

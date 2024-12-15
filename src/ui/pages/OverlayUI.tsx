@@ -150,14 +150,14 @@ const OverlayUI = () => {
         <div ref={chatEndRef} />
       </div>
       {/* Input Area */}
-      <div className="p-4 bg-gray-800 rounded-lg w-full max-w-md">
+      <div className="p-4 bg-gray-800 rounded-lg w-full  max-w-md">
         <div className="flex items-center space-x-4">
           <input
             type="text"
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            className="flex-grow p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-grow  p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Type a message..."
           />
           <button
