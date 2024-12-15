@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css"; // Import the CSS file
+import LogoutModal from './LogoutModal'; // Import the LogoutModal components
 
 function App() {
   const [messages, setMessages] = useState([
@@ -11,6 +12,32 @@ function App() {
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarVisible((prev) => !prev);
+  };
+
+  // Handle screen resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 800) {
+        // Only set isSidebarVisible to true if the window is large
+        setIsSidebarVisible(true);
+      }
+    };
+  
+    // Initial check
+    handleResize();
+  
+    // Attach event listener
+    window.addEventListener("resize", handleResize);
+  
+    // Cleanup
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Scroll to the latest message
   useEffect(() => {
@@ -41,18 +68,33 @@ function App() {
   };
 
   const handleLogout = () => {
-    // Show confirmation dialog
-    const confirmLogout = window.confirm("Are you sure you want to log out?");
-    if (confirmLogout) {
-      // Redirect to the homepage (assuming the homepage is the root)
-      window.location.href = "/";
-    }
+    setIsModalVisible(true); // Show the modal
+  };
+
+  const handleConfirmLogout = () => {
+    setIsModalVisible(false); // Close the modal
+    window.location.href = "/"; // Redirect to homepage or logout page
+  };
+
+  const handleCancelLogout = () => {
+    setIsModalVisible(false); // Close the modal without doing anything
   };
 
   return (
-    <div className="app-container">
-      {/* Sidebar */}
-      <div className="sidebar">
+    <div className={`app-container ${!isSidebarVisible ? "sidebar-hidden" : ""}`}>
+      <button className="sidebar-toggle" onClick={toggleSidebar}>
+        <img
+          src={
+            isSidebarVisible
+              ? "/src/ui/Assets/Images/sidebar_open.png"
+              : "/src/ui/Assets/Images/sidebar_close.png"
+          }
+          alt={isSidebarVisible ? "Close Sidebar" : "Open Sidebar"}
+          className="toggle-icon"
+        />
+      </button>
+
+      <div className={`sidebar ${!isSidebarVisible ? "hidden" : ""}`}>
         <h2>History</h2>
         <ul>
           <li>Composite bow stats</li>
@@ -63,23 +105,25 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div className="main-content">
-        {/* Top-right Dropdown */}
-        <div className="profile-icon" onClick={toggleDropdown}>
-          <img
-            src="https://via.placeholder.com/32"
-            alt="Profile"
-            className="icon"
-          />
-          {dropdownOpen && (
-            <div className="dropdown-menu">
-              <ul>
-                <li>Settings</li>
-                <li>Upgrade Plan</li>
-                <li onClick={handleLogout}>Logout</li> {/* Attach handleLogout here */}
-              </ul>
-            </div>
-          )}
+      <div className={`main-content ${!isSidebarVisible ? "centered" : ""}`}>
+        {/* Top-right Profile Dropdown */}
+        <div className="profile-container">
+          <div className="profile-icon" onClick={toggleDropdown}>
+            <img
+              src="/src/ui/Assets/Images/user.png"
+              alt="Profile"
+              className="icon"
+            />
+            {dropdownOpen && (
+              <div className="dropdown-menu">
+                <ul>
+                  <li>Settings</li>
+                  <li>Upgrade Plan</li>
+                  <li onClick={handleLogout}>Logout</li>
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Greeting */}
@@ -89,16 +133,14 @@ function App() {
           </h1>
         </div>
 
-        {/* Chat Area */}
+         {/* Chat Area */}
         <div className="chat-area">
           {messages.map((message, index) => (
             <div
               key={index}
               className={`chat-message ${message.role === "user" ? "user" : "assistant"}`}
             >
-              <div className={`chat-bubble ${message.role}`}>
-                {message.content}
-              </div>
+              <div className={`chat-bubble ${message.role}`}>{message.content}</div>
             </div>
           ))}
           <div ref={chatEndRef} />
@@ -118,6 +160,10 @@ function App() {
           </button>
         </div>
       </div>
+      {/* Logout Confirmation Modal */}
+      {isModalVisible && (
+        <LogoutModal onConfirm={handleConfirmLogout} onCancel={handleCancelLogout} />
+      )}
     </div>
   );
 }
