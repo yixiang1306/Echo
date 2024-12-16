@@ -1,15 +1,14 @@
+import axios from 'axios';
 import { spawn } from 'child_process';
-import { app, BrowserWindow, ipcMain, Menu, Tray,screen, globalShortcut } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, Menu, screen, Tray } from 'electron';
 import path from 'path';
 import { getPreloadPath } from './pathResolver.js';
 import { isDev } from './util.js';
-import axios from 'axios';
-import sound from 'sound-play';
-import { writeFileSync } from 'fs';
 
 
 let mainWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
+let audioWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false; // Track whether the app is being quit explicitly
 
@@ -49,6 +48,7 @@ app.on('ready', async() => {
     width: 450,
     height: height,
     frame: false,
+    show: false,
     x: width, // Start off-screen to the right
     y: 0, // Adjust Y position if needed
     alwaysOnTop: true, // Keep the window on top
@@ -61,12 +61,24 @@ app.on('ready', async() => {
     },
   });
 
+  //Create hidden audio window
+  audioWindow = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: getPreloadPath(),
+    },
+  });
+
+
 
   //-------------------------ENVIRONMENTAL PATHS-------------------------
   // Load React/Vite app
   if (isDev()) {
     mainWindow.loadURL('http://localhost:3000');
     overlayWindow.loadURL('http://localhost:3000/overlay');
+    audioWindow.loadURL('http://localhost:3000/audio');
   } else {
     mainWindow.loadFile(path.join(app.getAppPath(), 'dist-react', 'index.html'));
     //need to build overlay page
@@ -118,6 +130,12 @@ app.on('ready', async() => {
     }
   });
 
+  globalShortcut.register('Alt+C', () => {
+    if(audioWindow){
+      audioWindow.webContents.send('stop-audio');
+    }
+  });
+
   // Handle showing the main window
   overlayWindow.on('show', async() => {
     pauseListening(); // Pause the Python process when the window is shown
@@ -156,8 +174,6 @@ app.on('ready', async() => {
   // Create the tray icon
   tray = new Tray(iconPath);
   tray.setToolTip('My Electron App'); // Tooltip for the tray icon
-
-
   //tray icon
   const trayMenu = Menu.buildFromTemplate([
     {
@@ -174,9 +190,7 @@ app.on('ready', async() => {
       },
     },
   ]);
-
   tray.setContextMenu(trayMenu);
-
   // Restore app window on tray icon double-click
   tray.on('double-click', async() => {
     mainWindow?.show();
@@ -184,6 +198,7 @@ app.on('ready', async() => {
 
 });
 
+//----------------------WAKEUP FUNCTIONALITY----------------------
 // Pause Python listening
 const pauseListening = () => {
   if (pythonProcess) {
@@ -200,27 +215,20 @@ const resumeListening = () => {
   }
 };
 
-// Function to play audio from Base64 string
-const playAudio = (audioBase64: string) => {
-  try {
-    // Decode Base64 audio and save it to a temporary file
-    const audioBuffer = Buffer.from(audioBase64, 'base64');
-    const tempAudioPath = path.join(app.getPath('temp'), 'response_audio.mp3');
-    writeFileSync(tempAudioPath, audioBuffer);
-
-    // Play the audio file
-    sound.play(tempAudioPath)
-      .then(() => {
-        console.log('Audio playback completed.');
-      })
-      .catch((err) => {
-        console.error('Error during audio playback:', err);
-      });
-  } catch (error) {
-    console.error('Error in playAudio:', error);
+//----------------------------AUDIO FUNCTIONALITY----------------------------
+ipcMain.handle("play-audio", (_, audioBase64: string) => {
+  if (mainWindow) {
+    mainWindow.webContents.send("play-audio", audioBase64);
   }
-};
+});
 
+ipcMain.handle("stop-audio", () => {
+  if (mainWindow) {
+    mainWindow.webContents.send("stop-audio");
+  }
+});
+  
+//-------------------------SERVER COMMUNICATION FUNCTIONALITY----------------------
 // Handle IPC to toggle recording for google-text-to-speech
 ipcMain.handle('text-input', async (_,text:string) => {
   console.log(text);
@@ -240,7 +248,9 @@ ipcMain.handle('text-input', async (_,text:string) => {
     const audioBase64 = ttsResponse.data.audio_base64;
 
     console.log('Playing audio for response...');
-    playAudio(audioBase64); // Play the audio
+    if (audioWindow) {
+      audioWindow.webContents.send('play-audio', audioBase64);
+    }
 
     return response.data.llm_response;
   } catch (error) {
@@ -270,13 +280,8 @@ ipcMain.handle("send-audio", async (_, audioData) => {
   }
 });
 
-// Handle IPC to show the main window
-ipcMain.on('show-main-window', () => {
-  overlayWindow?.show();
-  pauseListening();
-});
 
-//SLIDER
+//--------------------------SLIDER--------------------------------
 // Sliding Animations
 const slideIn = () => {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -314,6 +319,9 @@ const slideOut = () => {
   });
 };
 
+
+
+//--------------------------WINDOW CLOSE--------------------------
 // Handle when all windows are closed
 //@ts-ignore
 app.on('window-all-closed', (event) => {

@@ -119,7 +119,7 @@ def text_to_speech():
         # Configure voice parameters
         voice = texttospeech.VoiceSelectionParams(
             language_code="en-US",
-            name="en-US-Wavenet-D",  # Choose a preferred voice
+            name="en-US-Journey-F",  # Choose a preferred voice
             ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
         )
 
