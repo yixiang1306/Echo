@@ -1,51 +1,47 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Signup.css"; // Import the CSS file
+import { supabase } from "../supabaseClient";
 
 function Signup() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const [fistname, setFistname] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [message, setMessage] = useState("");
 
-  const handleSignup = async () => {
-    if (!username || !email || !password || !confirmPassword) {
-      setErrorMessage("All fields are required.");
-      return;
-    }
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    if (password !== confirmPassword) {
-      setErrorMessage("Passwords do not match.");
-      return;
-    }
+    const { data: signupData, error: signupError } = await supabase.auth.signUp(
+      {
+        email,
+        password,
+      }
+    );
+    setMessage(
+      signupError
+        ? signupError.message
+        : "Sign-up successful! Check your email."
+    );
 
-    if (!validateEmail(email)) {
-      setErrorMessage("Invalid email format.");
-      return;
-    }
-
-    const isSignedUp = await mockSignup(username, email, password);
-
-    if (isSignedUp) {
-      navigate("/login"); // Redirect to login page after successful signup
-    } else {
-      setErrorMessage("Error during signup. Please try again.");
-    }
-  };
-
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const mockSignup = (username: string, email: string, password: string) => {
-    return new Promise<boolean>((resolve) => {
-      setTimeout(() => {
-        resolve(username !== "existingUser");
-      }, 1000);
-    });
+    await supabase
+      .from("User")
+      .insert([
+        {
+          accountId: signupData?.user?.id,
+          email: email,
+          firstName: fistname,
+          lastName: lastName,
+          createdAt: signupData?.user?.created_at,
+          updatedAt: new Date(),
+          status: "ACTIVE",
+          userType: "FREE",
+        },
+      ])
+      .select();
   };
 
   return (
@@ -64,13 +60,23 @@ function Signup() {
         {/* Input Fields */}
         <input
           type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Username"
+          required
+          value={fistname}
+          onChange={(e) => setFistname(e.target.value)}
+          placeholder="First Name"
+          className="input-field"
+        />
+        <input
+          type="text"
+          required
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          placeholder="Last Name"
           className="input-field"
         />
         <input
           type="email"
+          required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
@@ -78,6 +84,7 @@ function Signup() {
         />
         <input
           type="password"
+          required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
@@ -85,6 +92,7 @@ function Signup() {
         />
         <input
           type="password"
+          required
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder="Re-type Password"
@@ -92,10 +100,10 @@ function Signup() {
         />
 
         {/* Error Message */}
-        {errorMessage && <div className="error-message">{errorMessage}</div>}
+        {message && <div className="error-message">{message}</div>}
 
         {/* Button */}
-        <button onClick={handleSignup} className="signup-button">
+        <button onClick={handleSignUp} className="signup-button">
           Sign Up
         </button>
       </div>
