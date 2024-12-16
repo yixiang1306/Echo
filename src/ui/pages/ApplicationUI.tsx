@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import "./ApplicationUI.css";
+import { useNavigate } from "react-router-dom";
 import LogoutModal from "./LogoutModal";
 
 const ApplicationUI = () => {
@@ -8,11 +8,12 @@ const ApplicationUI = () => {
   ]);
   const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Loading state
+  const [isLoading, setIsLoading] = useState(false);
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
+  const navigate = useNavigate();
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -21,26 +22,19 @@ const ApplicationUI = () => {
     setIsSidebarVisible((prev) => !prev);
   };
 
-  // Handle screen resize
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth > 800) {
-        // Only set isSidebarVisible to true if the window is large
         setIsSidebarVisible(true);
       }
     };
 
-    // Initial check
     handleResize();
-
-    // Attach event listener
     window.addEventListener("resize", handleResize);
 
-    // Cleanup
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Scroll to the latest message
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -49,21 +43,16 @@ const ApplicationUI = () => {
 
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
 
-  // Handle text message submission
   const sendMessage = async () => {
     if (userInput.trim() === "") return;
 
-    // Add user message to chat
     setMessages((prev) => [...prev, { role: "user", content: userInput }]);
     setUserInput("");
+    setIsLoading(true);
 
-    setIsLoading(true); // Start loading animation
-
-    // Send text to backend and wait for the response
     try {
       //@ts-ignore
       const response = await window.electronAPI.textInput(userInput);
-
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: response },
@@ -75,11 +64,10 @@ const ApplicationUI = () => {
         { role: "Vox", content: "Error processing your request." },
       ]);
     } finally {
-      setIsLoading(false); // Stop loading animation
+      setIsLoading(false);
     }
   };
 
-  // Handle recording toggle
   const handleRecord = () => {
     //@ts-ignore
     window.electronAPI.toggleRecording(!isRecording);
@@ -109,16 +97,15 @@ const ApplicationUI = () => {
     setIsRecording((prev) => !prev);
   };
 
-  // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
-    setIsLoading(true); // Start loading animation
+    setIsLoading(true);
 
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
       if (reader.result === null) return;
 
-      const base64Audio = (reader.result as string).split(",")[1]; // Extract base64 data
+      const base64Audio = (reader.result as string).split(",")[1];
 
       try {
         //@ts-ignore
@@ -140,30 +127,40 @@ const ApplicationUI = () => {
           { role: "assistant", content: "Error processing your request." },
         ]);
       } finally {
-        setIsLoading(false); // Stop loading animation
+        setIsLoading(false);
       }
     };
   };
 
-  // Handle logout
   const handleLogout = () => {
-    setIsModalVisible(true); // Show the modal
+    setIsModalVisible(true);
   };
 
   const handleConfirmLogout = () => {
-    setIsModalVisible(false); // Close the modal
-    window.location.href = "/"; // Redirect to homepage or logout page
+    setIsModalVisible(false);
+    window.location.href = "/";
   };
 
   const handleCancelLogout = () => {
-    setIsModalVisible(false); // Close the modal without doing anything
+    setIsModalVisible(false);
+  };
+
+  const goToUpgrade = () => {
+    navigate("/upgrade");
+  };
+
+  const goToSettings = () => {
+    navigate("/settings");
   };
 
   return (
     <div
-      className={`app-container ${!isSidebarVisible ? "sidebar-hidden" : ""}`}
+      className={`flex h-screen ${!isSidebarVisible ? "sidebar-hidden" : ""}`}
     >
-      <button className="sidebar-toggle" onClick={toggleSidebar}>
+      <button
+        className="fixed top-4 left-4 z-50 bg-transparent border-none cursor-pointer"
+        onClick={toggleSidebar}
+      >
         <img
           src={
             isSidebarVisible
@@ -171,93 +168,126 @@ const ApplicationUI = () => {
               : "/public/sidebar_close.png"
           }
           alt={isSidebarVisible ? "Close Sidebar" : "Open Sidebar"}
-          className="toggle-icon"
+          className="w-8 h-8"
         />
       </button>
 
-      <div className={`sidebar ${!isSidebarVisible ? "hidden" : ""}`}>
-        <h2>History</h2>
-        <ul>
+      <div
+        className={`flex flex-col justify-between bg-gray-900 text-white p-4 transition-all duration-300 ${
+          isSidebarVisible ? "w-1/5" : "hidden"
+        }`}
+      >
+        <h2 className="pt-12 mb-4">History</h2>
+        <ul className="space-y-4">
           <li>Composite bow stats</li>
           <li>How do I beat Battlemage</li>
           <li>How do I get to Abyssal Woods</li>
         </ul>
-        <div className="upgrade-plan">Upgrade plan</div>
+        <button
+          onClick={goToUpgrade}
+          className="mt-auto bg-purple-600 hover:bg-purple-700 text-white text-center py-2 px-4 rounded-lg"
+        >
+          Upgrade Plan
+        </button>
       </div>
 
-      {/* Main Content */}
-      <div className={`main-content ${!isSidebarVisible ? "centered" : ""}`}>
-        {/* Top-right Profile Dropdown */}
-        <div className="profile-container">
-          <div className="profile-icon" onClick={toggleDropdown}>
-            <img src="/public/user.png" alt="Profile" className="icon" />
+      <div className="flex-grow flex flex-col bg-gray-100 p-8 relative">
+        <div className="absolute top-4 right-4">
+          <div className="relative">
+            <img
+              src="/public/user.png"
+              alt="Profile"
+              className="w-8 h-8 rounded-full cursor-pointer"
+              onClick={toggleDropdown}
+            />
             {dropdownOpen && (
-              <div className="dropdown-menu">
-                <ul>
-                  <li>Settings</li>
-                  <li>Upgrade Plan</li>
-                  <li onClick={handleLogout}>Logout</li>
+              <div className="absolute right-0 mt-2 bg-white border rounded-lg shadow-lg w-36">
+                <ul className="py-1 text-gray-700">
+                  <li
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                    onClick={goToSettings}
+                  >
+                    Settings
+                  </li>
+                  <li
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                    onClick={goToUpgrade}
+                  >
+                    Upgrade Plan
+                  </li>
+                  <li
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </li>
                 </ul>
               </div>
             )}
           </div>
         </div>
 
-        {/* Greeting */}
-        <div className="greeting">
-          <h1>
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold">
             Hi, <b>&lt;username&gt;</b>
           </h1>
         </div>
 
-        {/* Chat Area */}
-        <div className="chat-area scrollbar-hide">
+        <div className="flex-1 overflow-y-auto mb-4 scrollbar-hide">
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`chat-message ${
-                message.role === "user" ? "user" : "assistant"
-              }`}
+              className={`flex ${
+                message.role === "user" ? "justify-end" : "justify-start"
+              } mb-4`}
             >
-              <div className={`chat-bubble ${message.role}`}>
+              <div
+                className={`max-w-xs px-4 py-2 rounded-lg shadow-md ${
+                  message.role === "user"
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-200 text-gray-800"
+                }`}
+              >
                 {message.content}
               </div>
             </div>
           ))}
-          {/* Loading Animation */}
           {isLoading && (
-            <div className="chat-message assistant">
-              <div className="chat-bubble assistant">
-                <span className="animate-pulse">...</span>
+            <div className="flex justify-start mb-4">
+              <div className="max-w-xs px-4 py-2 rounded-lg shadow-md bg-gray-200 text-gray-800 animate-pulse">
+                ...
               </div>
             </div>
           )}
           <div ref={chatEndRef} />
         </div>
 
-        {/* Input Area */}
-        <div className="input-area">
+        <div className="flex gap-4 sticky bottom-0 bg-gray-100 p-4">
           <input
             type="text"
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder="Ask me anything"
+            className="flex-grow px-4 py-2 border rounded-lg"
           />
-          <button onClick={sendMessage} className="send-button">
+          <button
+            onClick={sendMessage}
+            className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
+          >
             Send
           </button>
           <button
             onClick={handleRecord}
-            className={`px-4 py-2 rounded-lg ${
+            className={`py-2 px-4 rounded-lg ${
               isRecording ? "bg-red-600" : "bg-green-600"
-            } hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+            } hover:bg-blue-700`}
           >
             {isRecording ? "Stop" : "Record"}
           </button>
         </div>
       </div>
-      {/* Logout Confirmation Modal */}
+
       {isModalVisible && (
         <LogoutModal
           onConfirm={handleConfirmLogout}
