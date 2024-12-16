@@ -33,17 +33,17 @@ function Login() {
   // };
 
   const handleSignIn = async (e: React.FormEvent) => {
-    // e.preventDefault();
-    // const { data, error } = await supabase.auth.signInWithPassword({
-    //   email,
-    //   password,
-    // });
-    // setMessage(error ? error.message : "Login successful!");
-    // if (error === null) {
-    //   localStorage.setItem("accountId", data.user.id || "");
-    //   navigate("/application");
-    // }
-    navigate("/application");
+    e.preventDefault();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setMessage(error ? error.message : "Login successful!");
+    if (error === null) {
+      localStorage.setItem("accountId", data.user.id || "");
+      navigate("/application");
+    }
+    // navigate("/application");
   };
 
   return (
