@@ -7,7 +7,7 @@ import Start from "./pages/Start";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Upgrade from "./pages/Upgrade";
-import Settings from "./pages/settings";
+import Settings from "./pages/Settings";
 import UpdateAcc from "./pages/UpdateAcc";
 
 createRoot(document.getElementById("root")!).render(

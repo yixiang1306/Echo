@@ -1,21 +1,38 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaEye, FaEyeSlash } from "react-icons/fa"; // Import icons
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+import UpdateAccModal from "./UpdateAccModal";
+import DeleteAccModal from "./DeleteAccModal";
 
 function UpdateAcc() {
-    const navigate = useNavigate();
-    const [username, setUsername] = useState("");
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [showNewPassword, setShowNewPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Modal states
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
 
   const handleUpdate = () => {
-    alert("Profile updated successfully!");
+    setShowUpdateModal(true);
   };
 
   const handleDelete = () => {
-    alert("Account deleted!");
+    setShowDeleteModal(true);
+  };
+
+  const confirmUpdate = () => {
+    setShowUpdateModal(false);
+    setFeedbackMessage("Profile updated successfully!");
+  };
+
+  const confirmDelete = () => {
+    setShowDeleteModal(false);
+    setFeedbackMessage("Account deleted!");
   };
 
   return (
@@ -40,6 +57,10 @@ function UpdateAcc() {
       {/* Header */}
       <h1 className="text-3xl font-bold mb-8">Profile</h1>
 
+      {feedbackMessage && (
+        <p className="text-green-600 font-semibold mb-4">{feedbackMessage}</p>
+      )}
+
       {/* Form Container */}
       <div className="w-full max-w-md space-y-4">
         <input
@@ -49,6 +70,7 @@ function UpdateAcc() {
           onChange={(e) => setUsername(e.target.value)}
           className="w-full p-3 bg-gray-100 rounded-lg outline-none"
         />
+
         {/* New Password Input */}
         <div className="relative">
           <input
@@ -99,6 +121,20 @@ function UpdateAcc() {
           </button>
         </div>
       </div>
+
+      {/* Modals */}
+      {showUpdateModal && (
+        <UpdateAccModal
+          onConfirm={confirmUpdate}
+          onCancel={() => setShowUpdateModal(false)}
+        />
+      )}
+      {showDeleteModal && (
+        <DeleteAccModal
+          onConfirm={confirmDelete}
+          onCancel={() => setShowDeleteModal(false)}
+        />
+      )}
     </div>
   );
 }
