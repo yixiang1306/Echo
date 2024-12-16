@@ -1,34 +1,49 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css"; // Import the external CSS file
+import { supabase } from "../supabaseClient";
 
 function Login() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [email, setEmail] = useState<string>("");
+  const [message, setMessage] = useState("");
+  const [password, setPassword] = useState<string>("");
 
-  const handleLogin = async () => {
-    if (!username || !password) {
-      setErrorMessage("Both fields are required.");
-      return;
-    }
+  // const handleLogin = async () => {
+  //   if (!email || !password) {
+  //     setMessage("Both fields are required.");
+  //     return;
+  //   }
 
-    const isAuthenticated = await mockLogin(username, password);
+  //   const isAuthenticated = await mockLogin(email, password);
 
-    if (isAuthenticated) {
-      navigate("/application"); // Redirect to the app page after successful login
-    } else {
-      setErrorMessage("Invalid credentials. Please try again.");
-    }
-  };
+  //   if (isAuthenticated) {
+  //     navigate("/application"); // Redirect to the app page after successful login
+  //   } else {
+  //     setMessage("Invalid credentials. Please try again.");
+  //   }
+  // };
 
-  const mockLogin = (username: string, password: string) => {
-    return new Promise<boolean>((resolve) => {
-      setTimeout(() => {
-        resolve(username === "u" && password === "p");
-      }, 1000);
-    });
+  // const mockLogin = (email: string, password: string) => {
+  //   return new Promise<boolean>((resolve) => {
+  //     setTimeout(() => {
+  //       resolve(email === "u" && password === "p");
+  //     }, 1000);
+  //   });
+  // };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    // e.preventDefault();
+    // const { data, error } = await supabase.auth.signInWithPassword({
+    //   email,
+    //   password,
+    // });
+    // setMessage(error ? error.message : "Login successful!");
+    // if (error === null) {
+    //   localStorage.setItem("accountId", data.user.id || "");
+    //   navigate("/application");
+    // }
+    navigate("/application");
   };
 
   return (
@@ -44,9 +59,9 @@ function Login() {
         <h1 className="login-title">Login Here</h1>
         <input
           type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Username"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="email"
           className="input-field"
         />
         <input
@@ -56,8 +71,8 @@ function Login() {
           placeholder="Password"
           className="input-field"
         />
-        {errorMessage && <div className="error-message">{errorMessage}</div>}
-        <button onClick={handleLogin} className="login-button">
+        {message && <div className="error-message">{message}</div>}
+        <button onClick={handleSignIn} className="login-button">
           Login
         </button>
         <div className="divider">

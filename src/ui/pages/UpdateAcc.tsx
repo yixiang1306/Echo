@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 import DeleteAccModal from "./DeleteAccModal";
 import UpdateAccModal from "./UpdateAccModal";
+import { supabase } from "../supabaseClient";
+
+interface FetchDataType {
+  firstName: string;
+  lastName: string;
+}
 
 function UpdateAcc() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const [fetchData, setFetchData] = useState<FetchDataType | null>(null);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -17,6 +25,35 @@ function UpdateAcc() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
+
+  // Fetch user name
+  const fetchName = async (session: any) => {
+    if (session) {
+      let { data: User, error } = await supabase
+        .from("User")
+        .select("firstName,lastName")
+        .eq("accountId", session.data.user.id)
+        .single(); // Use .single() to return just one user instead of an array
+      if (error) {
+        setFetchData(null);
+        console.error("Error fetching user data:", error.message);
+      } else {
+        setFetchData(User);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const session = supabase.auth.getSession();
+    fetchName(session);
+  }, []);
+
+  useEffect(() => {
+    if (fetchData) {
+      setFirstName(fetchData.firstName); // Safely access firstName
+      setLastName(fetchData.lastName); // Safely access lastName
+    }
+  }, [fetchData]);
 
   const handleUpdate = () => {
     setShowUpdateModal(true);
@@ -66,9 +103,16 @@ function UpdateAcc() {
       <div className="w-full max-w-md space-y-4">
         <input
           type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          placeholder="First Name"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          className="w-full p-3 bg-gray-100 rounded-lg outline-none"
+        />
+        <input
+          type="text"
+          placeholder="Last Name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
           className="w-full p-3 bg-gray-100 rounded-lg outline-none"
         />
 

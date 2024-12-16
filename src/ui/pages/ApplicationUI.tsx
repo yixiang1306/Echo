@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LogoutModal from "./LogoutModal";
+import { supabase } from "../supabaseClient";
+
+interface FetchDataType {
+  firstName: string;
+  lastName: string;
+}
 
 const ApplicationUI = () => {
   const [messages, setMessages] = useState([
@@ -17,12 +23,30 @@ const ApplicationUI = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [fetchData, setFetchData] = useState<FetchDataType | null>(null);
+
+  const fetchName = async (session: any) => {
+    if (!session) return;
+    let { data: User, error } = await supabase
+      .from("User")
+      .select("firstName,lastName")
+      .eq("accountId", session.data.user.id)
+      .single(); // Use .single() to return just one user instead of an array
+    if (error) {
+      setFetchData(null);
+      console.error("Error fetching user data:", error.message);
+    } else {
+      setFetchData(User);
+    }
+  };
 
   const toggleSidebar = () => {
     setIsSidebarVisible((prev) => !prev);
   };
 
   useEffect(() => {
+    const session = supabase.auth.getSession();
+    fetchName(session);
     const handleResize = () => {
       if (window.innerWidth > 800) {
         setIsSidebarVisible(true);
@@ -132,11 +156,17 @@ const ApplicationUI = () => {
     };
   };
 
-  const handleLogout = () => {
+  const handleCleanupSession = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem("accountId"); // Remove from localStorage
+  };
+
+  const handleLogout = async () => {
     setIsModalVisible(true);
   };
 
-  const handleConfirmLogout = () => {
+  const handleConfirmLogout = async () => {
+    await handleCleanupSession();
     setIsModalVisible(false);
     window.location.href = "/";
   };
@@ -229,7 +259,7 @@ const ApplicationUI = () => {
 
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold">
-            Hi, <b>&lt;username&gt;</b>
+            Hi, <b>&lt;{(fetchData?.firstName, fetchData?.lastName)}&gt;</b>
           </h1>
         </div>
 
