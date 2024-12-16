@@ -7,6 +7,8 @@ import Start from "./pages/Start";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Upgrade from "./pages/Upgrade";
+import Settings from "./pages/settings";
+import UpdateAcc from "./pages/UpdateAcc";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -17,6 +19,8 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/signup" element={<Signup />} />
         <Route path="/app" element={<ApplicationUI />} />
         <Route path="/upgrade" element={<Upgrade />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/updateAcc" element={<UpdateAcc />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>
