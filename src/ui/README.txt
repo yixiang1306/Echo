@@ -1,5 +1,7 @@
 For ease of use
 
+All images are stored in /public 
+
 Start.tsx 
 - where the user can login/signup 
 
@@ -11,4 +13,5 @@ App.tsx
 
 If user is authenticated and logged in, then user is directed to Main.tsx
 
-If user wants to sign up, then user is directed to _____
+If user wants to sign up, then user is directed to Signup.tsx
+

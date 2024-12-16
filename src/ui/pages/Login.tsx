@@ -17,7 +17,7 @@ function Login() {
     const isAuthenticated = await mockLogin(username, password);
 
     if (isAuthenticated) {
-      navigate("/application"); // Redirect to the app page after successful login
+      navigate("/app"); // Redirect to the app page after successful login
     } else {
       setErrorMessage("Invalid credentials. Please try again.");
     }

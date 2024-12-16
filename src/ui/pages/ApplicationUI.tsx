@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./ApplicationUI.css";
 import LogoutModal from "./LogoutModal";
 
@@ -13,6 +14,7 @@ const ApplicationUI = () => {
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
+  const navigate = useNavigate();
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -159,6 +161,11 @@ const ApplicationUI = () => {
     setIsModalVisible(false); // Close the modal without doing anything
   };
 
+  //Handle Routing
+  const goToUpgrade = () => {
+    navigate("/upgrade"); // Navigate to the Upgrade page
+  };
+
   return (
     <div
       className={`app-container ${!isSidebarVisible ? "sidebar-hidden" : ""}`}
@@ -182,7 +189,9 @@ const ApplicationUI = () => {
           <li>How do I beat Battlemage</li>
           <li>How do I get to Abyssal Woods</li>
         </ul>
-        <div className="upgrade-plan">Upgrade plan</div>
+        <button onClick={goToUpgrade} className="upgrade-plan">
+          Upgrade plan
+        </button>
       </div>
 
       {/* Main Content */}
@@ -195,7 +204,7 @@ const ApplicationUI = () => {
               <div className="dropdown-menu">
                 <ul>
                   <li>Settings</li>
-                  <li>Upgrade Plan</li>
+                  <li onClick={goToUpgrade}>Upgrade Plan</li>
                   <li onClick={handleLogout}>Logout</li>
                 </ul>
               </div>
