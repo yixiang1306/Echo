@@ -26,26 +26,40 @@ function UpdateAcc() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
 
+  const [currentSession, setCurrentSession] = useState<any>(null);
+
   // Fetch user name
-  const fetchName = async (session: any) => {
-    if (session) {
-      let { data: User, error } = await supabase
-        .from("User")
-        .select("firstName,lastName")
-        .eq("accountId", session.data.user.id)
-        .single(); // Use .single() to return just one user instead of an array
-      if (error) {
-        setFetchData(null);
-        console.error("Error fetching user data:", error.message);
-      } else {
-        setFetchData(User);
-      }
+
+  const fetchName = async () => {
+    if (!currentSession) return;
+    let { data: User, error } = await supabase
+      .from("User")
+      .select("firstName,lastName")
+      .eq("accountId", currentSession.data.session.user.id)
+      .single(); // Use .single() to return just one user instead of an array
+    if (error) {
+      setFetchData(null);
+      console.error("Error fetching user data:", error.message);
+    } else {
+      setFetchData(User);
+      console.log("fetchData from fun", fetchData);
     }
   };
 
   useEffect(() => {
-    const session = supabase.auth.getSession();
-    fetchName(session);
+    fetchName();
+  }, [currentSession]);
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      const currentSession = await supabase.auth.getSession();
+      setCurrentSession(currentSession);
+      if (currentSession.data.session) {
+        console.log("session", currentSession.data.session.user.id);
+      }
+    };
+
+    fetchSession();
   }, []);
 
   useEffect(() => {

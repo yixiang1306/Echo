@@ -24,19 +24,21 @@ const ApplicationUI = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [fetchData, setFetchData] = useState<FetchDataType | null>(null);
+  const [currentSession, setCurrentSession] = useState<any>(null);
 
-  const fetchName = async (session: any) => {
-    if (!session) return;
+  const fetchName = async () => {
+    if (!currentSession) return;
     let { data: User, error } = await supabase
       .from("User")
       .select("firstName,lastName")
-      .eq("accountId", session.data.user.id)
+      .eq("accountId", currentSession.data.session.user.id)
       .single(); // Use .single() to return just one user instead of an array
     if (error) {
       setFetchData(null);
       console.error("Error fetching user data:", error.message);
     } else {
       setFetchData(User);
+      console.log("fetchData from fun", fetchData);
     }
   };
 
@@ -45,8 +47,20 @@ const ApplicationUI = () => {
   };
 
   useEffect(() => {
-    const session = supabase.auth.getSession();
-    fetchName(session);
+    fetchName();
+  }, [currentSession]);
+
+  useEffect(() => {
+    // Fetch the current session
+    const fetchSession = async () => {
+      const currentSession = await supabase.auth.getSession();
+      setCurrentSession(currentSession);
+      if (currentSession.data.session) {
+        console.log("session", currentSession.data.session.user.id);
+      }
+    };
+
+    fetchSession();
     const handleResize = () => {
       if (window.innerWidth > 800) {
         setIsSidebarVisible(true);
@@ -259,7 +273,10 @@ const ApplicationUI = () => {
 
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold">
-            Hi, <b>&lt;{(fetchData?.firstName, fetchData?.lastName)}&gt;</b>
+            Hi,{" "}
+            <b>
+              &lt;{fetchData?.firstName} {fetchData?.lastName}&gt;
+            </b>
           </h1>
         </div>
 
