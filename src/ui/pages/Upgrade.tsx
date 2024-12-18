@@ -7,10 +7,16 @@ const Upgrade: React.FC = () => {
       {/* Logo */}
       <div
         className="absolute top-5 left-10 cursor-pointer text-4xl font-bold mb-5"
-        onClick={() => navigate("/app")}
+        onClick={() => navigate("/application")}
       >
         <span className="text-black">Ask</span>
         <span className="text-indigo-500">Vox</span>
+      </div>
+      <div
+        className="absolute top-5 right-10 cursor-pointer text-2xl"
+        onClick={() => navigate("/application")}
+      >
+        &times;
       </div>
 
       {/* Header */}
