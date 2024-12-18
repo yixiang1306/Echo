@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
-
+import { supabase } from "../supabaseClient";
 import DeleteAccModal from "./DeleteAccModal";
 import UpdateAccModal from "./UpdateAccModal";
-import { supabase } from "../supabaseClient";
 
 interface FetchDataType {
   firstName: string;
@@ -18,174 +16,284 @@ function UpdateAcc() {
   const [lastName, setLastName] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Modal states
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
 
+  const [showUpdatePasswordModal, setShowUpdatePasswordModal] = useState(false);
+  const [showUpdateProfileModal, setShowUpdateProfileModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [currentSession, setCurrentSession] = useState<any>(null);
 
-  // Fetch user name
-
+  // Fetch user data
   const fetchName = async () => {
     if (!currentSession) return;
-    let { data: User, error } = await supabase
+    const { data: User, error } = await supabase
       .from("User")
-      .select("firstName,lastName")
+      .select("firstName, lastName")
       .eq("accountId", currentSession.data.session.user.id)
-      .single(); // Use .single() to return just one user instead of an array
+      .single();
+
     if (error) {
       setFetchData(null);
       console.error("Error fetching user data:", error.message);
     } else {
       setFetchData(User);
-      console.log("fetchData from fun", fetchData);
     }
   };
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      const currentSession = await supabase.auth.getSession();
+      setCurrentSession(currentSession);
+    };
+    fetchSession();
+  }, []);
 
   useEffect(() => {
     fetchName();
   }, [currentSession]);
 
   useEffect(() => {
-    const fetchSession = async () => {
-      const currentSession = await supabase.auth.getSession();
-      setCurrentSession(currentSession);
-      if (currentSession.data.session) {
-        console.log("session", currentSession.data.session.user.id);
-      }
-    };
-
-    fetchSession();
-  }, []);
-
-  useEffect(() => {
     if (fetchData) {
-      setFirstName(fetchData.firstName); // Safely access firstName
-      setLastName(fetchData.lastName); // Safely access lastName
+      setFirstName(fetchData.firstName);
+      setLastName(fetchData.lastName);
     }
   }, [fetchData]);
 
-  const handleUpdate = () => {
-    setShowUpdateModal(true);
+  // Handle password update
+  const handleUpdatePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      setFeedbackMessage("Passwords do not match.");
+      return;
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      console.error("Error updating password:", error.message);
+      setFeedbackMessage("Error updating password.");
+    } else {
+      setFeedbackMessage("Password updated successfully!");
+    }
   };
 
-  const handleDelete = () => {
-    setShowDeleteModal(true);
+  // Handle name change
+  const handleNameChange = async () => {
+    if (!firstName || !lastName) {
+      setFeedbackMessage("Please fill in both first and last name.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("User")
+      .update({ firstName, lastName })
+      .eq("accountId", currentSession.data.session.user.id);
+
+    if (error) {
+      console.error("Error updating name:", error.message);
+      setFeedbackMessage("Error updating name.");
+    } else {
+      setFeedbackMessage("Name updated successfully!");
+    }
   };
 
-  const confirmUpdate = () => {
-    setShowUpdateModal(false);
-    setFeedbackMessage("Profile updated successfully!");
+  const handleCleanupSession = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem("accountId"); // Remove from localStorage
   };
 
-  const confirmDelete = () => {
+  const handleDeleteAccount = async () => {
+    try {
+      if (!currentSession) {
+        setFeedbackMessage("No session found.");
+        return;
+      }
+
+      // Delete the user data from your database first
+      const { error: deleteError } = await supabase
+        .from("User")
+        .delete()
+        .eq("accountId", currentSession.data.session.user.id);
+
+      if (deleteError) {
+        console.error("Error deleting user data:", deleteError.message);
+        setFeedbackMessage("Error deleting account .");
+        return;
+      }
+
+      const { error: authError } = await supabase.rpc("deleteUser");
+
+      if (authError) {
+        console.error(
+          "Error deleting user from authentication:",
+          authError.message
+        );
+        setFeedbackMessage("Error deleting account from auth.");
+      } else {
+        setFeedbackMessage("Account deleted successfully!");
+        await handleCleanupSession();
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Error during account deletion:", error);
+      setFeedbackMessage("Error deleting account.");
+    }
+  };
+
+  // Handle modal visibility
+  const handlePasswordUpdate = () => setShowUpdatePasswordModal(true);
+  const handleProfileUpdate = () => setShowUpdateProfileModal(true);
+  const handleDelete = () => setShowDeleteModal(true);
+
+  const confirmPasswordUpdate = async () => {
+    await handleUpdatePassword();
+
+    setShowUpdatePasswordModal(false);
+  };
+  const confirmProfileUpdate = async () => {
+    await handleNameChange();
+    setShowUpdateProfileModal(false);
+  };
+
+  const confirmDelete = async () => {
+    await handleDeleteAccount();
     setShowDeleteModal(false);
-    setFeedbackMessage("Account deleted!");
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
-      {/* Logo */}
-      <div
-        className="absolute top-5 left-10 cursor-pointer text-4xl font-bold"
-        onClick={() => navigate("/app")}
-      >
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 py-6">
+      {/* Header */}
+      <div className="absolute top-5 left-10 cursor-pointer text-3xl font-bold">
         <span className="text-black">Ask</span>
         <span className="text-indigo-500">Vox</span>
       </div>
 
-      {/* Close Button */}
       <div
-        className="absolute top-5 right-10 cursor-pointer text-4xl"
+        className="absolute top-5 right-10 cursor-pointer text-2xl"
         onClick={() => navigate("/settings")}
       >
         &times;
       </div>
 
-      {/* Header */}
-      <h1 className="text-3xl font-bold mb-8">Profile</h1>
+      <h1 className="text-2xl font-semibold mb-6">Profile Settings</h1>
 
+      {/* Feedback Message */}
       {feedbackMessage && (
-        <p className="text-green-600 font-semibold mb-4">{feedbackMessage}</p>
+        <div className="bg-green-100 text-green-700 px-4 py-3 rounded-lg mb-4 w-full max-w-md">
+          {feedbackMessage}
+          <button
+            onClick={() => setFeedbackMessage("")}
+            className="ml-4 text-green-500 hover:text-green-700"
+          >
+            &times;
+          </button>
+        </div>
       )}
 
-      {/* Form Container */}
-      <div className="w-full max-w-md space-y-4">
-        <input
-          type="text"
-          placeholder="First Name"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          className="w-full p-3 bg-gray-100 rounded-lg outline-none"
-        />
-        <input
-          type="text"
-          placeholder="Last Name"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          className="w-full p-3 bg-gray-100 rounded-lg outline-none"
-        />
+      {/* Form */}
+      <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-md space-y-6">
+        {/* Edit Profile Section */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-gray-700">Edit Profile</h2>
 
-        {/* New Password Input */}
-        <div className="relative">
-          <input
-            type={showNewPassword ? "text" : "password"}
-            placeholder="New Password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full p-3 bg-gray-100 rounded-lg outline-none"
-          />
-          <span
-            className="absolute top-1/2 right-4 transform -translate-y-1/2 cursor-pointer"
-            onClick={() => setShowNewPassword((prev) => !prev)}
-          >
-            {showNewPassword ? <FaEyeSlash /> : <FaEye />}
-          </span>
+          <div className="flex flex-col">
+            <input
+              id="firstName"
+              type="text"
+              placeholder="First Name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <input
+              id="lastName"
+              type="text"
+              placeholder="Last Name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Update Name Button */}
+          <div className="flex justify-start">
+            <button
+              onClick={handleProfileUpdate}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Update Name
+            </button>
+          </div>
         </div>
 
-        {/* Re-type New Password Input */}
-        <div className="relative">
-          <input
-            type={showConfirmPassword ? "text" : "password"}
-            placeholder="Re-type New Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full p-3 bg-gray-100 rounded-lg outline-none"
-          />
-          <span
-            className="absolute top-1/2 right-4 transform -translate-y-1/2 cursor-pointer"
-            onClick={() => setShowConfirmPassword((prev) => !prev)}
-          >
-            {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-          </span>
+        {/* Edit Password Section */}
+        <div className="space-y-4 mt-8">
+          <h2 className="text-xl font-semibold text-gray-700">Edit Password</h2>
+
+          <div className="flex flex-col">
+            <input
+              id="newPassword"
+              type="password"
+              placeholder="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <input
+              id="confirmPassword"
+              type="password"
+              placeholder="Confirm New Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Update Password Button */}
+          <div className="flex justify-start">
+            <button
+              onClick={handlePasswordUpdate}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Update Password
+            </button>
+          </div>
         </div>
 
-        {/* Buttons */}
-        <div className="flex justify-center gap-8 mt-4">
-          <button
-            onClick={handleUpdate}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700"
-          >
-            Update
-          </button>
-          <button
-            onClick={handleDelete}
-            className="px-6 py-2 bg-red-600 text-white rounded-full hover:bg-red-700"
-          >
-            Delete Account
-          </button>
+        {/* Manage Account Section */}
+        <div className="space-y-4 mt-8">
+          <h2 className="text-xl font-semibold text-gray-700">
+            Manage Account
+          </h2>
+
+          <div className="flex justify-start">
+            <button
+              onClick={handleDelete}
+              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Modals */}
-      {showUpdateModal && (
+      {showUpdatePasswordModal && (
         <UpdateAccModal
-          onConfirm={confirmUpdate}
-          onCancel={() => setShowUpdateModal(false)}
+          title="Password"
+          onConfirm={confirmPasswordUpdate}
+          onCancel={() => setShowUpdatePasswordModal(false)}
+        />
+      )}
+
+      {showUpdateProfileModal && (
+        <UpdateAccModal
+          title="Profile"
+          onConfirm={confirmProfileUpdate}
+          onCancel={() => setShowUpdateProfileModal(false)}
         />
       )}
       {showDeleteModal && (
