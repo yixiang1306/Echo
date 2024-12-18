@@ -19,6 +19,9 @@ function Signup() {
       {
         email,
         password,
+        options: {
+          emailRedirectTo: "https://askvox-admin.vercel.app/email-comfirm",
+        },
       }
     );
     setMessage(
