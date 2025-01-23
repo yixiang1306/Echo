@@ -9,6 +9,7 @@ import Signup from "./pages/Signup";
 import Upgrade from "./pages/Upgrade";
 import Settings from "./pages/Settings";
 import UpdateAcc from "./pages/UpdateAcc";
+import Payment from "./pages/Payment";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -21,6 +22,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/upgrade" element={<Upgrade />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/updateAcc" element={<UpdateAcc />} />
+        <Route path="/payment" element={<Payment />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>

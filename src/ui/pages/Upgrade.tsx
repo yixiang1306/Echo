@@ -38,7 +38,7 @@ const Upgrade: React.FC = () => {
           <p className="text-3xl font-bold">
             $10<span className="text-sm font-normal">/month</span>
           </p>
-          <button className="mt-6 bg-indigo-600 text-white py-2 px-6 rounded-full hover:bg-indigo-700">
+          <button className="mt-6 bg-indigo-600 text-white py-2 px-6 rounded-full hover:bg-indigo-700" onClick={()=>navigate("/payment")}>
             Upgrade to Premium
           </button>
         </div>
