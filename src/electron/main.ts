@@ -1,5 +1,6 @@
 import axios from "axios";
 import { spawn } from "child_process";
+import dotenv from "dotenv";
 import {
   app,
   BrowserWindow,
@@ -13,6 +14,7 @@ import path from "path";
 import { getPreloadPath } from "./pathResolver.js";
 import { isDev } from "./util.js";
 
+dotenv.config();
 let mainWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
 let audioWindow: BrowserWindow | null = null;
@@ -26,6 +28,8 @@ const pythonInterpreterPath = path.join(
   "./.venv/Scripts/python.exe"
 ); // Adjust for Windows: ../python/venv/Scripts/python
 let pythonProcess: any = null;
+
+console.log("Environment:", process.env.NODE_ENV);
 
 app.on("ready", async () => {
   const iconPath = !isDev()
@@ -204,6 +208,11 @@ app.on("ready", async () => {
   tray.on("double-click", async () => {
     mainWindow?.show();
   });
+
+  ipcMain.handle("get-env", () => ({
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_KEY: process.env.SUPABASE_KEY,
+  }));
 });
 
 //----------------------WAKEUP FUNCTIONALITY----------------------
@@ -343,3 +352,5 @@ app.on("before-quit", () => {
     console.log("Python process terminated.");
   }
 });
+
+//------------------------------- ENV Retrun --------------------------------
