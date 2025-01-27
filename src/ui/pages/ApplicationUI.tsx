@@ -18,13 +18,23 @@ const ApplicationUI = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
+  const [chatHistory, setChatHistory] = useState<string[]>([
+    "Composite bow stats",
+    "How do I beat Battlemage",
+    "How do I get to Abyssal Woods",
+  ]);
+
+  const clearChatHistory = () => {
+    setChatHistory([]);
+  };
+
   const toggleSidebar = () => {
     setIsSidebarVisible((prev) => !prev);
   };
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth > 800) {
+      if (window.innerWidth > 800 && !isSidebarVisible) {
         setIsSidebarVisible(true);
       }
     };
@@ -142,7 +152,7 @@ const ApplicationUI = () => {
   }
 
   return (
-    <div className={`flex h-screen ${!isSidebarVisible ? "sidebar-hidden" : ""}`}>
+    <div className={`flex h-screen bg-gray-100 ${!isSidebarVisible ? "sidebar-hidden" : ""}`}>
       <button
         className="fixed top-4 left-4 z-50 bg-transparent border-none cursor-pointer"
         onClick={toggleSidebar}
@@ -161,9 +171,11 @@ const ApplicationUI = () => {
       >
         <h2 className="pt-12 mb-4">History</h2>
         <ul className="space-y-4">
-          <li>Composite bow stats</li>
-          <li>How do I beat Battlemage</li>
-          <li>How do I get to Abyssal Woods</li>
+          {chatHistory.length > 0 ? (
+            chatHistory.map((item, index) => <li key={index}>{item}</li>)
+          ) : (
+            <li>No history available</li>
+          )}
         </ul>
         <button
           onClick={goToUpgrade}
@@ -173,7 +185,7 @@ const ApplicationUI = () => {
         </button>
       </div>
 
-      <div className="flex-grow flex flex-col bg-gray-100 p-8 relative">
+      <div className="flex-grow flex flex-col bg-gray-100 p-8 relative max-w-[60%] mx-auto">
         <div className="absolute top-4 right-4">
           <div className="relative">
             <img
@@ -242,29 +254,27 @@ const ApplicationUI = () => {
           <div ref={chatEndRef} />
         </div>
 
-        <div className="flex gap-4 sticky bottom-0 bg-gray-100 p-4">
-          <input
-            type="text"
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            placeholder="Ask me anything"
-            className="flex-grow px-4 py-2 border rounded-lg"
-          />
-          <button
-            onClick={sendMessage}
-            className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
-          >
-            Send
+        <div className="relative w-full">
+        <input
+          type="text"
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          placeholder="Ask me anything"
+          className="w-full px-4 py-2 border rounded-lg pr-28"  // Adjust padding to make space for buttons
+        />
+        <div className="absolute inset-y-0 right-0 flex items-center gap-2 pr-2">
+          <button onClick={sendMessage} className="p-1 rounded-lg">
+            <img src="/send.png" alt="Send" className="h-6 w-6" />
           </button>
-          <button
-            onClick={handleRecord}
-            className={`py-2 px-4 rounded-lg ${
-              isRecording ? "bg-red-600" : "bg-green-600"
-            } hover:bg-blue-700`}
-          >
-            {isRecording ? "Stop" : "Record"}
+          <button onClick={handleRecord} className="p-1 rounded-lg">
+            <img 
+              src={isRecording ? "/red_mic.png" : "/blacked_mic.png"} 
+              alt={isRecording ? "Stop Recording" : "Start Recording"} 
+              className="h-6 w-6" 
+            />
           </button>
+        </div>
         </div>
       </div>
 
