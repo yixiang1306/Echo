@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Login.css"; // Import the external CSS file
-import { supabase } from "../supabaseClient"; // Import Supabase client
 import { v4 as uuidv4 } from "uuid";
+import { supabase } from "../supabaseClient"; // Import Supabase client
+import "./Login.css"; // Import the external CSS file
 
 function Login() {
   const navigate = useNavigate();
@@ -96,6 +96,121 @@ function Login() {
     return true; // User is already marked as active
   }
 
+  //----------------------- Handle coin and subscription sync---------------------------------
+  async function syncCoinsAndSubscriptions() {
+    const today = new Date().toISOString().split("T")[0];
+    const { data, error } = await supabase
+      .from("FreeCoin")
+      .select("id,amount,updatedAt")
+      .eq("accountId", localStorage.getItem("accountId"))
+      .single();
+
+    if (error) {
+      console.error("Error fetching user free data:", error.message);
+      return false;
+    }
+
+    const lastUpdate = data.updatedAt.split("T")[0];
+
+    if (lastUpdate !== today) {
+      const { error: updateError } = await supabase
+        .from("FreeCoin")
+        .update({
+          amount: data.amount + 1,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq("id", data.id);
+
+      if (updateError) {
+        console.error("Error updating user free data:", updateError.message);
+        return false;
+      }
+    }
+
+    const { data: user_type, error: user_type_error } = await supabase
+      .from("User")
+      .select("userType")
+      .eq("accountId", localStorage.getItem("accountId"))
+      .single();
+
+    if (user_type_error) {
+      console.error(
+        "Error fetching userType from main user:",
+        user_type_error.message
+      );
+      return false;
+    }
+
+    if (user_type.userType !== "MONTHLY_SUBSCRIPTION") {
+      return true;
+    }
+
+    const { data: subscription_data, error: subscription_data_error } =
+      await supabase
+        .from("Subscription")
+        .select("expiredAt")
+        .eq("accountId", localStorage.getItem("accountId"))
+        .single();
+
+    if (subscription_data_error) {
+      console.error(
+        "Error fetching Subscription:",
+        subscription_data_error.message
+      );
+      return false;
+    }
+
+    const expired_date = subscription_data.expiredAt.split("T")[0];
+
+    if (expired_date < today) {
+      const { data: wallet_data, error: wallet_data_error } = await supabase
+        .from("Wallet")
+        .select("amount")
+        .eq("accountId", localStorage.getItem("accountId"))
+        .single();
+
+      if (wallet_data_error) {
+        console.error("Error fetching Wallet:", wallet_data_error.message);
+        return false;
+      }
+      if (wallet_data.amount <= 0) {
+        const { error: updateUserTypeError } = await supabase
+          .from("User")
+          .update({
+            userType: "FREE",
+            updatedAt: new Date().toISOString(),
+          })
+          .eq("accountId", localStorage.getItem("accountId"));
+
+        if (updateUserTypeError) {
+          console.error(
+            "Error updating FREE user type:",
+            updateUserTypeError.message
+          );
+          return false;
+        }
+      } else {
+        const { error: updateUserTypeError } = await supabase
+          .from("User")
+          .update({
+            userType: "PAY_PER_USE",
+            updatedAt: new Date().toISOString(),
+          })
+          .eq("accountId", localStorage.getItem("accountId"));
+
+        if (updateUserTypeError) {
+          console.error(
+            "Error updating PAY_PER_USE user type:",
+            updateUserTypeError.message
+          );
+          return false;
+        }
+      }
+      return true;
+    }
+    return true;
+  }
+
   //----------------------- Handle sign-in form submission---------------------------------
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault(); // Prevent page reload on form submit
@@ -114,6 +229,10 @@ function Login() {
     // Mark the user as online and update daily active user count
     const isMarkedOnline = await markUserAsOnline(data.user.id);
     if (!isMarkedOnline) {
+      return;
+    }
+    const isSynced = await syncCoinsAndSubscriptions();
+    if (!isSynced) {
       return;
     }
     navigate("/application"); // Redirect to the application page after successful login
