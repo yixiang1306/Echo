@@ -7,7 +7,6 @@ interface FetchDataType {
   firstName: string;
   lastName: string;
 }
-
 const ApplicationUI = () => {
   const [messages, setMessages] = useState([
     { role: "Vox", content: "Hello! How can I assist you today?" },
@@ -15,10 +14,8 @@ const ApplicationUI = () => {
   const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
-
   const navigate = useNavigate();
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -26,30 +23,7 @@ const ApplicationUI = () => {
   const [fetchData, setFetchData] = useState<FetchDataType | null>(null);
   const [currentSession, setCurrentSession] = useState<any>(null);
 
-  const fetchName = async () => {
-    if (!currentSession) return;
-    let { data: User, error } = await supabase
-      .from("User")
-      .select("firstName,lastName")
-      .eq("accountId", currentSession.data.session.user.id)
-      .single(); // Use .single() to return just one user instead of an array
-    if (error) {
-      setFetchData(null);
-      console.error("Error fetching user data:", error.message);
-    } else {
-      setFetchData(User);
-      console.log("fetchData from fun", fetchData);
-    }
-  };
-
-  const toggleSidebar = () => {
-    setIsSidebarVisible((prev) => !prev);
-  };
-
-  useEffect(() => {
-    fetchName();
-  }, [currentSession]);
-
+  //------------------ Function the current session and resize handler -------------------------
   useEffect(() => {
     // Fetch the current session
     const fetchSession = async () => {
@@ -73,13 +47,41 @@ const ApplicationUI = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  //------------------ Function to fetch Display name from session -------------------------
+  useEffect(() => {
+    const fetchName = async () => {
+      if (!currentSession) return;
+      let { data: User, error } = await supabase
+        .from("User")
+        .select("firstName,lastName")
+        .eq("accountId", currentSession.data.session.user.id)
+        .single();
+      if (error) {
+        setFetchData(null);
+        console.error("Error fetching user data:", error.message);
+      } else {
+        setFetchData(User);
+        console.log("fetchData from fun", fetchData);
+      }
+    };
+    fetchName();
+  }, [currentSession]);
+
+  //------------------ Function   -------------------------
+
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
+  const toggleSidebar = () => {
+    setIsSidebarVisible((prev) => !prev);
+  };
+
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
+
+  //------------------ Function   -------------------------
 
   const sendMessage = async () => {
     if (userInput.trim() === "") return;
@@ -105,6 +107,8 @@ const ApplicationUI = () => {
       setIsLoading(false);
     }
   };
+
+  //------------------ Function   -------------------------
 
   const handleRecord = () => {
     //@ts-ignore
@@ -134,6 +138,8 @@ const ApplicationUI = () => {
 
     setIsRecording((prev) => !prev);
   };
+
+  //------------------ Function   -------------------------
 
   const sendAudio = async (audioBlob: Blob) => {
     setIsLoading(true);
@@ -170,9 +176,34 @@ const ApplicationUI = () => {
     };
   };
 
+  //------------------ Function Sign out   -------------------------
+
+  const markUserAsOffline = async (accountId: string) => {
+    const todayDate = new Date().toISOString().split("T")[0];
+    const { error } = await supabase
+      .from("UserOnlineStatus")
+      .update({
+        isOnline: false,
+        lastActive: todayDate,
+      })
+      .eq("accountId", accountId);
+
+    if (error) {
+      return false;
+    }
+
+    return true;
+  };
+
   const handleCleanupSession = async () => {
+    const res = await markUserAsOffline(currentSession.data.session.user.id);
+    if (!res) {
+      return;
+    }
     await supabase.auth.signOut();
     localStorage.removeItem("accountId"); // Remove from localStorage
+    setIsModalVisible(false);
+    window.location.href = "/";
   };
 
   const handleLogout = async () => {
@@ -181,13 +212,13 @@ const ApplicationUI = () => {
 
   const handleConfirmLogout = async () => {
     await handleCleanupSession();
-    setIsModalVisible(false);
-    window.location.href = "/";
   };
 
   const handleCancelLogout = () => {
     setIsModalVisible(false);
   };
+
+  //------------------ Function   -------------------------
 
   const goToUpgrade = () => {
     navigate("/upgrade");
