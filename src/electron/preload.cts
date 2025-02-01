@@ -1,11 +1,21 @@
 import { contextBridge, ipcRenderer } from "electron/renderer";
 
+enum MODEL_TYPE {
+  ASKVOX = "ASKVOX",
+  GPT_4o = "GPT_4o",
+}
+
 contextBridge.exposeInMainWorld("nodeAPI", {
   Buffer: (base64String: string) => Buffer.from(base64String, "base64"), // Buffer conversion function
 });
 
 contextBridge.exposeInMainWorld("electron", {
   getEnv: () => ipcRenderer.invoke("get-env"),
+});
+
+contextBridge.exposeInMainWorld("tokenManagerApi", {
+  calculateCost: (text: { input: string; output: string }, model: MODEL_TYPE) =>
+    ipcRenderer.invoke("calculate-cost", text, model),
 });
 
 contextBridge.exposeInMainWorld("electronAPI", {

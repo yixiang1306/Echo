@@ -12,7 +12,7 @@ import {
 } from "electron";
 import path from "path";
 import { getPreloadPath } from "./pathResolver.js";
-import { isDev } from "./util.js";
+import { isDev, MODEL_TYPE } from "./util.js";
 
 dotenv.config();
 let mainWindow: BrowserWindow | null = null;
@@ -353,4 +353,38 @@ app.on("before-quit", () => {
   }
 });
 
-//------------------------------- ENV Retrun --------------------------------
+ipcMain.handle(
+  "calculate-cost",
+  (_, text: { input: string; output: string }, model: MODEL_TYPE) => {
+    const getInputTokenCount = (sampleText: string) => {
+      const words = sampleText.trim().split(/\s+/).length;
+      return Math.ceil(words * 1.33);
+    };
+
+    // Pricing configuration (typed explicitly)
+    const pricing = {
+      [MODEL_TYPE.ASKVOX]: { input: 0.03 / 1000, output: 0.06 / 1000 },
+      [MODEL_TYPE.GPT_4o]: { input: 0.0015 / 1000, output: 0.002 / 1000 },
+    };
+
+    // Ensure pricing exists
+    const modelPricing = pricing[model] || pricing[MODEL_TYPE.ASKVOX];
+
+    // Calculate input and output costs
+    const inputTokenCount = getInputTokenCount(text.input);
+    const outputTokenCount = getInputTokenCount(text.output);
+    const totalTokenCount = inputTokenCount + outputTokenCount;
+    const inputCost = inputTokenCount * modelPricing.input;
+    const outputCost = outputTokenCount * modelPricing.output;
+    const totalCost = inputCost + outputCost;
+
+    return {
+      inputTokenCount,
+      outputTokenCount,
+      totalTokenCount,
+      inputCost: inputCost.toFixed(6),
+      outputCost: outputCost.toFixed(6),
+      totalCost: totalCost.toFixed(6),
+    };
+  }
+);
