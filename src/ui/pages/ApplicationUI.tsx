@@ -2,10 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LogoutModal from "./LogoutModal";
 import { supabase } from "../supabaseClient";
+import { CircleDollarSign, Wallet } from "lucide-react";
 
 interface FetchDataType {
   firstName: string;
   lastName: string;
+}
+export enum MODEL_TYPE {
+  ASKVOX = "ASKVOX",
+  GPT_4o = "GPT_4o",
 }
 const ApplicationUI = () => {
   const [messages, setMessages] = useState([
@@ -22,6 +27,8 @@ const ApplicationUI = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [fetchData, setFetchData] = useState<FetchDataType | null>(null);
   const [currentSession, setCurrentSession] = useState<any>(null);
+  const [freeCoin, setFreeCoins] = useState(5);
+  const [walletCoin, setWalletCoin] = useState(5);
 
   //------------------ Function the current session and resize handler -------------------------
   useEffect(() => {
@@ -87,8 +94,13 @@ const ApplicationUI = () => {
     if (userInput.trim() === "") return;
 
     setMessages((prev) => [...prev, { role: "user", content: userInput }]);
-    setUserInput("");
+
     setIsLoading(true);
+    const test = {
+      input: userInput,
+      output: "Hey How can I Help you today?",
+    };
+    calculateCost(test, MODEL_TYPE.ASKVOX);
 
     try {
       //@ts-ignore
@@ -97,6 +109,12 @@ const ApplicationUI = () => {
         ...prev,
         { role: "assistant", content: response },
       ]);
+      const conversation_data = {
+        input: userInput,
+        output: String(response),
+      };
+      calculateCost(conversation_data, MODEL_TYPE.ASKVOX);
+      setUserInput("");
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => [
@@ -154,16 +172,28 @@ const ApplicationUI = () => {
       try {
         //@ts-ignore
         const response = await window.electronAPI.sendAudio(base64Audio);
+        setUserInput(response);
 
         setMessages((prev) => [...prev, { role: "user", content: response }]);
+        const test = {
+          input: userInput,
+          output: "Hey How can I Help you today?",
+        };
+        calculateCost(test, MODEL_TYPE.ASKVOX);
 
         //@ts-ignore
         const llm_response = await window.electronAPI.textInput(response);
+        const conversation_data = {
+          input: userInput,
+          output: String(llm_response),
+        };
+        calculateCost(conversation_data, MODEL_TYPE.ASKVOX);
 
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: llm_response },
         ]);
+        setUserInput("");
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
         setMessages((prev) => [
@@ -228,6 +258,16 @@ const ApplicationUI = () => {
     navigate("/settings");
   };
 
+  //--------------------Calculate Cost --------------------------
+  const calculateCost = (
+    text: { input: string; output: string },
+    model: MODEL_TYPE
+  ) => {
+    //@ts-ignore
+    const costData = window.tokenManagerApi.calculateCost(text, model);
+    console.log("Cost data:", costData);
+  };
+
   return (
     <div
       className={`flex h-screen ${!isSidebarVisible ? "sidebar-hidden" : ""}`}
@@ -268,63 +308,85 @@ const ApplicationUI = () => {
 
       <div className="flex-grow flex flex-col bg-gray-100 p-8 relative">
         <div className="absolute top-4 right-4">
-          <div className="relative">
-            <img
-              src="/public/user.png"
-              alt="Profile"
-              className="w-8 h-8 rounded-full cursor-pointer"
-              onClick={toggleDropdown}
-            />
-            {dropdownOpen && (
-              <div className="absolute right-0 mt-2 bg-white border rounded-lg shadow-lg w-36">
-                <ul className="py-1 text-gray-700">
-                  <li
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={goToSettings}
-                  >
-                    Settings
-                  </li>
-                  <li
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={goToUpgrade}
-                  >
-                    Upgrade Plan
-                  </li>
-                  <li
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={handleLogout}
-                  >
-                    Logout
-                  </li>
-                </ul>
+          <div className="flex items-center gap-6">
+            <div className="flex gap-6">
+              {/* Token Balance Tooltip */}
+              <div className="relative group flex gap-2 items-center">
+                <CircleDollarSign className=" size-8" />
+                <p className="text-xl">{freeCoin}</p>
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
+                  Daily Free Balance
+                </div>
               </div>
-            )}
+
+              {/* Wallet Balance Tooltip */}
+              <div className="relative group flex gap-2 items-center">
+                <Wallet className="size-8" />
+                <p className="text-xl">{walletCoin}</p>
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
+                  Your Wallet Balance
+                </div>
+              </div>
+            </div>
+
+            <div className="relative">
+              <img
+                src="/public/user.png"
+                alt="Profile"
+                className="w-8 h-8 rounded-full cursor-pointer"
+                onClick={toggleDropdown}
+              />
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 bg-white border rounded-lg shadow-lg w-36">
+                  <ul className="py-1 text-gray-700">
+                    <li
+                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                      onClick={goToSettings}
+                    >
+                      Settings
+                    </li>
+                    <li
+                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                      onClick={goToUpgrade}
+                    >
+                      Upgrade Plan
+                    </li>
+                    <li
+                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </li>
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="text-center mb-8">
+        {/* <div className="text-center mb-8">
           <h1 className="text-2xl font-bold">
             Hi,{" "}
             <b>
               &lt;{fetchData?.firstName} {fetchData?.lastName}&gt;
             </b>
           </h1>
-        </div>
+        </div> */}
 
-        <div className="flex-1 overflow-y-auto mb-4 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto mt-6 scrollbar-hide">
           {messages.map((message, index) => (
             <div
               key={index}
               className={`flex ${
                 message.role === "user" ? "justify-end" : "justify-start"
-              } mb-4`}
+              } my-4`}
             >
               <div
                 className={`max-w-xs px-4 py-2 rounded-lg shadow-md ${
                   message.role === "user"
                     ? "bg-blue-500 text-white"
                     : "bg-gray-200 text-gray-800"
-                }`}
+                } break-words whitespace-pre-wrap`}
               >
                 {message.content}
               </div>
