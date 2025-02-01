@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LogoutModal from "./LogoutModal";
 import { supabase } from "../supabaseClient";
-import { CircleDollarSign, Wallet } from "lucide-react";
+import { CircleCheckBig, CircleDollarSign, Wallet } from "lucide-react";
 
 interface FetchDataType {
   firstName: string;
   lastName: string;
+  userType: string;
 }
 export enum MODEL_TYPE {
   ASKVOX = "ASKVOX",
@@ -27,8 +28,9 @@ const ApplicationUI = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [fetchData, setFetchData] = useState<FetchDataType | null>(null);
   const [currentSession, setCurrentSession] = useState<any>(null);
-  const [freeCoin, setFreeCoins] = useState(5);
-  const [walletCoin, setWalletCoin] = useState(5);
+  const [freeCoin, setFreeCoin] = useState(5.0);
+  const [walletCoin, setWalletCoin] = useState(5.0);
+  const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
 
   //------------------ Function the current session and resize handler -------------------------
   useEffect(() => {
@@ -60,7 +62,7 @@ const ApplicationUI = () => {
       if (!currentSession) return;
       let { data: User, error } = await supabase
         .from("User")
-        .select("firstName,lastName")
+        .select("firstName,lastName,userType")
         .eq("accountId", currentSession.data.session.user.id)
         .single();
       if (error) {
@@ -68,10 +70,44 @@ const ApplicationUI = () => {
         console.error("Error fetching user data:", error.message);
       } else {
         setFetchData(User);
-        console.log("fetchData from fun", fetchData);
+        if (User?.userType === "MONTHLY_SUBSCRIPTION") {
+          setIsSubscriptionActive(true);
+        } else {
+          setIsSubscriptionActive(false);
+        }
+      }
+    };
+    const fetchFreeCoin = async () => {
+      if (!currentSession) return;
+      let { data: free_coin, error } = await supabase
+        .from("FreeCoin")
+        .select("amount")
+        .eq("accountId", currentSession.data.session.user.id)
+        .single();
+      if (error) {
+        setFreeCoin(0);
+        console.error("Error fetching user data:", error.message);
+      } else {
+        setFreeCoin(free_coin!.amount as number);
+      }
+    };
+    const fetchWallet = async () => {
+      if (!currentSession) return;
+      let { data: wallet, error } = await supabase
+        .from("Wallet")
+        .select("amount")
+        .eq("accountId", currentSession.data.session.user.id)
+        .single();
+      if (error) {
+        setWalletCoin(0);
+        console.error("Error fetching user data:", error.message);
+      } else {
+        setWalletCoin(wallet!.amount as number);
       }
     };
     fetchName();
+    fetchFreeCoin();
+    fetchWallet();
   }, [currentSession]);
 
   //------------------ Function   -------------------------
@@ -95,12 +131,24 @@ const ApplicationUI = () => {
 
     setMessages((prev) => [...prev, { role: "user", content: userInput }]);
 
+    if (!isSubscriptionActive && freeCoin <= 0 && walletCoin <= 0) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "Sorry, you do not have enough coins. Please purchase a subscription or top up your wallet.",
+        },
+      ]);
+      return;
+    }
     setIsLoading(true);
-    const test = {
-      input: userInput,
-      output: "Hey How can I Help you today?",
-    };
-    calculateCost(test, MODEL_TYPE.ASKVOX);
+    //-------------for testing--------------
+    // const test = {
+    //   input: userInput,
+    //   output: "Hey How can I Help you today?",
+    // };
+    // await calculateCost(test, MODEL_TYPE.ASKVOX);
 
     try {
       //@ts-ignore
@@ -113,7 +161,7 @@ const ApplicationUI = () => {
         input: userInput,
         output: String(response),
       };
-      calculateCost(conversation_data, MODEL_TYPE.ASKVOX);
+      await calculateCost(conversation_data, MODEL_TYPE.ASKVOX);
       setUserInput("");
     } catch (error) {
       console.error("Error sending message:", error);
@@ -160,6 +208,17 @@ const ApplicationUI = () => {
   //------------------ Function   -------------------------
 
   const sendAudio = async (audioBlob: Blob) => {
+    if (!isSubscriptionActive && freeCoin <= 0 && walletCoin <= 0) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "Sorry, you do not have enough coins. Please purchase a subscription or top up your wallet.",
+        },
+      ]);
+      return;
+    }
     setIsLoading(true);
 
     const reader = new FileReader();
@@ -175,11 +234,11 @@ const ApplicationUI = () => {
         setUserInput(response);
 
         setMessages((prev) => [...prev, { role: "user", content: response }]);
-        const test = {
-          input: userInput,
-          output: "Hey How can I Help you today?",
-        };
-        calculateCost(test, MODEL_TYPE.ASKVOX);
+        // const test = {
+        //   input: userInput,
+        //   output: "Hey How can I Help you today?",
+        // };
+        // await calculateCost(test, MODEL_TYPE.ASKVOX);
 
         //@ts-ignore
         const llm_response = await window.electronAPI.textInput(response);
@@ -187,7 +246,7 @@ const ApplicationUI = () => {
           input: userInput,
           output: String(llm_response),
         };
-        calculateCost(conversation_data, MODEL_TYPE.ASKVOX);
+        await calculateCost(conversation_data, MODEL_TYPE.ASKVOX);
 
         setMessages((prev) => [
           ...prev,
@@ -259,13 +318,44 @@ const ApplicationUI = () => {
   };
 
   //--------------------Calculate Cost --------------------------
-  const calculateCost = (
+  const calculateCost = async (
     text: { input: string; output: string },
     model: MODEL_TYPE
   ) => {
     //@ts-ignore
-    const costData = window.tokenManagerApi.calculateCost(text, model);
-    console.log("Cost data:", costData);
+    const costData = await window.tokenManagerApi.calculateCost(text, model);
+    if (isSubscriptionActive) {
+      return;
+    } else if (freeCoin > 0) {
+      const newAmount = freeCoin - parseFloat(costData.totalCost);
+      setFreeCoin(newAmount);
+      const { error } = await supabase
+        .from("FreeCoin")
+        .update({
+          amount: newAmount,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq("accountId", currentSession.data.session.user.id);
+
+      if (error) {
+        console.error("Error updating free coin amount:", error.message);
+      }
+    } else if (walletCoin > 0) {
+      const newAmount = freeCoin - parseFloat(costData.totalCost);
+      console.log("updated amount from Wallet", newAmount);
+      setWalletCoin(newAmount);
+      const { error } = await supabase
+        .from("Wallet")
+        .update({
+          amount: newAmount,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq("accountId", currentSession.data.session.user.id);
+
+      if (error) {
+        console.error("Error updating free coin amount:", error.message);
+      }
+    }
   };
 
   return (
@@ -308,12 +398,12 @@ const ApplicationUI = () => {
 
       <div className="flex-grow flex flex-col bg-gray-100 p-8 relative">
         <div className="absolute top-4 right-4">
-          <div className="flex items-center gap-6">
-            <div className="flex gap-6">
+          <div className="flex items-center gap-8">
+            <div className="flex gap-8">
               {/* Token Balance Tooltip */}
               <div className="relative group flex gap-2 items-center">
-                <CircleDollarSign className=" size-8" />
-                <p className="text-xl">{freeCoin}</p>
+                <CircleDollarSign className=" size-8 text-yellow-400" />
+                <p className="text-xl">{freeCoin.toFixed(4)}</p>
                 <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
                   Daily Free Balance
                 </div>
@@ -321,12 +411,21 @@ const ApplicationUI = () => {
 
               {/* Wallet Balance Tooltip */}
               <div className="relative group flex gap-2 items-center">
-                <Wallet className="size-8" />
-                <p className="text-xl">{walletCoin}</p>
+                <Wallet className="size-8 text-blue-400" />
+                <p className="text-xl">{walletCoin.toFixed(4)}</p>
                 <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
                   Your Wallet Balance
                 </div>
               </div>
+              {isSubscriptionActive && (
+                <div className="relative group flex gap-2 items-center">
+                  <CircleCheckBig className="size-8 text-green-600" />
+                  <p className="text-xl"></p>
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg ">
+                    Your monthly Subscription is active
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="relative">
