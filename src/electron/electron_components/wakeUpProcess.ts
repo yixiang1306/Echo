@@ -8,7 +8,7 @@ const pythonInterpreterPath = path.join(
   './.venv/Scripts/python.exe'
 );
 
-export function createPythonProcess() {
+export function createWakeUpProcess() {
   console.log("process started"); 
   const process = spawn(pythonInterpreterPath, [pythonScriptPath], {
     stdio: ['pipe', 'pipe', 'pipe'],

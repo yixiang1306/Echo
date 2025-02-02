@@ -1,12 +1,13 @@
 import { app, globalShortcut } from 'electron';
 import dotenv from 'dotenv';
 import path from 'path';
-import { createPythonProcess } from './electron_components/pythonProcess.js';
+import { createWakeUpProcess } from './electron_components/wakeUpProcess.js';
 import { isDev } from './util.js';
 import { createAudioWindow, createMainWindow, createOverlayWindow } from './electron_components/windows.js';
 import { createTray } from './electron_components/tray.js';
 import { setupIpcHandlers } from './electron_components/ipcHandlers.js';
 import { slideIn, slideOut } from './electron_components/animations.js';
+import { createLLMProcess } from './electron_components/llmProcess.js';
 
 
 dotenv.config();
@@ -14,7 +15,8 @@ dotenv.config();
 let mainWindow: Electron.BrowserWindow;
 let overlayWindow: Electron.BrowserWindow;
 let audioWindow: Electron.BrowserWindow;
-let pythonProcess: ReturnType<typeof createPythonProcess>;
+let wakeUpProcess: ReturnType<typeof createWakeUpProcess>;
+let llmProcess: ReturnType<typeof createLLMProcess>;
 let isQuitting = false;
 
 app.commandLine.appendSwitch('disable-features', 'ChunkedDataPipe');
@@ -30,13 +32,14 @@ app.on('ready', async () => {
   audioWindow = createAudioWindow();
 
   // Setup Python process
-  pythonProcess = createPythonProcess();
+  wakeUpProcess = createWakeUpProcess();
+  llmProcess = createLLMProcess();
 
   // Setup tray
   createTray(iconPath, mainWindow);
 
   // Setup IPC handlers
-  setupIpcHandlers(mainWindow, audioWindow);
+  setupIpcHandlers(mainWindow, audioWindow, llmProcess);
 
   // Window event handlers
   mainWindow.on('close', (event) => {
@@ -51,7 +54,7 @@ app.on('ready', async () => {
   globalShortcut.register('Alt+C', () => audioWindow.webContents.send('stop-audio'));
 
   // Python process communication
-  pythonProcess.process.stdout.on('data', async(data: Buffer) => {
+  wakeUpProcess.process.stdout.on('data', async(data: Buffer) => {
     console.log(data.toString().trim() === 'wake-up');
     if (data.toString().trim() === 'wake-up') {
       overlayWindow.show()
@@ -62,7 +65,8 @@ app.on('ready', async () => {
 
 // Cleanup before quit
 app.on('before-quit', () => {
-  pythonProcess.kill();
+  wakeUpProcess.kill();
+  llmProcess.kill();
 });
 
 
@@ -73,11 +77,11 @@ async function handleOverlayToggle() {
     await slideOut(overlayWindow);
     overlayWindow.hide();
     console.log("hide overlay");
-    pythonProcess.resume();
+    wakeUpProcess.resume();
   } else {
     overlayWindow.show();
     console.log("show overlay");
     await slideIn(overlayWindow);
-    pythonProcess.pause();
+    wakeUpProcess.pause();
   }
 }

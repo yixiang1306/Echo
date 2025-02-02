@@ -4,7 +4,7 @@ import os
 import json
 import random
 from dotenv import load_dotenv
-
+import sys
 # Load environment variables
 load_dotenv()
 
@@ -136,12 +136,12 @@ def get_response(user_input: str):
             {"role": "user", "content": user_input}
         ],
         temperature=0.5,
-        max_tokens=4000,
+        max_tokens=200,
         tools=tools,
         tool_choice=tool_name
     )
 
-    print(response_stream)
+
     # Extract normal text response
     if response_stream.choices[0].message.content is not None:
         return response_stream.choices[0].message.content
@@ -161,5 +161,11 @@ def get_response(user_input: str):
     return "I'm sorry, I couldn't fetch the image. Try again later."
 
 # Run the function
+
+# Read input from Electron's stdin
 if __name__ == "__main__":
-    print(get_response("Do you know who paint the picture of Monalisa?"))
+    try:
+        user_input = sys.stdin.read().strip()  # Read entire input from Electron
+        print(get_response(user_input))  # Print plain text output
+    except Exception as e:
+        print(f"Error: {str(e)}")

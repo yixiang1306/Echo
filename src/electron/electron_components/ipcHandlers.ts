@@ -1,10 +1,11 @@
 import { ipcMain } from "electron";
 import axios from "axios";
 import { MODEL_TYPE } from "../util.js";
+import { createLLMProcess } from "./llmProcess.js";
 
 
 
-export function setupIpcHandlers(mainWindow: Electron.BrowserWindow, audioWindow: Electron.BrowserWindow) {
+export function setupIpcHandlers(mainWindow: Electron.BrowserWindow, audioWindow: Electron.BrowserWindow, llmProcess: ReturnType<typeof createLLMProcess>) {
     ipcMain.handle('get-env', () => ({
       SUPABASE_URL: process.env.SUPABASE_URL,
       SUPABASE_KEY: process.env.SUPABASE_KEY,
@@ -25,18 +26,18 @@ export function setupIpcHandlers(mainWindow: Electron.BrowserWindow, audioWindow
     });
     
     ipcMain.handle("text-input", async (_, text: string) => {
-    try {
-        const response = await axios.post("http://localhost:8000/llm", { text });
-        const llmResponse = response.data.llm_response;
-    
-        const ttsResponse = await axios.post("http://localhost:8000/tts", { text: llmResponse });
-        const audioBase64 = ttsResponse.data.audio_base64;
-    
-        audioWindow?.webContents.send("play-audio", audioBase64);
-        return llmResponse;
-        } catch (error) {
-        return "Error communicating with the server.";
-        }
+
+      return new Promise((resolve, reject) => {
+        llmProcess.process.stdin.write(text);
+        llmProcess.process.stdin.end();
+        llmProcess.process.stdout.on('data', (data) => {
+          resolve(data.toString());
+        });
+        llmProcess.process.stderr.on('data', (data) => {
+          console.error(`Python Error: ${data}`);
+          reject(data.toString());
+        });
+      })
     });
   
     ipcMain.handle("calculate-cost", (_, text: { input: string; output: string }, model: MODEL_TYPE) => {
