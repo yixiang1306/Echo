@@ -164,8 +164,11 @@ def get_response(user_input: str):
 
 # Read input from Electron's stdin
 if __name__ == "__main__":
-    try:
-        user_input = sys.stdin.read().strip()  # Read entire input from Electron
-        print(get_response(user_input))  # Print plain text output
-    except Exception as e:
-        print(f"Error: {str(e)}")
+    while True:
+        try:
+            user_input = sys.stdin.readline().strip()
+            if user_input:
+                response = get_response(user_input)
+                print(response, flush=True)  # Send response to Electron
+        except Exception as e:
+            print(f"Error: {str(e)}", flush=True)

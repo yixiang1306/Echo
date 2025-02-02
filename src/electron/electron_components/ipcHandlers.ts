@@ -1,5 +1,4 @@
 import { ipcMain } from "electron";
-import axios from "axios";
 import { MODEL_TYPE } from "../util.js";
 import { createLLMProcess } from "./llmProcess.js";
 
@@ -26,13 +25,16 @@ export function setupIpcHandlers(mainWindow: Electron.BrowserWindow, audioWindow
     });
     
     ipcMain.handle("text-input", async (_, text: string) => {
-
+      console.log("processing...");
       return new Promise((resolve, reject) => {
-        llmProcess.process.stdin.write(text);
-        llmProcess.process.stdin.end();
+        llmProcess.process.stdin.write(text+'\n');  
+        console.log("sent text...");
+        console.log("waiting for response...");
         llmProcess.process.stdout.on('data', (data) => {
+          console.log(data.toString());
           resolve(data.toString());
         });
+        
         llmProcess.process.stderr.on('data', (data) => {
           console.error(`Python Error: ${data}`);
           reject(data.toString());

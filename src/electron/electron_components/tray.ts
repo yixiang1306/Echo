@@ -1,5 +1,5 @@
 import { Tray, Menu, app } from 'electron';
-import path from 'path';
+
 
 export function createTray(iconPath: string, mainWindow: Electron.BrowserWindow) {
   const tray = new Tray(iconPath);
