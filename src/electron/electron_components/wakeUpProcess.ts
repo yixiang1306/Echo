@@ -1,26 +1,46 @@
-import { spawn } from 'child_process';
-import path from 'path';
-import { app } from 'electron';
+import { spawn } from "child_process";
+import path from "path";
+import { app } from "electron";
+import { isDev } from "../util.js";
+import os from "os";
 
-const pythonScriptPath = path.join(app.getAppPath(), './src/python/HeyVox.py');
-const pythonInterpreterPath = path.join(
-  app.getAppPath(),
-  './.venv/Scripts/python.exe'
-);
+// const pythonScriptPath = path.join(app.getAppPath(), "./src/python/HeyVox.py");
+// const pythonInterpreterPath = path.join(
+//   app.getAppPath(),
+//   "./.venv/Scripts/python.exe"
+// );
+
+// Correct Python script path
+const pythonScriptPath = isDev()
+  ? path.join(app.getAppPath(), "./src/python/HeyVox.py") // Development
+  : path.join(process.resourcesPath, "python/HeyVox.py"); // Production
+
+// Correct Python interpreter path (handle Windows & macOS/Linux)
+const pythonInterpreterPath = isDev()
+  ? path.join(
+      app.getAppPath(),
+      ".venv",
+      os.platform() === "win32" ? "Scripts/python.exe" : "bin/python"
+    ) // Development
+  : path.join(
+      process.resourcesPath,
+      "python_env",
+      os.platform() === "win32" ? "Scripts/python.exe" : "bin/python"
+    ); // Production
 
 export function createWakeUpProcess() {
-  console.log("process started"); 
+  console.log("process started");
   const process = spawn(pythonInterpreterPath, [pythonScriptPath], {
-    stdio: ['pipe', 'pipe', 'pipe'],
+    stdio: ["pipe", "pipe", "pipe"],
   });
 
   return {
     process,
     pause: () => {
       console.log("pausing");
-      process.stdin.write('pause\n')
+      process.stdin.write("pause\n");
     },
-    resume: () => process.stdin.write('resume\n'),
+    resume: () => process.stdin.write("resume\n"),
     kill: () => process.kill(),
   };
 }

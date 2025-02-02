@@ -1,16 +1,24 @@
-import { app, globalShortcut } from 'electron';
-import dotenv from 'dotenv';
-import path from 'path';
-import { createWakeUpProcess } from './electron_components/wakeUpProcess.js';
-import { isDev } from './util.js';
-import { createAudioWindow, createMainWindow, createOverlayWindow } from './electron_components/windows.js';
-import { createTray } from './electron_components/tray.js';
-import { setupIpcHandlers } from './electron_components/ipcHandlers.js';
-import { slideIn, slideOut } from './electron_components/animations.js';
-import { createLLMProcess } from './electron_components/llmProcess.js';
+import { app, globalShortcut } from "electron";
+import dotenv from "dotenv";
+import path from "path";
+import { createWakeUpProcess } from "./electron_components/wakeUpProcess.js";
+import { isDev } from "./util.js";
+import {
+  createAudioWindow,
+  createMainWindow,
+  createOverlayWindow,
+} from "./electron_components/windows.js";
+import { createTray } from "./electron_components/tray.js";
+import { setupIpcHandlers } from "./electron_components/ipcHandlers.js";
+import { slideIn, slideOut } from "./electron_components/animations.js";
+import { createLLMProcess } from "./electron_components/llmProcess.js";
 
+// Set the correct .env file path
+const envPath = isDev()
+  ? path.resolve(process.cwd(), ".env") // Development: Use .env in root folder
+  : path.join(process.resourcesPath, ".env"); // Production: Use bundled .env
 
-dotenv.config();
+dotenv.config({ path: envPath });
 
 let mainWindow: Electron.BrowserWindow;
 let overlayWindow: Electron.BrowserWindow;
@@ -19,12 +27,12 @@ let wakeUpProcess: ReturnType<typeof createWakeUpProcess>;
 let llmProcess: ReturnType<typeof createLLMProcess>;
 let isQuitting = false;
 
-app.commandLine.appendSwitch('disable-features', 'ChunkedDataPipe');
+app.commandLine.appendSwitch("disable-features", "ChunkedDataPipe");
 
-app.on('ready', async () => {
+app.on("ready", async () => {
   const iconPath = isDev()
-    ? path.join(app.getAppPath(), 'public', 'askvoxIcon.ico')
-    : path.join(process.resourcesPath, 'askvoxIcon.ico');
+    ? path.join(app.getAppPath(), "public", "askvoxIcon.ico")
+    : path.join(process.resourcesPath, "askvoxIcon.ico");
 
   // Create windows
   mainWindow = createMainWindow(iconPath);
@@ -42,7 +50,7 @@ app.on('ready', async () => {
   setupIpcHandlers(mainWindow, audioWindow, llmProcess);
 
   // Window event handlers
-  mainWindow.on('close', (event) => {
+  mainWindow.on("close", (event) => {
     if (!isQuitting) {
       event.preventDefault();
       mainWindow.hide();
@@ -50,25 +58,26 @@ app.on('ready', async () => {
   });
 
   // Global shortcuts
-  globalShortcut.register('Alt+V', () => handleOverlayToggle());
-  globalShortcut.register('Alt+C', () => audioWindow.webContents.send('stop-audio'));
+  globalShortcut.register("Alt+V", () => handleOverlayToggle());
+  globalShortcut.register("Alt+C", () =>
+    audioWindow.webContents.send("stop-audio")
+  );
 
   // Python process communication
-  wakeUpProcess.process.stdout.on('data', async(data: Buffer) => {
-    console.log(data.toString().trim() === 'wake-up');
-    if (data.toString().trim() === 'wake-up') {
-      overlayWindow.show()
+  wakeUpProcess.process.stdout.on("data", async (data: Buffer) => {
+    console.log(data.toString().trim() === "wake-up");
+    if (data.toString().trim() === "wake-up") {
+      overlayWindow.show();
       await slideIn(overlayWindow);
-    };
+    }
   });
 });
 
 // Cleanup before quit
-app.on('before-quit', () => {
+app.on("before-quit", () => {
   wakeUpProcess.kill();
   llmProcess.kill();
 });
-
 
 // Handle Alt+V
 async function handleOverlayToggle() {

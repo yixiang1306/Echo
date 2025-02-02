@@ -4,11 +4,6 @@ import LogoutModal from "./LogoutModal";
 import { supabase } from "../supabaseClient";
 import { CircleCheckBig, CircleDollarSign, Wallet } from "lucide-react";
 
-interface FetchDataType {
-  firstName: string;
-  lastName: string;
-  userType: string;
-}
 export enum MODEL_TYPE {
   ASKVOX = "ASKVOX",
   GPT_4o = "GPT_4o",
@@ -26,7 +21,6 @@ const ApplicationUI = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [fetchData, setFetchData] = useState<FetchDataType | null>(null);
   const [currentSession, setCurrentSession] = useState<any>(null);
   const [freeCoin, setFreeCoin] = useState(5.0);
   const [walletCoin, setWalletCoin] = useState(5.0);
@@ -62,14 +56,12 @@ const ApplicationUI = () => {
       if (!currentSession) return;
       let { data: User, error } = await supabase
         .from("User")
-        .select("firstName,lastName,userType")
+        .select("userType")
         .eq("accountId", currentSession.data.session.user.id)
         .single();
       if (error) {
-        setFetchData(null);
         console.error("Error fetching user data:", error.message);
       } else {
-        setFetchData(User);
         if (User?.userType === "MONTHLY_SUBSCRIPTION") {
           setIsSubscriptionActive(true);
         } else {
@@ -462,15 +454,6 @@ const ApplicationUI = () => {
             </div>
           </div>
         </div>
-
-        {/* <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold">
-            Hi,{" "}
-            <b>
-              &lt;{fetchData?.firstName} {fetchData?.lastName}&gt;
-            </b>
-          </h1>
-        </div> */}
 
         <div className="flex-1 overflow-y-auto mt-6 scrollbar-hide">
           {messages.map((message, index) => (

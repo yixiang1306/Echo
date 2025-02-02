@@ -1,15 +1,33 @@
-import { spawn } from 'child_process';
-import path from 'path';
-import { app } from 'electron';
+import { spawn } from "child_process";
+import path from "path";
+import { app } from "electron";
+import { isDev } from "../util.js";
+import os from "os";
 
-const pythonScriptPath = path.join(app.getAppPath(), './src/python/LLM.py');
-const pythonInterpreterPath = path.join(
-  app.getAppPath(),
-  './.venv/Scripts/python.exe'
-);
+// const pythonScriptPath = path.join(app.getAppPath(), "./src/python/LLM.py");
+// const pythonInterpreterPath = path.join(
+//   app.getAppPath(),
+//   "./.venv/Scripts/python.exe"
+// );
+
+const pythonScriptPath = isDev()
+  ? path.join(app.getAppPath(), "./src/python/LLM.py") // Development
+  : path.join(process.resourcesPath, "python/HeyVox.py"); // Production
+
+const pythonInterpreterPath = isDev()
+  ? path.join(
+      app.getAppPath(),
+      ".venv",
+      os.platform() === "win32" ? "Scripts/python.exe" : "bin/python"
+    ) // Development
+  : path.join(
+      process.resourcesPath,
+      "python_env",
+      os.platform() === "win32" ? "Scripts/python.exe" : "bin/python"
+    );
 
 export function createLLMProcess() {
-  console.log("process started"); 
+  console.log("process started");
   const process = spawn(pythonInterpreterPath, [pythonScriptPath]);
 
   return {
