@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Signup.css"; // Import the CSS file
 import { supabase } from "../supabaseClient";
+import { v4 as uuidv4 } from "uuid";
 
 function Signup() {
   const navigate = useNavigate();
@@ -42,6 +43,29 @@ function Signup() {
           updatedAt: new Date(),
           status: "ACTIVE",
           userType: "FREE",
+        },
+      ])
+      .select();
+
+    await supabase
+      .from("FreeCoin")
+      .insert([
+        {
+          id: uuidv4(), // Unique ID for each record
+          accountId: signupData?.user?.id,
+          amount: 1.0,
+          updatedAt: new Date().toISOString(),
+        },
+      ])
+      .select();
+    await supabase
+      .from("Wallet")
+      .insert([
+        {
+          id: uuidv4(), // Unique ID for each record
+          accountId: signupData?.user?.id,
+          amount: 0.0,
+          updatedAt: new Date().toISOString(),
         },
       ])
       .select();
