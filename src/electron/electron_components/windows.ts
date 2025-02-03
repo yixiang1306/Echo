@@ -1,7 +1,6 @@
-import { BrowserWindow, screen } from 'electron';
-import path from 'path';
-import { getPreloadPath } from '../pathResolver.js';
-import { isDev } from '../util.js';
+import { BrowserWindow, ipcMain, screen } from "electron";
+import { getPreloadPath } from "../pathResolver.js";
+import { isDev } from "../util.js";
 
 export function createMainWindow(iconPath: string) {
   const mainWindow = new BrowserWindow({
@@ -14,13 +13,20 @@ export function createMainWindow(iconPath: string) {
       preload: getPreloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
     },
   });
 
+  ipcMain.handle("get-env", () => ({
+    SUPABASE_URL: process.env.SUPABASE_URL || "NOT_SET",
+    SUPABASE_KEY: process.env.SUPABASE_KEY || "NOT_SET",
+  }));
+
   if (isDev()) {
-    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.loadURL("http://localhost:3000");
   } else {
-    mainWindow.loadFile(path.join(process.resourcesPath, 'dist-react/index.html'));
+    mainWindow.loadURL("app://index.html");
   }
 
   return mainWindow;
@@ -28,7 +34,7 @@ export function createMainWindow(iconPath: string) {
 
 export function createOverlayWindow(iconPath: string) {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  
+
   const overlayWindow = new BrowserWindow({
     icon: iconPath,
     width: 450,
@@ -44,11 +50,15 @@ export function createOverlayWindow(iconPath: string) {
       preload: getPreloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
     },
   });
 
   if (isDev()) {
-    overlayWindow.loadURL('http://localhost:3000/overlay');
+    overlayWindow.loadURL("http://localhost:3000/overlay");
+  } else {
+    overlayWindow.loadURL("app://index.html#overlay");
   }
 
   return overlayWindow;
@@ -61,11 +71,15 @@ export function createAudioWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: getPreloadPath(),
+      sandbox: true,
+      webSecurity: true,
     },
   });
 
   if (isDev()) {
-    audioWindow.loadURL('http://localhost:3000/audio');
+    audioWindow.loadURL("http://localhost:3000/audio");
+  } else {
+    audioWindow.loadURL("app://index.html#audio");
   }
 
   return audioWindow;

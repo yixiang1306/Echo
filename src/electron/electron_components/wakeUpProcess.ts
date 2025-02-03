@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 import path from "path";
 import { app } from "electron";
 import { isDev } from "../util.js";
-import os from "os";
+import os from "node:os";
 
 // const pythonScriptPath = path.join(app.getAppPath(), "./src/python/HeyVox.py");
 // const pythonInterpreterPath = path.join(
@@ -11,11 +11,12 @@ import os from "os";
 // );
 
 // Correct Python script path
+// Correct script path for development & production
 const pythonScriptPath = isDev()
   ? path.join(app.getAppPath(), "./src/python/HeyVox.py") // Development
   : path.join(process.resourcesPath, "python/HeyVox.py"); // Production
 
-// Correct Python interpreter path (handle Windows & macOS/Linux)
+// Correct Python interpreter path (Windows & macOS/Linux)
 const pythonInterpreterPath = isDev()
   ? path.join(
       app.getAppPath(),
@@ -29,6 +30,9 @@ const pythonInterpreterPath = isDev()
     ); // Production
 
 export function createWakeUpProcess() {
+  console.log("From wakeUp", os.platform());
+  console.log(pythonInterpreterPath);
+  console.log(pythonScriptPath);
   console.log("process started");
   const process = spawn(pythonInterpreterPath, [pythonScriptPath], {
     stdio: ["pipe", "pipe", "pipe"],

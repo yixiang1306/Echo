@@ -5,6 +5,8 @@ enum MODEL_TYPE {
   GPT_4o = "GPT_4o",
 }
 
+console.log("This file is called");
+
 contextBridge.exposeInMainWorld("nodeAPI", {
   Buffer: (base64String: string) => Buffer.from(base64String, "base64"), // Buffer conversion function
 });

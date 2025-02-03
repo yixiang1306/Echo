@@ -15,6 +15,7 @@ dist-electron
 dist-ssr
 *.local
 .env
+env-config.js
 
 # Editor directories and files
 .vscode/*

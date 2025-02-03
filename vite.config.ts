@@ -14,6 +14,12 @@ export default defineConfig({
   build: {
     target: "esnext",
     outDir: "dist-react",
+    assetsDir: ".",
+    rollupOptions: {
+      input: {
+        main: "./index.html",
+      },
+    },
   },
   server: {
     port: 3000,

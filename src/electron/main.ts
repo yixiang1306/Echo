@@ -1,17 +1,19 @@
-import { app, globalShortcut } from "electron";
 import dotenv from "dotenv";
+import { app, globalShortcut, protocol } from "electron";
+import log from "electron-log";
 import path from "path";
+import { slideIn, slideOut } from "./electron_components/animations.js";
+import { setupIpcHandlers } from "./electron_components/ipcHandlers.js";
+import { createLLMProcess } from "./electron_components/llmProcess.js";
+import { createTray } from "./electron_components/tray.js";
 import { createWakeUpProcess } from "./electron_components/wakeUpProcess.js";
-import { isDev } from "./util.js";
 import {
   createAudioWindow,
   createMainWindow,
   createOverlayWindow,
 } from "./electron_components/windows.js";
-import { createTray } from "./electron_components/tray.js";
-import { setupIpcHandlers } from "./electron_components/ipcHandlers.js";
-import { slideIn, slideOut } from "./electron_components/animations.js";
-import { createLLMProcess } from "./electron_components/llmProcess.js";
+import { getPreloadPath } from "./pathResolver.js";
+import { isDev } from "./util.js";
 
 // Set the correct .env file path
 const envPath = isDev()
@@ -27,6 +29,12 @@ let wakeUpProcess: ReturnType<typeof createWakeUpProcess>;
 let llmProcess: ReturnType<typeof createLLMProcess>;
 let isQuitting = false;
 
+// Set log file path (correct method)
+log.transports.file.resolvePathFn = () =>
+  path.join(app.getPath("userData"), "logs", "main.log");
+
+log.info("Env", process.env.SUPABASE_URL);
+log.info("Path", getPreloadPath());
 app.commandLine.appendSwitch("disable-features", "ChunkedDataPipe");
 
 app.on("ready", async () => {

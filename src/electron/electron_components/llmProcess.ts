@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 import path from "path";
 import { app } from "electron";
 import { isDev } from "../util.js";
-import os from "os";
+import os from "node:os";
 
 // const pythonScriptPath = path.join(app.getAppPath(), "./src/python/LLM.py");
 // const pythonInterpreterPath = path.join(
@@ -12,7 +12,7 @@ import os from "os";
 
 const pythonScriptPath = isDev()
   ? path.join(app.getAppPath(), "./src/python/LLM.py") // Development
-  : path.join(process.resourcesPath, "python/HeyVox.py"); // Production
+  : path.join(process.resourcesPath, "python/LLM.py"); // Production
 
 const pythonInterpreterPath = isDev()
   ? path.join(
@@ -27,6 +27,9 @@ const pythonInterpreterPath = isDev()
     );
 
 export function createLLMProcess() {
+  console.log("From LLM", os.platform());
+  console.log(pythonInterpreterPath);
+  console.log(pythonScriptPath);
   console.log("process started");
   const process = spawn(pythonInterpreterPath, [pythonScriptPath]);
 

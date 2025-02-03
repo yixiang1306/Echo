@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route, HashRouter } from "react-router-dom";
 import ApplicationUI from "./pages/ApplicationUI";
 import OverlayUI from "./pages/OverlayUI";
 import Start from "./pages/Start";
@@ -11,7 +11,7 @@ import Upgrade from "./pages/Upgrade";
 
 function App() {
   return (
-    <Router>
+    <HashRouter>
       <Routes>
         <Route path="/" element={<Start />} />
         <Route path="/login" element={<Login />} />
@@ -23,7 +23,7 @@ function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/updateAcc" element={<UpdateAcc />} />
       </Routes>
-    </Router>
+    </HashRouter>
   );
 }
 

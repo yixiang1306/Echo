@@ -1,29 +1,37 @@
 {
     "appId": "Askvox.app",
-    "files": ["dist-electron", "dist-react","src/python/**"],
-    "icon":"./public/icon.jpg",
-    "extraResources":["dist-electron/preload.cjs",{
+    "files": [
+      "dist-electron",
+      "dist-react",   
+      "src/python/**"
+    ],
+    "icon": "./public/icon.jpg",
+    "extraResources": [
+      "dist-electron/preload.cjs", 
+      {
         "from": "src/python/",
-        "to": "resources/python/",
+        "to": "python/",
         "filter": ["**/*"]
-    },
-    {
+      },
+      {
         "from": ".venv/",
-        "to": "resources/python_env/",
+        "to": "python_env/",
         "filter": ["**/*"]
-    },
-    {
+      },
+      {
         "from": ".env",
-        "to": "resources/"
-    }],
-    "mac":{
-        "target": "dmg"
+        "to": ".env" 
+      }
+    ],
+    "mac": {
+      "target": "dmg"
     },
-    "win":{
-        "target": ["portable","msi"]
+    "win": {
+      "target":"nsis"
     },
-    "linux":{ 
-        "target": "AppImage",
-        "category": "Utility"
-     }
-}
+    "linux": { 
+      "target": "AppImage",
+      "category": "Utility"
+    }
+  }
+  
