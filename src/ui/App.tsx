@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import ApplicationUI from "./pages/ApplicationUI";
 import OverlayUI from "./pages/OverlayUI";
 import Start from "./pages/Start";

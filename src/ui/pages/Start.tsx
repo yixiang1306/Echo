@@ -25,7 +25,7 @@ function Start() {
 
         {/* Microphone Icon */}
         <div className="icon">
-          <img src="/public/mic.png" alt="microphone" className="mic-icon" />
+          <img src="./mic.png" alt="microphone" className="mic-icon" />
         </div>
 
         {/* Buttons */}

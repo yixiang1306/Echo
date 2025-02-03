@@ -1,9 +1,36 @@
-import { BrowserWindow, screen } from 'electron';
-import path from 'path';
-import { getPreloadPath } from '../pathResolver.js';
-import { isDev } from '../util.js';
+import { BrowserWindow, ipcMain, screen } from "electron";
+import path from "path";
+import { getPreloadPath } from "../pathResolver.js";
+import { isDev } from "../util.js";
+import asar from "asar";
+import os from "node:os";
+import fs from "fs";
+
+function extractAsar() {
+  const distPath = path.join(process.resourcesPath, "app.asar"); // Path to the asar archive
+  const tempDir = path.join(os.tmpdir(), "dist-react"); // Temporary directory for extracted files
+
+  // If files have not been extracted yet, perform the extraction
+  if (!fs.existsSync(tempDir)) {
+    asar.extractAll(distPath, tempDir);
+  }
+
+  return path.join(tempDir, "dist-react", "index.html");
+}
+
+function getDistReactPath() {
+  // Ensure the path works both in development and production (packed into .asar)
+  return isDev()
+    ? "http://localhost:3000" // Local dev server path
+    : `file://${extractAsar()}`; // Extracted files in production
+}
 
 export function createMainWindow(iconPath: string) {
+  ipcMain.handle("get-env", () => ({
+    SUPABASE_URL: process.env.SUPABASE_URL || "",
+    SUPABASE_KEY: process.env.SUPABASE_KEY || "",
+  }));
+
   const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
@@ -17,25 +44,23 @@ export function createMainWindow(iconPath: string) {
     },
   });
 
-  if (isDev()) {
-    mainWindow.loadURL('http://localhost:3000');
-  } else {
-    mainWindow.loadFile(path.join(process.resourcesPath, 'dist-react/index.html'));
-  }
+  const startURL = isDev() ? "http://localhost:3000" : getDistReactPath();
+
+  mainWindow.loadURL(startURL);
 
   return mainWindow;
 }
 
 export function createOverlayWindow(iconPath: string) {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  
+
   const overlayWindow = new BrowserWindow({
     icon: iconPath,
     width: 450,
     height,
     frame: false,
     show: false,
-    x: width,
+    x: width - 450, // Ensures it appears on the right edge
     y: 0,
     alwaysOnTop: true,
     resizable: false,
@@ -47,9 +72,11 @@ export function createOverlayWindow(iconPath: string) {
     },
   });
 
-  if (isDev()) {
-    overlayWindow.loadURL('http://localhost:3000/overlay');
-  }
+  const overlayURL = isDev()
+    ? "http://localhost:3000/overlay"
+    : `file://${path.join(extractAsar(), "overlay.html")}`;
+
+  overlayWindow.loadURL(overlayURL);
 
   return overlayWindow;
 }
@@ -64,9 +91,11 @@ export function createAudioWindow() {
     },
   });
 
-  if (isDev()) {
-    audioWindow.loadURL('http://localhost:3000/audio');
-  }
+  const audioURL = isDev()
+    ? "http://localhost:3000/audio"
+    : `file://${path.join(extractAsar(), "audio.html")}`;
+
+  audioWindow.loadURL(audioURL);
 
   return audioWindow;
 }
