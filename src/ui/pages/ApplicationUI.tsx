@@ -143,6 +143,10 @@ const ApplicationUI = () => {
     navigate("/settings");
   };
 
+  const startNewChat = () => {
+    setMessages([{ role: "Vox", content: "Hello! How can I assist you today?" }]);
+  };
+
   return (
     <div
       className={`flex h-screen ${
@@ -169,6 +173,19 @@ const ApplicationUI = () => {
           isSidebarVisible ? "w-1/5" : "hidden"
         }`}
       >
+        {/* New Chat Button */}
+        <button
+          className="self-end mt-1 mb-4 bg-transparent border-none cursor-pointer"
+          onClick={startNewChat}
+          title="Start New Chat"
+        >
+          <img
+            src="/public/new_chat.png"
+            alt="Start New Chat"
+            className="w-6 h-6"
+          />
+        </button>
+
         <h2 className="pt-12 mb-4">History</h2>
         <ul className="space-y-4">
           {chatHistory.length > 0 ? (
