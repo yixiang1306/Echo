@@ -174,7 +174,8 @@ const ApplicationUI = () => {
 
     if (!isRecording) {
       navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-        const recorder = new MediaRecorder(stream);
+        const options = { mimeType: "audio/wav" };
+        const recorder = new MediaRecorder(stream, options);
         const audioChunks: Blob[] = [];
 
         recorder.ondataavailable = (event) => {
@@ -183,7 +184,8 @@ const ApplicationUI = () => {
 
         recorder.onstop = () => {
           const blob = new Blob(audioChunks, { type: "audio/wav" });
-          sendAudio(blob);
+          // Ensure all data is processed before sending
+          setTimeout(() => sendAudio(blob), 500);
         };
 
         recorder.start();
@@ -218,6 +220,7 @@ const ApplicationUI = () => {
     reader.onloadend = async () => {
       if (reader.result === null) return;
 
+      // Extract base64 data
       const base64Audio = (reader.result as string).split(",")[1];
 
       try {
