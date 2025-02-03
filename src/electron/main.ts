@@ -34,11 +34,9 @@ let isQuitting: boolean = false;
 app.commandLine.appendSwitch("disable-features", "ChunkedDataPipe");
 
 app.on("ready", async () => {
-  // const iconPath = isDev()
-  //   ? path.join(app.getAppPath(), "public", "askvoxIcon.ico")
-  //   : path.join(process.resourcesPath, "askvoxIcon.ico");
-
-  const iconPath = path.join(__dirname, "assets/icons/echo-win.ico");
+  const iconPath = isDev()
+    ? path.join(app.getAppPath(), "assets", "icons", "echo-win.ico") // Use app.getAppPath() for dev
+    : path.join(process.resourcesPath, "assets", "icons", "echo-win.ico"); // Use process.resourcesPath for prod
 
   // Create windows
   mainWindow = createMainWindow(iconPath);

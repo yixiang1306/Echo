@@ -77,30 +77,6 @@ export function setupIpcHandlers(
       llmProcess.process.stdin.write(text + "\n");
       console.log("sent text...");
       console.log("waiting for response...");
-      llmProcess.process.stdout.on("data", (data) => {
-        console.log(data.toString());
-        resolve(data.toString());
-      });
-
-      llmProcess.process.stderr.on("data", (data) => {
-        console.error(`Python Error: ${data}`);
-        reject(data.toString());
-      });
-    });
-  });
-
-  ipcMain.handle("stop-audio", () => {
-    if (mainWindow) {
-      mainWindow.webContents.send("stop-audio");
-    }
-  });
-
-  ipcMain.handle("text-input", async (_, text: string) => {
-    console.log("processing...");
-    return new Promise((resolve, reject) => {
-      llmProcess.process.stdin.write(text + "\n");
-      console.log("sent text...");
-      console.log("waiting for response...");
       llmProcess.process.stdout.on("data", async (data) => {
         const responseText = data.toString().trim();
         console.log(responseText);
