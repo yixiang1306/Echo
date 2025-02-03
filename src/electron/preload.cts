@@ -22,7 +22,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   toggleRecording: (recording: boolean) =>
     ipcRenderer.send("toggle-recording", recording),
   textInput: (text: string) => ipcRenderer.invoke("text-input", text),
-  sendAudio: (audio: string) => ipcRenderer.invoke("send-audio", audio),
+  sendAudio: (base64Audio: string) => ipcRenderer.invoke("send-audio", base64Audio),
 });
 
 // Expose a new audioManagerAPI
