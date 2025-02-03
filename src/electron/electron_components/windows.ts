@@ -73,7 +73,7 @@ export function createOverlayWindow(iconPath: string) {
   });
 
   const overlayURL = isDev()
-    ? "http://localhost:3000/overlay"
+    ? "http://localhost:3000/#/overlay"
     : `file://${path.join(extractAsar(), "overlay.html")}`;
 
   overlayWindow.loadURL(overlayURL);
@@ -92,7 +92,7 @@ export function createAudioWindow() {
   });
 
   const audioURL = isDev()
-    ? "http://localhost:3000/audio"
+    ? "http://localhost:3000/#/audio"
     : `file://${path.join(extractAsar(), "audio.html")}`;
 
   audioWindow.loadURL(audioURL);
