@@ -21,7 +21,7 @@ function Start() {
           <span className="ask">Ask</span>
           <span className="vox">Vox</span>
         </div>
-        <p className="subtitle">Ask anything about blah blah</p>
+        <p className="subtitle">Ask about anything</p>
 
         {/* Microphone Icon */}
         <div className="icon">

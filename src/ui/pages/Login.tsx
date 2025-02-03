@@ -235,7 +235,7 @@ function Login() {
     if (!isSynced) {
       return;
     }
-    navigate("/application"); // Redirect to the application page after successful login
+    navigate("/app"); // Redirect to the application page after successful login
   };
 
   return (
@@ -251,7 +251,7 @@ function Login() {
           type="text"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="email"
+          placeholder="Email"
           className="input-field"
         />
         <input

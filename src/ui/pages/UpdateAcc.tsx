@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import DeleteAccModal from "./DeleteAccModal";
 import UpdateAccModal from "./UpdateAccModal";
+import { useTheme } from "../context/ThemeContext";
 
 interface FetchDataType {
   firstName: string;
@@ -17,11 +18,13 @@ function UpdateAcc() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
-
   const [showUpdatePasswordModal, setShowUpdatePasswordModal] = useState(false);
   const [showUpdateProfileModal, setShowUpdateProfileModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [currentSession, setCurrentSession] = useState<any>(null);
+
+  // Use the theme context
+  const { isDarkMode } = useTheme();
 
   // Fetch user data
   const fetchName = async () => {
@@ -31,7 +34,6 @@ function UpdateAcc() {
       .select("firstName, lastName")
       .eq("accountId", currentSession.data.session.user.id)
       .single();
-
     if (error) {
       setFetchData(null);
       console.error("Error fetching user data:", error.message);
@@ -80,12 +82,10 @@ function UpdateAcc() {
       setFeedbackMessage("Please fill in both first and last name.");
       return;
     }
-
     const { error } = await supabase
       .from("User")
       .update({ firstName, lastName })
-      .eq("accountId", currentSession.data.session.user.id);
-
+      .eq("accountId", currentSession?.data?.session?.user?.id);
     if (error) {
       console.error("Error updating name:", error.message);
       setFeedbackMessage("Error updating name.");
@@ -105,21 +105,17 @@ function UpdateAcc() {
         setFeedbackMessage("No session found.");
         return;
       }
-
       // Delete the user data from your database first
       const { error: deleteError } = await supabase
         .from("User")
         .delete()
         .eq("accountId", currentSession.data.session.user.id);
-
       if (deleteError) {
         console.error("Error deleting user data:", deleteError.message);
-        setFeedbackMessage("Error deleting account .");
+        setFeedbackMessage("Error deleting account.");
         return;
       }
-
       const { error: authError } = await supabase.rpc("deleteUser");
-
       if (authError) {
         console.error(
           "Error deleting user from authentication:",
@@ -141,58 +137,78 @@ function UpdateAcc() {
   const handlePasswordUpdate = () => setShowUpdatePasswordModal(true);
   const handleProfileUpdate = () => setShowUpdateProfileModal(true);
   const handleDelete = () => setShowDeleteModal(true);
-
   const confirmPasswordUpdate = async () => {
     await handleUpdatePassword();
-
     setShowUpdatePasswordModal(false);
   };
   const confirmProfileUpdate = async () => {
     await handleNameChange();
     setShowUpdateProfileModal(false);
   };
-
   const confirmDelete = async () => {
     await handleDeleteAccount();
     setShowDeleteModal(false);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 py-6">
+    <div
+      className={`flex flex-col items-center justify-center min-h-screen ${
+        isDarkMode ? "bg-gray-900" : "bg-gray-50"
+      } px-4 py-6`}
+    >
       {/* Header */}
-      <div className="absolute top-5 left-10 cursor-pointer text-3xl font-bold">
-        <span className="text-black">Ask</span>
+      <div
+        className={`absolute top-5 left-10 cursor-pointer text-3xl font-bold ${
+          isDarkMode ? "text-white" : "text-black"
+        }`}
+      >
+        <span>Ask</span>
         <span className="text-indigo-500">Vox</span>
       </div>
-
       <div
-        className="absolute top-5 right-10 cursor-pointer text-2xl"
+        className={`absolute top-5 right-10 cursor-pointer text-2xl ${
+          isDarkMode ? "text-white" : "text-black"
+        }`}
         onClick={() => navigate("/settings")}
       >
         &times;
       </div>
-
-      <h1 className="text-2xl font-semibold mb-6">Profile Settings</h1>
-
+      <h1
+        className={`text-2xl font-semibold mb-6 ${
+          isDarkMode ? "text-white" : "text-black"
+        }`}
+      >
+        Profile Settings
+      </h1>
       {/* Feedback Message */}
       {feedbackMessage && (
-        <div className="bg-green-100 text-green-700 px-4 py-3 rounded-lg mb-4 w-full max-w-md">
+        <div
+          className={`${
+            isDarkMode
+              ? "bg-gray-800 text-gray-200"
+              : "bg-green-100 text-green-700"
+          } px-4 py-3 rounded-lg mb-4 w-full max-w-md`}
+        >
           {feedbackMessage}
           <button
             onClick={() => setFeedbackMessage("")}
-            className="ml-4 text-green-500 hover:text-green-700"
+            className={`ml-4 ${isDarkMode ? "text-gray-400" : "text-green-500"} hover:${
+              isDarkMode ? "text-gray-200" : "text-green-700"
+            }`}
           >
             &times;
           </button>
         </div>
       )}
-
       {/* Form */}
-      <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-md space-y-6">
+      <div
+        className={`${
+          isDarkMode ? "bg-gray-800 text-white" : "bg-white text-black"
+        } shadow-lg rounded-lg p-8 w-full max-w-md space-y-6`}
+      >
         {/* Edit Profile Section */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-700">Edit Profile</h2>
-
+          <h2 className="text-xl font-semibold">Edit Profile</h2>
           <div className="flex flex-col">
             <input
               id="firstName"
@@ -200,10 +216,11 @@ function UpdateAcc() {
               placeholder="First Name"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className={`w-full p-3 border ${
+                isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-white"
+              } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             />
           </div>
-
           <div className="flex flex-col">
             <input
               id="lastName"
@@ -211,10 +228,11 @@ function UpdateAcc() {
               placeholder="Last Name"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className={`w-full p-3 border ${
+                isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-white"
+              } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             />
           </div>
-
           {/* Update Name Button */}
           <div className="flex justify-start">
             <button
@@ -225,11 +243,9 @@ function UpdateAcc() {
             </button>
           </div>
         </div>
-
         {/* Edit Password Section */}
         <div className="space-y-4 mt-8">
-          <h2 className="text-xl font-semibold text-gray-700">Edit Password</h2>
-
+          <h2 className="text-xl font-semibold">Edit Password</h2>
           <div className="flex flex-col">
             <input
               id="newPassword"
@@ -237,10 +253,11 @@ function UpdateAcc() {
               placeholder="New Password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className={`w-full p-3 border ${
+                isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-white"
+              } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             />
           </div>
-
           <div className="flex flex-col">
             <input
               id="confirmPassword"
@@ -248,10 +265,11 @@ function UpdateAcc() {
               placeholder="Confirm New Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className={`w-full p-3 border ${
+                isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-white"
+              } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             />
           </div>
-
           {/* Update Password Button */}
           <div className="flex justify-start">
             <button
@@ -262,13 +280,9 @@ function UpdateAcc() {
             </button>
           </div>
         </div>
-
         {/* Manage Account Section */}
         <div className="space-y-4 mt-8">
-          <h2 className="text-xl font-semibold text-gray-700">
-            Manage Account
-          </h2>
-
+          <h2 className="text-xl font-semibold">Manage Account</h2>
           <div className="flex justify-start">
             <button
               onClick={handleDelete}
@@ -279,7 +293,6 @@ function UpdateAcc() {
           </div>
         </div>
       </div>
-
       {/* Modals */}
       {showUpdatePasswordModal && (
         <UpdateAccModal
@@ -288,7 +301,6 @@ function UpdateAcc() {
           onCancel={() => setShowUpdatePasswordModal(false)}
         />
       )}
-
       {showUpdateProfileModal && (
         <UpdateAccModal
           title="Profile"
