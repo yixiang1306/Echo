@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { useTheme } from "../context/ThemeContext"; // Import the useTheme hook
 import UpdateAccModal from "./UpdateAccModal";
 import DeleteAccModal from "./DeleteAccModal";
 
 function UpdateAcc() {
   const navigate = useNavigate();
+  const { isDarkMode } = useTheme(); // Get the current theme
   const [username, setUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   // Modal states
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -36,19 +37,25 @@ function UpdateAcc() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
+    <div
+      className={`flex flex-col items-center justify-center min-h-screen ${
+        isDarkMode ? "bg-gray-900 text-white" : "bg-white text-black"
+      } p-4`}
+    >
       {/* Logo */}
       <div
         className="absolute top-5 left-10 cursor-pointer text-4xl font-bold"
         onClick={() => navigate("/app")}
       >
-        <span className="text-black">Ask</span>
+        <span className={isDarkMode ? "text-indigo-400" : "text-black"}>Ask</span>
         <span className="text-indigo-500">Vox</span>
       </div>
 
       {/* Close Button */}
       <div
-        className="absolute top-5 right-10 cursor-pointer text-4xl"
+        className={`absolute top-5 right-10 cursor-pointer text-4xl ${
+          isDarkMode ? "text-gray-300" : "text-black"
+        }`}
         onClick={() => navigate("/settings")}
       >
         &times;
@@ -58,17 +65,26 @@ function UpdateAcc() {
       <h1 className="text-3xl font-bold mb-8">Profile</h1>
 
       {feedbackMessage && (
-        <p className="text-green-600 font-semibold mb-4">{feedbackMessage}</p>
+        <p
+          className={`text-green-600 font-semibold mb-4 ${
+            isDarkMode ? "text-green-400" : "text-green-600"
+          }`}
+        >
+          {feedbackMessage}
+        </p>
       )}
 
       {/* Form Container */}
       <div className="w-full max-w-md space-y-4">
+        {/* Username Input */}
         <input
           type="text"
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="w-full p-3 bg-gray-100 rounded-lg outline-none"
+          className={`w-full p-3 rounded-lg outline-none ${
+            isDarkMode ? "bg-gray-800 text-white" : "bg-gray-100 text-black"
+          }`}
         />
 
         {/* New Password Input */}
@@ -78,7 +94,9 @@ function UpdateAcc() {
             placeholder="New Password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full p-3 bg-gray-100 rounded-lg outline-none"
+            className={`w-full p-3 rounded-lg outline-none ${
+              isDarkMode ? "bg-gray-800 text-white" : "bg-gray-100 text-black"
+            }`}
           />
           <span
             className="absolute top-1/2 right-4 transform -translate-y-1/2 cursor-pointer"
@@ -95,7 +113,9 @@ function UpdateAcc() {
             placeholder="Re-type New Password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full p-3 bg-gray-100 rounded-lg outline-none"
+            className={`w-full p-3 rounded-lg outline-none ${
+              isDarkMode ? "bg-gray-800 text-white" : "bg-gray-100 text-black"
+            }`}
           />
           <span
             className="absolute top-1/2 right-4 transform -translate-y-1/2 cursor-pointer"
@@ -109,13 +129,17 @@ function UpdateAcc() {
         <div className="flex justify-center gap-8 mt-4">
           <button
             onClick={handleUpdate}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700"
+            className={`px-6 py-2 rounded-full hover:${
+              isDarkMode ? "bg-indigo-700" : "bg-indigo-700"
+            } ${isDarkMode ? "bg-indigo-600 text-white" : "bg-indigo-600 text-white"}`}
           >
             Update
           </button>
           <button
             onClick={handleDelete}
-            className="px-6 py-2 bg-red-600 text-white rounded-full hover:bg-red-700"
+            className={`px-6 py-2 rounded-full hover:${
+              isDarkMode ? "bg-red-700" : "bg-red-700"
+            } ${isDarkMode ? "bg-red-600 text-white" : "bg-red-600 text-white"}`}
           >
             Delete Account
           </button>

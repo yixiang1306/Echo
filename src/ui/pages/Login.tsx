@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css"; // Import the external CSS file
+import { supabase } from "../supabase";
 
 function Login() {
   const navigate = useNavigate();
@@ -30,6 +31,22 @@ function Login() {
       }, 1000);
     });
   };
+
+  // For testing 
+  /*
+  async function test() {
+    const { data, error } = await supabase.from("User").select("*");
+
+    if (error) {
+      console.log("Error fetching data:", error);
+    }
+
+    console.log("Data:", data);
+  }
+
+  useEffect(() => {
+    test();
+  }, []); */
 
   return (
     <div className="login-container">
