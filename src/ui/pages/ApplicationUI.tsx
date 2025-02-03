@@ -4,11 +4,6 @@ import LogoutModal from "./LogoutModal";
 import { supabase } from "../supabaseClient";
 import { CircleCheckBig, CircleDollarSign, Wallet } from "lucide-react";
 
-interface FetchDataType {
-  firstName: string;
-  lastName: string;
-  userType: string;
-}
 export enum MODEL_TYPE {
   ASKVOX = "ASKVOX",
   GPT_4o = "GPT_4o",
@@ -26,7 +21,6 @@ const ApplicationUI = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [fetchData, setFetchData] = useState<FetchDataType | null>(null);
   const [currentSession, setCurrentSession] = useState<any>(null);
   const [freeCoin, setFreeCoin] = useState(5.0);
   const [walletCoin, setWalletCoin] = useState(5.0);
@@ -66,10 +60,8 @@ const ApplicationUI = () => {
         .eq("accountId", currentSession.data.session.user.id)
         .single();
       if (error) {
-        setFetchData(null);
         console.error("Error fetching user data:", error.message);
       } else {
-        setFetchData(User);
         if (User?.userType === "MONTHLY_SUBSCRIPTION") {
           setIsSubscriptionActive(true);
         } else {
@@ -236,7 +228,7 @@ const ApplicationUI = () => {
         const response = await window.electronAPI.sendAudio(base64Audio);
         setUserInput(response);
 
-        setMessages((prev) => [...prev, { role: "user", content: response }]);
+        // setMessages((prev) => [...prev, { role: "user", content: response }]);
         // const test = {
         //   input: userInput,
         //   output: "Hey How can I Help you today?",
@@ -293,9 +285,9 @@ const ApplicationUI = () => {
       return;
     }
     await supabase.auth.signOut();
-    localStorage.removeItem("accountId"); // Remove from localStorage
+    localStorage.removeItem("accountId");
     setIsModalVisible(false);
-    window.location.href = "/";
+    navigate("/");
   };
 
   const handleLogout = async () => {
@@ -327,6 +319,7 @@ const ApplicationUI = () => {
   ) => {
     //@ts-ignore
     const costData = await window.tokenManagerApi.calculateCost(text, model);
+
     if (isSubscriptionActive) {
       return;
     } else if (freeCoin > 0) {
@@ -370,11 +363,7 @@ const ApplicationUI = () => {
         onClick={toggleSidebar}
       >
         <img
-          src={
-            isSidebarVisible
-              ? "/public/sidebar_open.png"
-              : "/public/sidebar_close.png"
-          }
+          src={isSidebarVisible ? "./sidebar_open.png" : "./sidebar_close.png"}
           alt={isSidebarVisible ? "Close Sidebar" : "Open Sidebar"}
           className="w-8 h-8"
         />
@@ -433,7 +422,7 @@ const ApplicationUI = () => {
 
             <div className="relative">
               <img
-                src="/public/user.png"
+                src="./user.png"
                 alt="Profile"
                 className="w-8 h-8 rounded-full cursor-pointer"
                 onClick={toggleDropdown}
