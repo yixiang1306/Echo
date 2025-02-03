@@ -1,4 +1,5 @@
 import { Tray, Menu, app } from 'electron';
+import { setQuitting } from '../main.js';
 
 
 export function createTray(iconPath: string, mainWindow: Electron.BrowserWindow) {
@@ -13,7 +14,9 @@ export function createTray(iconPath: string, mainWindow: Electron.BrowserWindow)
     {
       label: 'Quit',
       click: () => {
+        setQuitting(true);
         app.quit();
+   
       },
     },
   ]);

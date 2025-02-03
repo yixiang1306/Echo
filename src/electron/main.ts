@@ -17,7 +17,7 @@ let overlayWindow: Electron.BrowserWindow;
 let audioWindow: Electron.BrowserWindow;
 let wakeUpProcess: ReturnType<typeof createWakeUpProcess>;
 let llmProcess: ReturnType<typeof createLLMProcess>;
-let isQuitting = false;
+let isQuitting: boolean = false;
 
 app.commandLine.appendSwitch('disable-features', 'ChunkedDataPipe');
 
@@ -69,7 +69,6 @@ app.on('before-quit', () => {
   llmProcess.kill();
 });
 
-
 // Handle Alt+V
 async function handleOverlayToggle() {
   console.log("Alt+V pressed.");
@@ -84,4 +83,11 @@ async function handleOverlayToggle() {
     await slideIn(overlayWindow);
     wakeUpProcess.pause();
   }
+}
+
+
+//Handle quitting parameters
+
+export function setQuitting(quit: boolean) {
+  isQuitting = quit;
 }

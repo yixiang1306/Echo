@@ -2,7 +2,8 @@ import { ipcMain } from "electron";
 import { MODEL_TYPE } from "../util.js";
 import { createLLMProcess } from "./llmProcess.js";
 import axios from "axios";
-
+import * as fs from 'fs';
+import { exec } from "child_process";
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 export function setupIpcHandlers(mainWindow: Electron.BrowserWindow, audioWindow: Electron.BrowserWindow, llmProcess: ReturnType<typeof createLLMProcess>) {
@@ -81,8 +82,40 @@ export function setupIpcHandlers(mainWindow: Electron.BrowserWindow, audioWindow
         llmProcess.process.stdin.write(text+'\n');  
         console.log("sent text...");
         console.log("waiting for response...");
-        llmProcess.process.stdout.on('data', (data) => {
-          console.log(data.toString());
+        llmProcess.process.stdout.on('data', async (data) => {
+
+          const responseText = data.toString().trim();
+          console.log(responseText);
+
+
+
+          // Step 1: Start Playing TTS in Parallel
+           // Step 1: Request TTS from Google
+        try {
+          const ttsResponse = await axios.post(
+            `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
+            {
+              input: { text: responseText },
+              voice: {
+                languageCode: "en-US",
+                name: "en-US-Journey-F",
+                ssmlGender: "NEUTRAL",
+              },
+              audioConfig: { audioEncoding: "MP3" },
+            },
+            { headers: { "Content-Type": "application/json" } }
+          );
+
+          const base64Audio = ttsResponse.data.audioContent;
+          console.log("TTS Audio Generated (Base64)");
+
+          // Step 2: Send Base64 Audio to Frontend
+          audioWindow.webContents.send("play-audio", base64Audio);
+
+        } catch (ttsError) {
+          console.error("TTS Error:", ttsError);
+        }
+
           resolve(data.toString());
         });
         

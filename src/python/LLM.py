@@ -5,6 +5,7 @@ import json
 import random
 from dotenv import load_dotenv
 import sys
+from collections import deque
 # Load environment variables
 load_dotenv()
 
@@ -158,7 +159,7 @@ def get_response(user_input: str):
 
         
 
-    return "I'm sorry, I couldn't fetch the image. Try again later."
+    return "I'm sorry, It seem like the server is down. Please try again later."
 
 # Run the function
 
@@ -171,4 +172,4 @@ if __name__ == "__main__":
                 response = get_response(user_input)
                 print(response, flush=True)  # Send response to Electron
         except Exception as e:
-            print(f"Error: {str(e)}", flush=True)
+            print(f"Error: {str(e)} \n I'm sorry, It seem like the server is down. Please try again later.", flush=True)
