@@ -1,7 +1,7 @@
 import "regenerator-runtime/runtime";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route, HashRouter } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 import "./main.css";
 import ApplicationUI from "./pages/ApplicationUI";
@@ -18,7 +18,7 @@ import Payment from "./pages/Payment";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/" element={<Start />} />
           <Route path="/login" element={<Login />} />
@@ -27,11 +27,14 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/overlay" element={<OverlayUI />} />
           <Route path="/audio" element={<HiddenAudioPlayer />} />
           <Route path="/upgrade" element={<Upgrade />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route
+            path="/settings"
+            element={<Settings clearChatHistory={() => {}} />}
+          />
           <Route path="/updateAcc" element={<UpdateAcc />} />
           <Route path="/payment" element={<Payment />} />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </ThemeProvider>
   </StrictMode>
 );

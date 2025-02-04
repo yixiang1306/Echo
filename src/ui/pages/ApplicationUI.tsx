@@ -174,14 +174,14 @@ const ApplicationUI = () => {
 
   //------------------ Function   -------------------------
 
+  // Handle recording toggle
   const handleRecord = () => {
     //@ts-ignore
     window.electronAPI.toggleRecording(!isRecording);
 
     if (!isRecording) {
       navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-        const options = { mimeType: "audio/wav" };
-        const recorder = new MediaRecorder(stream, options);
+        const recorder = new MediaRecorder(stream);
         const audioChunks: Blob[] = [];
 
         recorder.ondataavailable = (event) => {
@@ -190,8 +190,7 @@ const ApplicationUI = () => {
 
         recorder.onstop = () => {
           const blob = new Blob(audioChunks, { type: "audio/wav" });
-          // Ensure all data is processed before sending
-          setTimeout(() => sendAudio(blob), 500);
+          sendAudio(blob);
         };
 
         recorder.start();
@@ -207,53 +206,30 @@ const ApplicationUI = () => {
 
   //------------------ Function   -------------------------
 
+  // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
-    if (!isSubscriptionActive && freeCoin <= 0 && walletCoin <= 0) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "Sorry, you do not have enough coins. Please purchase a subscription or top up your wallet.",
-        },
-      ]);
-      return;
-    }
-    setIsLoading(true);
+    setIsLoading(true); // Start loading animation
 
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
       if (reader.result === null) return;
 
-      // Extract base64 data
-      const base64Audio = (reader.result as string).split(",")[1];
+      const base64Audio = (reader.result as string).split(",")[1]; // Extract base64 data
 
       try {
         //@ts-ignore
         const response = await window.electronAPI.sendAudio(base64Audio);
-        setUserInput(response);
 
-        // setMessages((prev) => [...prev, { role: "user", content: response }]);
-        // const test = {
-        //   input: userInput,
-        //   output: "Hey How can I Help you today?",
-        // };
-        // await calculateCost(test, MODEL_TYPE.ASKVOX);
+        setMessages((prev) => [...prev, { role: "user", content: response }]);
 
         //@ts-ignore
         const llm_response = await window.electronAPI.textInput(response);
-        const conversation_data = {
-          input: userInput,
-          output: String(llm_response),
-        };
-        await calculateCost(conversation_data, MODEL_TYPE.ASKVOX);
 
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: llm_response },
         ]);
-        setUserInput("");
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
         setMessages((prev) => [
@@ -261,7 +237,7 @@ const ApplicationUI = () => {
           { role: "assistant", content: "Error processing your request." },
         ]);
       } finally {
-        setIsLoading(false);
+        setIsLoading(false); // Stop loading animation
       }
     };
   };
@@ -319,7 +295,9 @@ const ApplicationUI = () => {
   };
 
   const startNewChat = () => {
-    setMessages([{ role: "Vox", content: "Hello! How can I assist you today?" }]);
+    setMessages([
+      { role: "Vox", content: "Hello! How can I assist you today?" },
+    ]);
   };
 
   const clearChatHistory = () => {
@@ -477,13 +455,17 @@ const ApplicationUI = () => {
               />
               {dropdownOpen && (
                 <div
-                    className={`absolute right-0 mt-2 ${
+                  className={`absolute right-0 mt-2 ${
                     isDarkMode
                       ? "bg-gray-800 border-gray-700"
                       : "bg-white border-gray-300"
                   } border rounded-lg shadow-lg w-36`}
                 >
-                  <ul className={`py-1 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  <ul
+                    className={`py-1 ${
+                      isDarkMode ? "text-gray-300" : "text-gray-700"
+                    }`}
+                  >
                     <li
                       className={`px-4 py-2 cursor-pointer ${
                         isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
@@ -571,17 +553,13 @@ const ApplicationUI = () => {
           />
           <div className="absolute inset-y-0 right-0 flex items-center gap-2 pr-2">
             <button onClick={sendMessage} className="p-1 rounded-lg">
-              <img
-                src="/send.png"
-                alt="Send"
-                className="h-6 w-6"
-              />
+              <img src="/send.png" alt="Send" className="h-6 w-6" />
             </button>
             <button onClick={handleRecord} className="p-1 rounded-lg">
-              <img 
-                src={isRecording ? "/red_mic.png" : "/blacked_mic.png"} 
-                alt={isRecording ? "Stop Recording" : "Start Recording"} 
-                className="h-6 w-6" 
+              <img
+                src={isRecording ? "/red_mic.png" : "/blacked_mic.png"}
+                alt={isRecording ? "Stop Recording" : "Start Recording"}
+                className="h-6 w-6"
               />
             </button>
           </div>

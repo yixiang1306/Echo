@@ -2,8 +2,6 @@ import { ipcMain } from "electron";
 import { MODEL_TYPE } from "../util.js";
 import { createLLMProcess } from "./llmProcess.js";
 import axios from "axios";
-import * as fs from "fs";
-import { exec } from "child_process";
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 export function setupIpcHandlers(
