@@ -171,14 +171,14 @@ const ApplicationUI = () => {
 
   //------------------ Function   -------------------------
 
+  // Handle recording toggle
   const handleRecord = () => {
     //@ts-ignore
     window.electronAPI.toggleRecording(!isRecording);
 
     if (!isRecording) {
       navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-        const options = { mimeType: "audio/wav" };
-        const recorder = new MediaRecorder(stream, options);
+        const recorder = new MediaRecorder(stream);
         const audioChunks: Blob[] = [];
 
         recorder.ondataavailable = (event) => {
@@ -187,8 +187,7 @@ const ApplicationUI = () => {
 
         recorder.onstop = () => {
           const blob = new Blob(audioChunks, { type: "audio/wav" });
-          // Ensure all data is processed before sending
-          setTimeout(() => sendAudio(blob), 500);
+          sendAudio(blob);
         };
 
         recorder.start();
@@ -204,53 +203,30 @@ const ApplicationUI = () => {
 
   //------------------ Function   -------------------------
 
+  // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
-    if (!isSubscriptionActive && freeCoin <= 0 && walletCoin <= 0) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "Sorry, you do not have enough coins. Please purchase a subscription or top up your wallet.",
-        },
-      ]);
-      return;
-    }
-    setIsLoading(true);
+    setIsLoading(true); // Start loading animation
 
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
       if (reader.result === null) return;
 
-      // Extract base64 data
-      const base64Audio = (reader.result as string).split(",")[1];
+      const base64Audio = (reader.result as string).split(",")[1]; // Extract base64 data
 
       try {
         //@ts-ignore
         const response = await window.electronAPI.sendAudio(base64Audio);
-        setUserInput(response);
 
-        // setMessages((prev) => [...prev, { role: "user", content: response }]);
-        // const test = {
-        //   input: userInput,
-        //   output: "Hey How can I Help you today?",
-        // };
-        // await calculateCost(test, MODEL_TYPE.ASKVOX);
+        setMessages((prev) => [...prev, { role: "user", content: response }]);
 
         //@ts-ignore
         const llm_response = await window.electronAPI.textInput(response);
-        const conversation_data = {
-          input: userInput,
-          output: String(llm_response),
-        };
-        await calculateCost(conversation_data, MODEL_TYPE.ASKVOX);
 
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: llm_response },
         ]);
-        setUserInput("");
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
         setMessages((prev) => [
@@ -258,7 +234,7 @@ const ApplicationUI = () => {
           { role: "assistant", content: "Error processing your request." },
         ]);
       } finally {
-        setIsLoading(false);
+        setIsLoading(false); // Stop loading animation
       }
     };
   };
