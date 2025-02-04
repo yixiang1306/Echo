@@ -1,11 +1,16 @@
+import { CircleCheckBig, CircleDollarSign, Wallet } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import LogoutModal from "./LogoutModal";
-import { supabase } from "../utility/supabaseClient";
-import { CircleCheckBig, CircleDollarSign, Wallet } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../utility/authprovider";
-import { markUserAsOffline } from "../utility/syncFunctions";
+import { supabase } from "../utility/supabaseClient";
+import LogoutModal from "./LogoutModal";
+import { Session } from "@supabase/supabase-js";
+import {
+  markUserAsOffline,
+  markUserAsOnline,
+  syncCoinsAndSubscriptions,
+} from "../utility/syncFunctions";
 
 export enum MODEL_TYPE {
   ASKVOX = "ASKVOX",
@@ -24,7 +29,7 @@ const ApplicationUI = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [currentSession, setCurrentSession] = useState<any>(null);
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [freeCoin, setFreeCoin] = useState(5.0);
   const [walletCoin, setWalletCoin] = useState(5.0);
   const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
@@ -36,8 +41,16 @@ const ApplicationUI = () => {
   const { session } = useAuth();
 
   //------------------ Function the current session and resize handler -------------------------
+
   useEffect(() => {
     setCurrentSession(session);
+    if (session) {
+      markUserAsOnline(session.user.id);
+      syncCoinsAndSubscriptions(session.user.id);
+    }
+
+    //@ts-ignore
+    window.electron.openWindows();
     if (currentSession) {
       console.log("session", currentSession.user.id);
     }
@@ -242,7 +255,11 @@ const ApplicationUI = () => {
   //------------------ Function Sign out   ------------------------
 
   const handleCleanupSession = async () => {
-    await supabase.auth.signOut();
+    //@ts-ignore
+    await window.electron.killWindows();
+    await markUserAsOffline(currentSession!.user.id);
+    const { error } = await supabase.auth.signOut();
+    console.error("error sign out", error);
     setIsModalVisible(false);
   };
 
@@ -297,7 +314,7 @@ const ApplicationUI = () => {
           amount: newAmount,
           updatedAt: new Date().toISOString(),
         })
-        .eq("accountId", currentSession.user.id);
+        .eq("accountId", currentSession!.user.id);
 
       if (error) {
         console.error("Error updating free coin amount:", error.message);
@@ -312,7 +329,7 @@ const ApplicationUI = () => {
           amount: newAmount,
           updatedAt: new Date().toISOString(),
         })
-        .eq("accountId", currentSession.user.id);
+        .eq("accountId", currentSession!.user.id);
 
       if (error) {
         console.error("Error updating free coin amount:", error.message);

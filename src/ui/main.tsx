@@ -28,7 +28,6 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/" element={<Start />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/app" element={<ApplicationUI />} />

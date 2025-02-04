@@ -23,7 +23,7 @@ const pythonInterpreterPath = isDev()
     ); // Production
 
 export function createLLMProcess() {
-  console.log("process started");
+  console.log("LLM process started");
   const process = spawn(pythonInterpreterPath, [pythonScriptPath]);
 
   return {

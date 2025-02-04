@@ -1,7 +1,10 @@
-import { ipcMain } from "electron";
-import { MODEL_TYPE } from "../util.js";
+import { app, ipcMain } from "electron";
+import { isDev, MODEL_TYPE } from "../util.js";
 import { createLLMProcess } from "./llmProcess.js";
 import axios from "axios";
+import path from "node:path";
+import { createOverlayWindow } from "./windows.js";
+import { createWakeUpProcess } from "./wakeUpProcess.js";
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 export function setupIpcHandlers(

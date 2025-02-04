@@ -23,7 +23,7 @@ const pythonInterpreterPath = isDev()
     ); // Production
 
 export function createWakeUpProcess() {
-  console.log("process started");
+  console.log("Wake Up process started");
   const process = spawn(pythonInterpreterPath, [pythonScriptPath], {
     stdio: ["pipe", "pipe", "pipe"],
   });

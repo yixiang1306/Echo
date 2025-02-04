@@ -2,11 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 import { Session } from "@supabase/supabase-js";
-import {
-  markUserAsOffline,
-  markUserAsOnline,
-  syncCoinsAndSubscriptions,
-} from "./syncFunctions";
+import { markUserAsOnline, syncCoinsAndSubscriptions } from "./syncFunctions";
 
 type AuthContextType = {
   session: Session | null;
@@ -24,58 +20,51 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data?.session) {
-        console.log("User session found", data.session);
-        setSession(data.session);
-      } else {
-        console.log("No session found, redirecting to login...");
-        navigate("/login");
+    let isMounted = true; // ✅ Prevents state updates on unmounted components
+
+    const initializeSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        if (data?.session && isMounted) {
+          console.log("✅ Existing session found:", data.session);
+          setSession(data.session);
+        }
+      } catch (error) {
+        console.error("❌ Error retrieving session:", error);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-      setLoading(false);
     };
 
-    checkSession();
+    initializeSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        console.log("🔄 Auth event:", _event, newSession);
+    // Listen for auth state changes only in the main window
+    if (window.opener == null) {
+      const { data: authListener } = supabase.auth.onAuthStateChange(
+        async (_event, session) => {
+          console.log("🔄 Auth event:", _event, session);
 
-        if (_event === "SIGNED_OUT") {
-          if (session?.user?.id) {
-            const isMarkedOffline = await markUserAsOffline(session.user.id);
-            if (!isMarkedOffline) {
-              console.error("Failed to mark user as offline");
-            }
+          if (_event === "SIGNED_IN" && session) {
+            console.log("✅ User signed in:", session.user.id);
+            setSession(session);
           }
-          setSession(null);
-          navigate("/login");
-        } else if (newSession?.user) {
-          setSession(newSession);
-          const userId = newSession.user.id;
 
-          try {
-            const isMarkedOnline = await markUserAsOnline(userId);
-            if (!isMarkedOnline) {
-              console.error("Failed to mark user as online");
-            }
-
-            const isSynced = await syncCoinsAndSubscriptions(userId);
-            if (!isSynced) {
-              console.error("Failed to sync user coins and subscriptions");
-            }
-          } catch (error) {
-            console.error("Error during user sync:", error);
+          if (_event === "SIGNED_OUT") {
+            console.log("🚪 User signed out, redirecting...");
+            setSession(null);
+            navigate("/");
           }
         }
-      }
-    );
+      );
 
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [session]); // Dependency on session to keep track of the last logged-in user
+      return () => {
+        authListener.subscription.unsubscribe();
+        isMounted = false;
+      };
+    }
+  }, []);
 
   return (
     <AuthContext.Provider value={{ session, loading }}>

@@ -1,3 +1,4 @@
+import { Session } from "@supabase/supabase-js";
 import { contextBridge, ipcRenderer } from "electron/renderer";
 
 enum MODEL_TYPE {
@@ -11,6 +12,8 @@ contextBridge.exposeInMainWorld("nodeAPI", {
 
 contextBridge.exposeInMainWorld("electron", {
   getEnv: () => ipcRenderer.invoke("get-env"),
+  openWindows: () => ipcRenderer.send("open-windows"),
+  killWindows: () => ipcRenderer.send("kill-windows"),
 });
 
 contextBridge.exposeInMainWorld("tokenManagerApi", {
@@ -22,7 +25,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   toggleRecording: (recording: boolean) =>
     ipcRenderer.send("toggle-recording", recording),
   textInput: (text: string) => ipcRenderer.invoke("text-input", text),
-  sendAudio: (base64Audio: string) => ipcRenderer.invoke("send-audio", base64Audio),
+  sendAudio: (base64Audio: string) =>
+    ipcRenderer.invoke("send-audio", base64Audio),
 });
 
 // Expose a new audioManagerAPI

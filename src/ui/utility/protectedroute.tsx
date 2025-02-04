@@ -4,9 +4,18 @@ import { useAuth } from "./authprovider";
 const ProtectedRoute = () => {
   const { session, loading } = useAuth();
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    console.log("⏳ Still loading session...");
+    return <div>Loading...</div>; // Show this only while loading
+  }
 
-  return session ? <Outlet /> : <Navigate to="/login" />;
+  if (!session) {
+    console.log("No session found, redirecting to /");
+    return <Navigate to="/" replace />;
+  }
+
+  console.log("Session found, rendering protected content");
+  return <Outlet />;
 };
 
 export default ProtectedRoute;

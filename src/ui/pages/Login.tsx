@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../utility/supabaseClient";
 
@@ -7,22 +7,13 @@ import {
   syncCoinsAndSubscriptions,
 } from "../utility/syncFunctions";
 import "./Login.css";
-import { useAuth } from "../utility/authprovider";
 
 function Login() {
   const navigate = useNavigate();
-  const { session, loading } = useAuth(); // Get session & loading state from AuthProvider
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [message, setMessage] = useState(""); // For error or info messages
   const [isProcessing, setIsProcessing] = useState(false); // Prevent multiple clicks
-
-  //  Redirect if the user is already logged in
-  useEffect(() => {
-    if (!loading && session) {
-      navigate("/app");
-    }
-  }, [session, loading, navigate]);
 
   //----------------------- Handle sign-in form submission---------------------------------
   const handleSignIn = async (e: React.FormEvent) => {
@@ -43,7 +34,7 @@ function Login() {
         return;
       }
 
-      console.log("✅ User signed in:", data);
+      console.log("User signed in:", data);
 
       const userId = data.user.id;
 
@@ -62,7 +53,6 @@ function Login() {
         setIsProcessing(false);
         return;
       }
-
       //  Redirect to app
       navigate("/app");
     } catch (error) {
