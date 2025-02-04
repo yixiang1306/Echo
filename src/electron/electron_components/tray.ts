@@ -16,7 +16,7 @@ export function createTray(iconPath: string, mainWindow: Electron.BrowserWindow)
       click: () => {
         setQuitting(true);
         app.quit();
-   
+        
       },
     },
   ]);

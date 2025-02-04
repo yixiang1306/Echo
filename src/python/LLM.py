@@ -18,6 +18,13 @@ WALLPAPER_HEAVEN_ENDPOINT = os.getenv("WALLPAPER_HEAVEN_ENDPOINT")
 YOUTUBE_API_KEY = os.getenv("GOOGLE_API_KEY")
 YOUTUBE_SEARCH_URL =os.getenv("YOUTUBE_SEARCH_URL")
 
+
+# Context Window (stores last N interactions)
+CONTEXT_WINDOW_SIZE = 5  # Adjust this value based on available token limits
+chat_history = deque(maxlen=CONTEXT_WINDOW_SIZE * 2)  # Stores both user and assistant messages
+
+
+
 # Initialize OpenAI Client
 client = OpenAI(
     api_key=RUNPOD_API_KEY,
@@ -122,6 +129,15 @@ MODEL_NAME = "NalDice/askvox-llama3.3-70b-16bit"
 
 def get_response(user_input: str):
 
+    global chat_history
+
+    # Store user input in history
+    chat_history.append({"role": "user", "content": user_input})
+
+
+    # Prepare messages with conversation history
+    messages = [{"role": "system", "content": "Your name is Echo. You are friendly and intelligent. You are a helpful game assistant with tool calling capabilities. Maintain context from the conversation and only call tools when necessary."}] + list(chat_history)
+
     lower_input = user_input.lower()
     # Check for keywords related to tools
     if any(word in lower_input for word in ["video", "trailer", "clip", "youtube"]):
@@ -132,12 +148,9 @@ def get_response(user_input: str):
         tool_name = "none"
     response_stream = client.chat.completions.create(
         model=MODEL_NAME,
-        messages=[
-            {"role": "system", "content": "You are a helpful game assistant with tool calling capabilities. Only use these tools if they are relevant to the user question. Only reply with a tool call if the function exists and the user question is specific to the tool description. If the user question is unrelated to the tool description, just reply directly in natural language. When you receive a tool call response, use the output to format an answer to the original user question."},
-            {"role": "user", "content": user_input}
-        ],
+        messages=messages,
         temperature=0.5,
-        max_tokens=200,
+        max_tokens=2000,
         tools=tools,
         tool_choice=tool_name
     )
@@ -145,17 +158,25 @@ def get_response(user_input: str):
 
     # Extract normal text response
     if response_stream.choices[0].message.content is not None:
+        assistant_response = response_stream.choices[0].message.content
+        chat_history.append({"role": "assistant", "content": assistant_response})
         return response_stream.choices[0].message.content
 
     # Extract tool calls
     tool_calls = response_stream.choices[0].message.tool_calls
+
+    # print(tool_calls)
+
     if tool_calls:
+        
         function_name = tool_calls[0].function.name
         function_args = json.loads(tool_calls[0].function.arguments)
 
         for tool in tool_functions:
             if tool == function_name:
-                return tool_functions[function_name](function_args["search_param"])
+                response = tool_functions[function_name](function_args["search_param"])
+                chat_history.append({"role": "assistant", "content":  response})
+                return response
 
         
 
@@ -169,7 +190,8 @@ if __name__ == "__main__":
         try:
             user_input = sys.stdin.readline().strip()
             if user_input:
-                response = get_response(user_input)
+                response = get_response(user_input)  # Get response **only once**
+
                 print(response, flush=True)  # Send response to Electron
         except Exception as e:
-            print(f"Error: {str(e)} \n I'm sorry, It seem like the server is down. Please try again later.", flush=True)
+            print(f"Error: {str(e)} \n I'm sorry, It seems like the server is down. Please try again later.", flush=True)
