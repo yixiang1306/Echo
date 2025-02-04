@@ -34,7 +34,13 @@ export function createWakeUpProcess() {
       console.log("pausing");
       process.stdin.write("pause\n");
     },
-    resume: () => process.stdin.write("resume\n"),
-    kill: () => process.kill(),
+    resume: () => {
+      console.log("resuming");
+      process.stdin.write("resume\n");
+    },
+    kill: () => {
+      process.kill();
+      console.log("WakeUp process killed");
+    },
   };
 }

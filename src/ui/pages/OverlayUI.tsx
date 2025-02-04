@@ -40,7 +40,7 @@ const OverlayUI = () => {
       console.error("Error sending message:", error);
       setMessages((prev) => [
         ...prev,
-        { role: "Vox", content: "Error processing your request." },
+        { role: "assistant", content: "Error processing your request." },
       ]);
     } finally {
       setIsLoading(false); // Stop loading animation
@@ -113,8 +113,26 @@ const OverlayUI = () => {
     };
   };
 
+  const handleLLMResponse = (message: string): JSX.Element => {
+    // Regular expressions for checking image and video URLs
+    const imageRegex = /\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i;
+    const videoRegex =
+      /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\/.+/i;
+
+    if (imageRegex.test(message)) {
+      return <img src={message} alt="Image" width={"100%"} />;
+      // Handle image logic here (e.g., display in UI)
+    } else if (videoRegex.test(message)) {
+      // Handle video logic here (e.g., embed video)
+      return <video src={message} controls />;
+    } else {
+      // Handle plain text logic here
+      return <p>{message}</p>;
+    }
+  };
+
   return (
-    <div className="flex flex-col h-screen items-center justify-center bg-gray-900 text-white">
+    <div className="flex flex-col h-screen items-center justify-center bg-transparent text-white">
       {/* Header */}
       <div className="p-4">
         <h1 className="text-2xl font-bold">AskVox</h1>
@@ -128,14 +146,15 @@ const OverlayUI = () => {
               message.role === "user" ? "justify-end" : "justify-start"
             }`}
           >
+            {/* make this div pop up animation */}
             <div
-              className={`max-w-xs px-4 py-2 rounded-lg ${
+              className={`max-w-xs px-4 py-2 rounded-lg animate-pop-up ${
                 message.role === "user"
                   ? "bg-blue-600 text-white"
                   : "bg-gray-700 text-gray-200"
               }`}
             >
-              {message.content}
+              {handleLLMResponse(message.content)}
             </div>
           </div>
         ))}

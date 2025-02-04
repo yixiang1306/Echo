@@ -56,7 +56,8 @@ export function createOverlayWindow(
     icon: iconPath,
     width: 450,
     height,
-    frame: true,
+    transparent: true, // Transparent background
+    frame: false,
     show: false,
     x: width - 450,
     y: 0,
