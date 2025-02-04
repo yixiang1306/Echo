@@ -70,50 +70,54 @@ export function setupIpcHandlers(
   });
 
   ipcMain.handle("text-input", async (_, text: string) => {
-    console.log("processing...");
+    
     return new Promise((resolve, reject) => {
       llmProcess.process.stdin.write(text + "\n");
       console.log("sent text...");
       console.log("waiting for response...");
-      llmProcess.process.stdout.on("data", async (data) => {
+  
+      llmProcess.process.stdout.once("data", (data) => {
         const responseText = data.toString().trim();
         console.log(responseText);
-
-        // Step 1: Start Playing TTS in Parallel
-        // Step 1: Request TTS from Google
-        try {
-          const ttsResponse = await axios.post(
-            `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
-            {
-              input: { text: responseText },
-              voice: {
-                languageCode: "en-US",
-                name: "en-US-Journey-F",
-                ssmlGender: "NEUTRAL",
+  
+        // Send response text immediately without waiting for TTS
+        resolve(responseText);
+  
+        // Request TTS from Google asynchronously
+        (async () => {
+          try {
+            const ttsResponse = await axios.post(
+              `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
+              {
+                input: { text: responseText },
+                voice: {
+                  languageCode: "en-US",
+                  name: "en-US-Journey-F",
+                  ssmlGender: "NEUTRAL",
+                },
+                audioConfig: { audioEncoding: "MP3" },
               },
-              audioConfig: { audioEncoding: "MP3" },
-            },
-            { headers: { "Content-Type": "application/json" } }
-          );
-
-          const base64Audio = ttsResponse.data.audioContent;
-          console.log("TTS Audio Generated (Base64)");
-
-          // Step 2: Send Base64 Audio to Frontend
-          audioWindow.webContents.send("play-audio", base64Audio);
-        } catch (ttsError) {
-          console.error("TTS Error:", ttsError);
-        }
-
-        resolve(data.toString());
+              { headers: { "Content-Type": "application/json" } }
+            );
+  
+            const base64Audio = ttsResponse.data.audioContent;
+            console.log("TTS Audio Generated (Base64)");
+  
+            // Send Base64 Audio to Frontend after response
+            audioWindow.webContents.send("play-audio", base64Audio);
+          } catch (ttsError) {
+            console.error("TTS Error:", ttsError);
+          }
+        })();
       });
-
-      llmProcess.process.stderr.on("data", (data) => {
+  
+      llmProcess.process.stderr.once("data", (data) => {
         console.error(`Python Error: ${data}`);
         reject(data.toString());
       });
     });
   });
+  
 
   ipcMain.handle(
     "calculate-cost",

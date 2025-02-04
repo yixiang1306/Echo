@@ -58,6 +58,7 @@ export function createOverlayWindow(iconPath: string) {
     icon: iconPath,
     width: 450,
     height,
+    transparent: true, // Transparent background
     frame: false,
     show: false,
     x: width - 450, // Ensures it appears on the right edge

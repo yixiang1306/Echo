@@ -72,6 +72,7 @@ app.on("ready", async () => {
     console.log(data.toString().trim() === "wake-up");
     if (data.toString().trim() === "wake-up") {
       overlayWindow.show();
+      wakeUpProcess.pause();
       await slideIn(overlayWindow);
     }
   });
@@ -107,6 +108,8 @@ async function handleOverlayToggle() {
     wakeUpProcess.pause();
   }
 }
+
+
 
 //Handle quitting parameters
 
