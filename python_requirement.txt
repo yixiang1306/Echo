@@ -5,6 +5,7 @@ altgraph==0.17.4
 annotated-types==0.7.0
 anyio==4.7.0
 attrs==24.2.0
+beautifulsoup4==4.13.1
 blinker==1.9.0
 cachetools==5.5.0
 certifi==2024.8.30
@@ -21,6 +22,7 @@ google-auth==2.36.0
 google-cloud-speech==2.28.1
 google-cloud-texttospeech==2.22.0
 googleapis-common-protos==1.66.0
+googlesearch-python==1.3.0
 greenlet==3.1.1
 grpcio==1.68.1
 grpcio-status==1.68.1
@@ -66,6 +68,7 @@ requests-toolbelt==1.0.0
 rsa==4.9
 setuptools==75.6.0
 sniffio==1.3.1
+soupsieve==2.6
 SQLAlchemy==2.0.36
 srt==3.5.3
 tenacity==9.0.0
