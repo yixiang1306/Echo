@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../utility/supabaseClient";
 import DeleteAccModal from "./DeleteAccModal";
 import UpdateAccModal from "./UpdateAccModal";
 import { useTheme } from "../context/ThemeContext";
@@ -192,9 +192,9 @@ function UpdateAcc() {
           {feedbackMessage}
           <button
             onClick={() => setFeedbackMessage("")}
-            className={`ml-4 ${isDarkMode ? "text-gray-400" : "text-green-500"} hover:${
-              isDarkMode ? "text-gray-200" : "text-green-700"
-            }`}
+            className={`ml-4 ${
+              isDarkMode ? "text-gray-400" : "text-green-500"
+            } hover:${isDarkMode ? "text-gray-200" : "text-green-700"}`}
           >
             &times;
           </button>
@@ -217,7 +217,9 @@ function UpdateAcc() {
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               className={`w-full p-3 border ${
-                isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-white"
+                isDarkMode
+                  ? "border-gray-600 bg-gray-700"
+                  : "border-gray-300 bg-white"
               } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             />
           </div>
@@ -229,7 +231,9 @@ function UpdateAcc() {
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               className={`w-full p-3 border ${
-                isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-white"
+                isDarkMode
+                  ? "border-gray-600 bg-gray-700"
+                  : "border-gray-300 bg-white"
               } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             />
           </div>
@@ -254,7 +258,9 @@ function UpdateAcc() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className={`w-full p-3 border ${
-                isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-white"
+                isDarkMode
+                  ? "border-gray-600 bg-gray-700"
+                  : "border-gray-300 bg-white"
               } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             />
           </div>
@@ -266,7 +272,9 @@ function UpdateAcc() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className={`w-full p-3 border ${
-                isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-white"
+                isDarkMode
+                  ? "border-gray-600 bg-gray-700"
+                  : "border-gray-300 bg-white"
               } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             />
           </div>

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LogoutModal from "./LogoutModal";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../utility/supabaseClient";
 import { CircleCheckBig, CircleDollarSign, Wallet } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../utility/authprovider";
+import { markUserAsOffline } from "../utility/syncFunctions";
 
 export enum MODEL_TYPE {
   ASKVOX = "ASKVOX",
@@ -31,19 +33,14 @@ const ApplicationUI = () => {
     "How do I beat Battlemage",
     "How do I get to Abyssal Woods",
   ]);
+  const { session } = useAuth();
 
   //------------------ Function the current session and resize handler -------------------------
   useEffect(() => {
-    // Fetch the current session
-    const fetchSession = async () => {
-      const currentSession = await supabase.auth.getSession();
-      setCurrentSession(currentSession);
-      if (currentSession.data.session) {
-        console.log("session", currentSession.data.session.user.id);
-      }
-    };
-
-    fetchSession();
+    setCurrentSession(session);
+    if (currentSession) {
+      console.log("session", currentSession.user.id);
+    }
     const handleResize = () => {
       if (window.innerWidth > 800) {
         setIsSidebarVisible(true);
@@ -63,7 +60,7 @@ const ApplicationUI = () => {
       let { data: User, error } = await supabase
         .from("User")
         .select("firstName,lastName,userType")
-        .eq("accountId", currentSession.data.session.user.id)
+        .eq("accountId", currentSession.user.id)
         .single();
       if (error) {
         console.error("Error fetching user data:", error.message);
@@ -80,7 +77,7 @@ const ApplicationUI = () => {
       let { data: free_coin, error } = await supabase
         .from("FreeCoin")
         .select("amount")
-        .eq("accountId", currentSession.data.session.user.id)
+        .eq("accountId", currentSession.user.id)
         .single();
       if (error) {
         setFreeCoin(0);
@@ -94,7 +91,7 @@ const ApplicationUI = () => {
       let { data: wallet, error } = await supabase
         .from("Wallet")
         .select("amount")
-        .eq("accountId", currentSession.data.session.user.id)
+        .eq("accountId", currentSession.user.id)
         .single();
       if (error) {
         setWalletCoin(0);
@@ -266,34 +263,11 @@ const ApplicationUI = () => {
     };
   };
 
-  //------------------ Function Sign out   -------------------------
-
-  const markUserAsOffline = async (accountId: string) => {
-    const todayDate = new Date().toISOString().split("T")[0];
-    const { error } = await supabase
-      .from("UserOnlineStatus")
-      .update({
-        isOnline: false,
-        lastActive: todayDate,
-      })
-      .eq("accountId", accountId);
-
-    if (error) {
-      return false;
-    }
-
-    return true;
-  };
+  //------------------ Function Sign out   ------------------------
 
   const handleCleanupSession = async () => {
-    const res = await markUserAsOffline(currentSession.data.session.user.id);
-    if (!res) {
-      return;
-    }
     await supabase.auth.signOut();
-    localStorage.removeItem("accountId");
     setIsModalVisible(false);
-    navigate("/");
   };
 
   const handleLogout = async () => {
@@ -319,7 +293,9 @@ const ApplicationUI = () => {
   };
 
   const startNewChat = () => {
-    setMessages([{ role: "Vox", content: "Hello! How can I assist you today?" }]);
+    setMessages([
+      { role: "Vox", content: "Hello! How can I assist you today?" },
+    ]);
   };
 
   const clearChatHistory = () => {
@@ -345,13 +321,13 @@ const ApplicationUI = () => {
           amount: newAmount,
           updatedAt: new Date().toISOString(),
         })
-        .eq("accountId", currentSession.data.session.user.id);
+        .eq("accountId", currentSession.user.id);
 
       if (error) {
         console.error("Error updating free coin amount:", error.message);
       }
     } else if (walletCoin > 0) {
-      const newAmount = freeCoin - parseFloat(costData.totalCost);
+      const newAmount = walletCoin - parseFloat(costData.totalCost);
       console.log("updated amount from Wallet", newAmount);
       setWalletCoin(newAmount);
       const { error } = await supabase
@@ -360,7 +336,7 @@ const ApplicationUI = () => {
           amount: newAmount,
           updatedAt: new Date().toISOString(),
         })
-        .eq("accountId", currentSession.data.session.user.id);
+        .eq("accountId", currentSession.user.id);
 
       if (error) {
         console.error("Error updating free coin amount:", error.message);
@@ -477,13 +453,17 @@ const ApplicationUI = () => {
               />
               {dropdownOpen && (
                 <div
-                    className={`absolute right-0 mt-2 ${
+                  className={`absolute right-0 mt-2 ${
                     isDarkMode
                       ? "bg-gray-800 border-gray-700"
                       : "bg-white border-gray-300"
                   } border rounded-lg shadow-lg w-36`}
                 >
-                  <ul className={`py-1 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  <ul
+                    className={`py-1 ${
+                      isDarkMode ? "text-gray-300" : "text-gray-700"
+                    }`}
+                  >
                     <li
                       className={`px-4 py-2 cursor-pointer ${
                         isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
@@ -571,17 +551,13 @@ const ApplicationUI = () => {
           />
           <div className="absolute inset-y-0 right-0 flex items-center gap-2 pr-2">
             <button onClick={sendMessage} className="p-1 rounded-lg">
-              <img
-                src="/send.png"
-                alt="Send"
-                className="h-6 w-6"
-              />
+              <img src="/send.png" alt="Send" className="h-6 w-6" />
             </button>
             <button onClick={handleRecord} className="p-1 rounded-lg">
-              <img 
-                src={isRecording ? "/red_mic.png" : "/blacked_mic.png"} 
-                alt={isRecording ? "Stop Recording" : "Start Recording"} 
-                className="h-6 w-6" 
+              <img
+                src={isRecording ? "/red_mic.png" : "/blacked_mic.png"}
+                alt={isRecording ? "Stop Recording" : "Start Recording"}
+                className="h-6 w-6"
               />
             </button>
           </div>
