@@ -1,8 +1,21 @@
+import { CircleCheckBig, CircleDollarSign, Wallet } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "../context/ThemeContext"; // Import the useTheme hook
+import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../utility/authprovider";
+import { supabase } from "../utility/supabaseClient";
 import LogoutModal from "./LogoutModal";
+import { Session } from "@supabase/supabase-js";
+import {
+  markUserAsOffline,
+  markUserAsOnline,
+  syncCoinsAndSubscriptions,
+} from "../utility/syncFunctions";
 
+export enum MODEL_TYPE {
+  ASKVOX = "ASKVOX",
+  GPT_4o = "GPT_4o",
+}
 const ApplicationUI = () => {
   const [messages, setMessages] = useState([
     { role: "Vox", content: "Hello! How can I assist you today?" },
@@ -16,33 +29,96 @@ const ApplicationUI = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
+  const [freeCoin, setFreeCoin] = useState(5.0);
+  const [walletCoin, setWalletCoin] = useState(5.0);
+  const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
   const [chatHistory, setChatHistory] = useState<string[]>([
     "Composite bow stats",
     "How do I beat Battlemage",
     "How do I get to Abyssal Woods",
   ]);
+  const { session } = useAuth();
 
-  // Get theme context
-  const { isDarkMode } = useTheme();
-
-  const clearChatHistory = () => {
-    setChatHistory([]);
-  };
-
-  const toggleSidebar = () => {
-    setIsSidebarVisible((prev) => !prev);
-  };
+  //------------------ Function the current session and resize handler -------------------------
 
   useEffect(() => {
+    setCurrentSession(session);
+    if (session) {
+      markUserAsOnline(session.user.id);
+      syncCoinsAndSubscriptions(session.user.id);
+    }
+
+    //@ts-ignore
+    window.electron.openWindows();
+    if (currentSession) {
+      console.log("session", currentSession.user.id);
+    }
     const handleResize = () => {
-      if (window.innerWidth > 800 && !isSidebarVisible) {
+      if (window.innerWidth > 800) {
         setIsSidebarVisible(true);
       }
     };
+
     handleResize();
     window.addEventListener("resize", handleResize);
+
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  //------------------ Function to fetch Display name from session -------------------------
+  useEffect(() => {
+    const fetchName = async () => {
+      if (!currentSession) return;
+      let { data: User, error } = await supabase
+        .from("User")
+        .select("firstName,lastName,userType")
+        .eq("accountId", currentSession.user.id)
+        .single();
+      if (error) {
+        console.error("Error fetching user data:", error.message);
+      } else {
+        if (User?.userType === "MONTHLY_SUBSCRIPTION") {
+          setIsSubscriptionActive(true);
+        } else {
+          setIsSubscriptionActive(false);
+        }
+      }
+    };
+    const fetchFreeCoin = async () => {
+      if (!currentSession) return;
+      let { data: free_coin, error } = await supabase
+        .from("FreeCoin")
+        .select("amount")
+        .eq("accountId", currentSession.user.id)
+        .single();
+      if (error) {
+        setFreeCoin(0);
+        console.error("Error fetching user data:", error.message);
+      } else {
+        setFreeCoin(free_coin!.amount as number);
+      }
+    };
+    const fetchWallet = async () => {
+      if (!currentSession) return;
+      let { data: wallet, error } = await supabase
+        .from("Wallet")
+        .select("amount")
+        .eq("accountId", currentSession.user.id)
+        .single();
+      if (error) {
+        setWalletCoin(0);
+        console.error("Error fetching user data:", error.message);
+      } else {
+        setWalletCoin(wallet!.amount as number);
+      }
+    };
+    fetchName();
+    fetchFreeCoin();
+    fetchWallet();
+  }, [currentSession]);
+
+  //------------------ Function   -------------------------
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -50,17 +126,51 @@ const ApplicationUI = () => {
     }
   }, [messages]);
 
+  const toggleSidebar = () => {
+    setIsSidebarVisible((prev) => !prev);
+  };
+
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
+
+  //------------------ Function   -------------------------
 
   const sendMessage = async () => {
     if (userInput.trim() === "") return;
+
     setMessages((prev) => [...prev, { role: "user", content: userInput }]);
-    setUserInput("");
+
+    if (!isSubscriptionActive && freeCoin <= 0 && walletCoin <= 0) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "Sorry, you do not have enough coins. Please purchase a subscription or top up your wallet.",
+        },
+      ]);
+      return;
+    }
     setIsLoading(true);
+    //-------------for testing--------------
+    // const test = {
+    //   input: userInput,
+    //   output: "Hey How can I Help you today?",
+    // };
+    // await calculateCost(test, MODEL_TYPE.ASKVOX);
+
     try {
       //@ts-ignore
       const response = await window.electronAPI.textInput(userInput);
-      setMessages((prev) => [...prev, { role: "assistant", content: response }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: response },
+      ]);
+      const conversation_data = {
+        input: userInput,
+        output: String(response),
+      };
+      await calculateCost(conversation_data, MODEL_TYPE.ASKVOX);
+      setUserInput("");
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => [
@@ -72,20 +182,27 @@ const ApplicationUI = () => {
     }
   };
 
+  //------------------ Function   -------------------------
+
+  // Handle recording toggle
   const handleRecord = () => {
     //@ts-ignore
     window.electronAPI.toggleRecording(!isRecording);
+
     if (!isRecording) {
       navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         const recorder = new MediaRecorder(stream);
         const audioChunks: Blob[] = [];
+
         recorder.ondataavailable = (event) => {
           audioChunks.push(event.data);
         };
+
         recorder.onstop = () => {
           const blob = new Blob(audioChunks, { type: "audio/wav" });
           sendAudio(blob);
         };
+
         recorder.start();
         mediaRecorder.current = recorder;
       });
@@ -93,23 +210,36 @@ const ApplicationUI = () => {
       mediaRecorder.current.stop();
       mediaRecorder.current.stream.getTracks().forEach((track) => track.stop());
     }
+
     setIsRecording((prev) => !prev);
   };
 
+  //------------------ Function   -------------------------
+
+  // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
-    setIsLoading(true);
+    setIsLoading(true); // Start loading animation
+
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
       if (reader.result === null) return;
-      const base64Audio = (reader.result as string).split(",")[1];
+
+      const base64Audio = (reader.result as string).split(",")[1]; // Extract base64 data
+
       try {
         //@ts-ignore
         const response = await window.electronAPI.sendAudio(base64Audio);
+
         setMessages((prev) => [...prev, { role: "user", content: response }]);
+
         //@ts-ignore
         const llm_response = await window.electronAPI.textInput(response);
-        setMessages((prev) => [...prev, { role: "assistant", content: llm_response }]);
+
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: llm_response },
+        ]);
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
         setMessages((prev) => [
@@ -117,23 +247,35 @@ const ApplicationUI = () => {
           { role: "assistant", content: "Error processing your request." },
         ]);
       } finally {
-        setIsLoading(false);
+        setIsLoading(false); // Stop loading animation
       }
     };
   };
 
-  const handleLogout = () => {
+  //------------------ Function Sign out   ------------------------
+
+  const handleCleanupSession = async () => {
+    //@ts-ignore
+    await window.electron.killWindows();
+    await markUserAsOffline(currentSession!.user.id);
+    const { error } = await supabase.auth.signOut();
+    console.error("error sign out", error);
+    setIsModalVisible(false);
+  };
+
+  const handleLogout = async () => {
     setIsModalVisible(true);
   };
 
-  const handleConfirmLogout = () => {
-    setIsModalVisible(false);
-    window.location.href = "/";
+  const handleConfirmLogout = async () => {
+    await handleCleanupSession();
   };
 
   const handleCancelLogout = () => {
     setIsModalVisible(false);
   };
+
+  //------------------ Function   -------------------------
 
   const goToUpgrade = () => {
     navigate("/upgrade");
@@ -144,8 +286,59 @@ const ApplicationUI = () => {
   };
 
   const startNewChat = () => {
-    setMessages([{ role: "Vox", content: "Hello! How can I assist you today?" }]);
+    setMessages([
+      { role: "Vox", content: "Hello! How can I assist you today?" },
+    ]);
   };
+
+  const clearChatHistory = () => {
+    setChatHistory([]);
+  };
+
+  //--------------------Calculate Cost --------------------------
+  const calculateCost = async (
+    text: { input: string; output: string },
+    model: MODEL_TYPE
+  ) => {
+    //@ts-ignore
+    const costData = await window.tokenManagerApi.calculateCost(text, model);
+
+    if (isSubscriptionActive) {
+      return;
+    } else if (freeCoin > 0) {
+      const newAmount = freeCoin - parseFloat(costData.totalCost);
+      setFreeCoin(newAmount);
+      const { error } = await supabase
+        .from("FreeCoin")
+        .update({
+          amount: newAmount,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq("accountId", currentSession!.user.id);
+
+      if (error) {
+        console.error("Error updating free coin amount:", error.message);
+      }
+    } else if (walletCoin > 0) {
+      const newAmount = walletCoin - parseFloat(costData.totalCost);
+      console.log("updated amount from Wallet", newAmount);
+      setWalletCoin(newAmount);
+      const { error } = await supabase
+        .from("Wallet")
+        .update({
+          amount: newAmount,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq("accountId", currentSession!.user.id);
+
+      if (error) {
+        console.error("Error updating free coin amount:", error.message);
+      }
+    }
+  };
+
+  //--------------------Get theme context --------------------------
+  const { isDarkMode } = useTheme();
 
   return (
     <div
@@ -159,7 +352,7 @@ const ApplicationUI = () => {
         onClick={toggleSidebar}
       >
         <img
-          src={isSidebarVisible ? "/public/sidebar_open.png" : "/public/sidebar_close.png"}
+          src={isSidebarVisible ? "./sidebar_open.png" : "./sidebar_close.png"}
           alt={isSidebarVisible ? "Close Sidebar" : "Open Sidebar"}
           className="w-8 h-8"
         />
@@ -214,67 +407,95 @@ const ApplicationUI = () => {
       >
         {/* Dropdown Menu */}
         <div className="absolute top-4 right-4">
-          <div className="relative">
-            <img
-              src="/public/user.png"
-              alt="Profile"
-              className="w-8 h-8 rounded-full cursor-pointer"
-              onClick={toggleDropdown}
-            />
-            {dropdownOpen && (
-              <div
-                className={`absolute right-0 mt-2 ${
-                isDarkMode
-                  ? "bg-gray-800 border-gray-700"
-                  : "bg-white border-gray-300"
-              } border rounded-lg shadow-lg w-36`}
-            >
-              <ul className={`py-1 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
-                <li
-                  className={`px-4 py-2 cursor-pointer ${
-                    isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                  }`}
-                  onClick={goToSettings}
-                >
-                  Settings
-                </li>
-                <li
-                  className={`px-4 py-2 cursor-pointer ${
-                    isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                  }`}
-                  onClick={goToUpgrade}
-                >
-                  Upgrade Plan
-                </li>
-                <li
-                  className={`px-4 py-2 cursor-pointer ${
-                    isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                  }`}
-                  onClick={handleLogout}
-                >
-                  Logout
-                </li>
-              </ul>
+          <div className="flex items-center gap-8">
+            <div className="flex gap-8">
+              {/* Token Balance Tooltip */}
+              <div className="relative group flex gap-2 items-center">
+                <CircleDollarSign className=" size-8 text-yellow-400" />
+                <p className="text-xl">{freeCoin.toFixed(4)}</p>
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
+                  Daily Free Balance
+                </div>
+              </div>
+
+              {/* Wallet Balance Tooltip */}
+              <div className="relative group flex gap-2 items-center">
+                <Wallet className="size-8 text-blue-400" />
+                <p className="text-xl">{walletCoin.toFixed(4)}</p>
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
+                  Your Wallet Balance
+                </div>
+              </div>
+              {isSubscriptionActive && (
+                <div className="relative group flex gap-2 items-center">
+                  <CircleCheckBig className="size-8 text-green-600" />
+                  <p className="text-xl"></p>
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg ">
+                    Your monthly Subscription is active
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+
+            <div className="relative">
+              <img
+                src="./user.png"
+                alt="Profile"
+                className="w-8 h-8 rounded-full cursor-pointer"
+                onClick={toggleDropdown}
+              />
+              {dropdownOpen && (
+                <div
+                  className={`absolute right-0 mt-2 ${
+                    isDarkMode
+                      ? "bg-gray-800 border-gray-700"
+                      : "bg-white border-gray-300"
+                  } border rounded-lg shadow-lg w-36`}
+                >
+                  <ul
+                    className={`py-1 ${
+                      isDarkMode ? "text-gray-300" : "text-gray-700"
+                    }`}
+                  >
+                    <li
+                      className={`px-4 py-2 cursor-pointer ${
+                        isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                      }`}
+                      onClick={goToSettings}
+                    >
+                      Settings
+                    </li>
+                    <li
+                      className={`px-4 py-2 cursor-pointer ${
+                        isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                      }`}
+                      onClick={goToUpgrade}
+                    >
+                      Upgrade Plan
+                    </li>
+                    <li
+                      className={`px-4 py-2 cursor-pointer ${
+                        isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                      }`}
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </li>
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Chat Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold">
-            Hi, username
-          </h1>
-        </div>
-
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto mb-4">
+        <div className="flex-1 overflow-y-auto mt-6 scrollbar-hide">
           {messages.map((message, index) => (
             <div
               key={index}
               className={`flex ${
                 message.role === "user" ? "justify-end" : "justify-start"
-              } mb-4`}
+              } my-4`}
             >
               <div
                 className={`max-w-xs px-4 py-2 rounded-lg shadow-md ${
@@ -307,7 +528,7 @@ const ApplicationUI = () => {
           <div ref={chatEndRef} />
         </div>
 
-        {/* Chat Input Area */}
+        {/* User Input */}
         <div className="relative w-full">
           <input
             type="text"
@@ -323,24 +544,19 @@ const ApplicationUI = () => {
           />
           <div className="absolute inset-y-0 right-0 flex items-center gap-2 pr-2">
             <button onClick={sendMessage} className="p-1 rounded-lg">
-              <img
-                src="/send.png"
-                alt="Send"
-                className="h-6 w-6"
-              />
+              <img src="/send.png" alt="Send" className="h-6 w-6" />
             </button>
             <button onClick={handleRecord} className="p-1 rounded-lg">
-              <img 
-                src={isRecording ? "/red_mic.png" : "/blacked_mic.png"} 
-                alt={isRecording ? "Stop Recording" : "Start Recording"} 
-                className="h-6 w-6" 
+              <img
+                src={isRecording ? "/red_mic.png" : "/blacked_mic.png"}
+                alt={isRecording ? "Stop Recording" : "Start Recording"}
+                className="h-6 w-6"
               />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Logout Modal */}
       {isModalVisible && (
         <LogoutModal
           onConfirm={handleConfirmLogout}

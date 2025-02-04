@@ -21,11 +21,11 @@ function Start() {
           <span className="ask">Ask</span>
           <span className="vox">Vox</span>
         </div>
-        <p className="subtitle">Ask anything about blah blah</p>
+        <p className="subtitle">Ask about anything</p>
 
         {/* Microphone Icon */}
         <div className="icon">
-          <img src="/public/mic.png" alt="microphone" className="mic-icon" />
+          <img src="./mic.png" alt="microphone" className="mic-icon" />
         </div>
 
         {/* Buttons */}

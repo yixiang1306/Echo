@@ -1,70 +1,84 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Login.css"; // Import the external CSS file
-import { supabase } from "../supabase";
+import { supabase } from "../utility/supabaseClient";
+
+import {
+  markUserAsOnline,
+  syncCoinsAndSubscriptions,
+} from "../utility/syncFunctions";
+import "./Login.css";
 
 function Login() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [message, setMessage] = useState(""); // For error or info messages
+  const [isProcessing, setIsProcessing] = useState(false); // Prevent multiple clicks
 
-  const handleLogin = async () => {
-    if (!username || !password) {
-      setErrorMessage("Both fields are required.");
-      return;
-    }
+  //----------------------- Handle sign-in form submission---------------------------------
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isProcessing) return; // Prevent duplicate clicks
+    setIsProcessing(true);
+    setMessage("");
 
-    const isAuthenticated = await mockLogin(username, password);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (isAuthenticated) {
-      navigate("/app"); // Redirect to the app page after successful login
-    } else {
-      setErrorMessage("Invalid credentials. Please try again.");
+      if (error) {
+        setMessage("Error signing in: " + error.message);
+        setIsProcessing(false);
+        return;
+      }
+
+      console.log("User signed in:", data);
+
+      const userId = data.user.id;
+
+      // 🔹 Mark user as online
+      const isMarkedOnline = await markUserAsOnline(userId);
+      if (!isMarkedOnline) {
+        setMessage("Failed to mark user as online.");
+        setIsProcessing(false);
+        return;
+      }
+
+      // 🔹 Sync coins and subscriptions
+      const isSynced = await syncCoinsAndSubscriptions(userId);
+      if (!isSynced) {
+        setMessage("Failed to sync user data.");
+        setIsProcessing(false);
+        return;
+      }
+      //  Redirect to app
+      navigate("/app");
+    } catch (error) {
+      console.error("Login error:", error);
+      setMessage(" An unexpected error occurred.");
+    } finally {
+      setIsProcessing(false);
     }
   };
-
-  const mockLogin = (username: string, password: string) => {
-    return new Promise<boolean>((resolve) => {
-      setTimeout(() => {
-        resolve(username === "u" && password === "p");
-      }, 1000);
-    });
-  };
-
-  // For testing 
-  /*
-  async function test() {
-    const { data, error } = await supabase.from("User").select("*");
-
-    if (error) {
-      console.log("Error fetching data:", error);
-    }
-
-    console.log("Data:", data);
-  }
-
-  useEffect(() => {
-    test();
-  }, []); */
 
   return (
     <div className="login-container">
-      {/* Header */}
       <div className="logo" onClick={() => navigate("/")}>
         <span className="ask">Ask</span>
         <span className="vox">Vox</span>
       </div>
 
-      {/* Login Card */}
       <div className="login-card">
         <h1 className="login-title">Login Here</h1>
         <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Username"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
           className="input-field"
+          disabled={isProcessing}
         />
         <input
           type="password"
@@ -72,10 +86,16 @@ function Login() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
           className="input-field"
+          disabled={isProcessing}
         />
-        {errorMessage && <div className="error-message">{errorMessage}</div>}
-        <button onClick={handleLogin} className="login-button">
-          Login
+        {message && <div className="error-message">{message}</div>}{" "}
+        {/* Show error message if any */}
+        <button
+          onClick={handleSignIn}
+          className="login-button"
+          disabled={isProcessing}
+        >
+          {isProcessing ? "Logging in..." : "Login"}
         </button>
         <div className="divider">
           <span>------------ Or ------------</span>

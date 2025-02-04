@@ -1,0 +1,104 @@
+import { BrowserWindow, ipcMain, screen, session } from "electron";
+import path from "path";
+import { getPreloadPath } from "../pathResolver.js";
+import { isDev } from "../util.js";
+import asar from "asar";
+import os from "node:os";
+import fs from "fs";
+
+function extractAsar() {
+  const distPath = path.join(process.resourcesPath, "app.asar"); // Path to the asar archive
+  const tempDir = path.join(os.tmpdir(), "dist-react"); // Temporary directory for extracted files
+
+  // If files have not been extracted yet, perform the extraction
+  if (!fs.existsSync(tempDir)) {
+    asar.extractAll(distPath, tempDir);
+  }
+  return path.join(tempDir, "dist-react", "index.html");
+}
+
+export function createMainWindow(iconPath: string) {
+  ipcMain.handle("get-env", () => ({
+    SUPABASE_URL: process.env.SUPABASE_URL || "",
+    SUPABASE_KEY: process.env.SUPABASE_KEY || "",
+  }));
+
+  const mainWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    minWidth: 800,
+    minHeight: 600,
+    icon: iconPath,
+    webPreferences: {
+      preload: getPreloadPath(),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  const startURL = isDev()
+    ? "http://localhost:3000/#/app"
+    : `file://${path.join(extractAsar(), "ApplicationUI.html")}`;
+
+  mainWindow.loadURL(startURL);
+  return mainWindow;
+}
+
+export function createOverlayWindow(
+  mainWindow: Electron.BrowserWindow,
+  iconPath: string
+) {
+  if (!mainWindow) return;
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
+  const overlayWindow = new BrowserWindow({
+    parent: mainWindow,
+    icon: iconPath,
+    width: 450,
+    height,
+    transparent: true, // Transparent background
+    frame: false,
+    show: false,
+    x: width - 450,
+    y: 0,
+    alwaysOnTop: true,
+    resizable: false,
+    skipTaskbar: true,
+    webPreferences: {
+      preload: getPreloadPath(),
+      contextIsolation: true,
+      nodeIntegration: false,
+      session: mainWindow.webContents.session,
+    },
+  });
+
+  const overlayURL = isDev()
+    ? "http://localhost:3000/#/overlay"
+    : `file://${path.join(extractAsar(), "OverlayUI.html")}`;
+
+  overlayWindow.loadURL(overlayURL);
+  console.log("overlaywindow", session);
+  return overlayWindow;
+}
+
+export function createAudioWindow(mainWindow: Electron.BrowserWindow) {
+  if (!mainWindow) return;
+  const audioWindow = new BrowserWindow({
+    parent: mainWindow, // ✅ Set parent
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: getPreloadPath(),
+      session: mainWindow.webContents.session,
+    },
+  });
+  console.log("overlaywindow", session);
+
+  const audioURL = isDev()
+    ? "http://localhost:3000/#/audio"
+    : `file://${path.join(extractAsar(), "HiddenAudioPlayer.html")}`;
+
+  audioWindow.loadURL(audioURL);
+  return audioWindow;
+}

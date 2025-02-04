@@ -50,7 +50,7 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ onConfirm, onCancel }) => {
               cursor: "pointer",
               border: "none",
               borderRadius: "4px",
-              backgroundColor: isDarkMode ? "#4b5563" : "#dc3545",
+              backgroundColor: "#4b5563",
               color: "white",
             }}
             onClick={onCancel}
