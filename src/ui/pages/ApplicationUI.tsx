@@ -1,9 +1,16 @@
+import { CircleCheckBig, CircleDollarSign, Wallet } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import LogoutModal from "./LogoutModal";
-import { supabase } from "../supabaseClient";
-import { CircleCheckBig, CircleDollarSign, Wallet } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../utility/authprovider";
+import { supabase } from "../utility/supabaseClient";
+import LogoutModal from "./LogoutModal";
+import { Session } from "@supabase/supabase-js";
+import {
+  markUserAsOffline,
+  markUserAsOnline,
+  syncCoinsAndSubscriptions,
+} from "../utility/syncFunctions";
 
 export enum MODEL_TYPE {
   ASKVOX = "ASKVOX",
@@ -22,7 +29,7 @@ const ApplicationUI = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [currentSession, setCurrentSession] = useState<any>(null);
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [freeCoin, setFreeCoin] = useState(5.0);
   const [walletCoin, setWalletCoin] = useState(5.0);
   const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
@@ -31,19 +38,22 @@ const ApplicationUI = () => {
     "How do I beat Battlemage",
     "How do I get to Abyssal Woods",
   ]);
+  const { session } = useAuth();
 
   //------------------ Function the current session and resize handler -------------------------
-  useEffect(() => {
-    // Fetch the current session
-    const fetchSession = async () => {
-      const currentSession = await supabase.auth.getSession();
-      setCurrentSession(currentSession);
-      if (currentSession.data.session) {
-        console.log("session", currentSession.data.session.user.id);
-      }
-    };
 
-    fetchSession();
+  useEffect(() => {
+    setCurrentSession(session);
+    if (session) {
+      markUserAsOnline(session.user.id);
+      syncCoinsAndSubscriptions(session.user.id);
+    }
+
+    //@ts-ignore
+    window.electron.openWindows();
+    if (currentSession) {
+      console.log("session", currentSession.user.id);
+    }
     const handleResize = () => {
       if (window.innerWidth > 800) {
         setIsSidebarVisible(true);
@@ -63,7 +73,7 @@ const ApplicationUI = () => {
       let { data: User, error } = await supabase
         .from("User")
         .select("firstName,lastName,userType")
-        .eq("accountId", currentSession.data.session.user.id)
+        .eq("accountId", currentSession.user.id)
         .single();
       if (error) {
         console.error("Error fetching user data:", error.message);
@@ -80,7 +90,7 @@ const ApplicationUI = () => {
       let { data: free_coin, error } = await supabase
         .from("FreeCoin")
         .select("amount")
-        .eq("accountId", currentSession.data.session.user.id)
+        .eq("accountId", currentSession.user.id)
         .single();
       if (error) {
         setFreeCoin(0);
@@ -94,7 +104,7 @@ const ApplicationUI = () => {
       let { data: wallet, error } = await supabase
         .from("Wallet")
         .select("amount")
-        .eq("accountId", currentSession.data.session.user.id)
+        .eq("accountId", currentSession.user.id)
         .single();
       if (error) {
         setWalletCoin(0);
@@ -242,34 +252,15 @@ const ApplicationUI = () => {
     };
   };
 
-  //------------------ Function Sign out   -------------------------
-
-  const markUserAsOffline = async (accountId: string) => {
-    const todayDate = new Date().toISOString().split("T")[0];
-    const { error } = await supabase
-      .from("UserOnlineStatus")
-      .update({
-        isOnline: false,
-        lastActive: todayDate,
-      })
-      .eq("accountId", accountId);
-
-    if (error) {
-      return false;
-    }
-
-    return true;
-  };
+  //------------------ Function Sign out   ------------------------
 
   const handleCleanupSession = async () => {
-    const res = await markUserAsOffline(currentSession.data.session.user.id);
-    if (!res) {
-      return;
-    }
-    await supabase.auth.signOut();
-    localStorage.removeItem("accountId");
+    //@ts-ignore
+    await window.electron.killWindows();
+    await markUserAsOffline(currentSession!.user.id);
+    const { error } = await supabase.auth.signOut();
+    console.error("error sign out", error);
     setIsModalVisible(false);
-    navigate("/");
   };
 
   const handleLogout = async () => {
@@ -323,13 +314,13 @@ const ApplicationUI = () => {
           amount: newAmount,
           updatedAt: new Date().toISOString(),
         })
-        .eq("accountId", currentSession.data.session.user.id);
+        .eq("accountId", currentSession!.user.id);
 
       if (error) {
         console.error("Error updating free coin amount:", error.message);
       }
     } else if (walletCoin > 0) {
-      const newAmount = freeCoin - parseFloat(costData.totalCost);
+      const newAmount = walletCoin - parseFloat(costData.totalCost);
       console.log("updated amount from Wallet", newAmount);
       setWalletCoin(newAmount);
       const { error } = await supabase
@@ -338,7 +329,7 @@ const ApplicationUI = () => {
           amount: newAmount,
           updatedAt: new Date().toISOString(),
         })
-        .eq("accountId", currentSession.data.session.user.id);
+        .eq("accountId", currentSession!.user.id);
 
       if (error) {
         console.error("Error updating free coin amount:", error.message);

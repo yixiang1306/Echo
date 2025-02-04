@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Signup.css"; // Import the CSS file
-import { supabase } from "../supabaseClient";
+import { supabase } from "../utility/supabaseClient";
 import { v4 as uuidv4 } from "uuid";
 
 function Signup() {

@@ -1,5 +1,5 @@
-import { BrowserWindow } from 'electron';
-import { screen } from 'electron';
+import { BrowserWindow } from "electron";
+import { screen } from "electron";
 
 export async function slideIn(overlayWindow: BrowserWindow) {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;

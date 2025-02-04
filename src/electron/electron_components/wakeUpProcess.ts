@@ -23,7 +23,7 @@ const pythonInterpreterPath = isDev()
     ); // Production
 
 export function createWakeUpProcess() {
-  console.log("WakeUp process started");
+  console.log("Wake Up process started");
   const process = spawn(pythonInterpreterPath, [pythonScriptPath], {
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -36,7 +36,8 @@ export function createWakeUpProcess() {
     },
     resume: () => {
       console.log("resuming");
-      process.stdin.write("resume\n")},
+      process.stdin.write("resume\n");
+    },
     kill: () => {
       process.kill();
       console.log("WakeUp process killed");

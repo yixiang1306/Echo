@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, screen } from "electron";
+import { BrowserWindow, ipcMain, screen, session } from "electron";
 import path from "path";
 import { getPreloadPath } from "../pathResolver.js";
 import { isDev } from "../util.js";
@@ -14,15 +14,7 @@ function extractAsar() {
   if (!fs.existsSync(tempDir)) {
     asar.extractAll(distPath, tempDir);
   }
-
   return path.join(tempDir, "dist-react", "index.html");
-}
-
-function getDistReactPath() {
-  // Ensure the path works both in development and production (packed into .asar)
-  return isDev()
-    ? "http://localhost:3000" // Local dev server path
-    : `file://${extractAsar()}`; // Extracted files in production
 }
 
 export function createMainWindow(iconPath: string) {
@@ -44,24 +36,30 @@ export function createMainWindow(iconPath: string) {
     },
   });
 
-  const startURL = isDev() ? "http://localhost:3000" : getDistReactPath();
+  const startURL = isDev()
+    ? "http://localhost:3000/#/app"
+    : `file://${path.join(extractAsar(), "ApplicationUI.html")}`;
 
   mainWindow.loadURL(startURL);
-
   return mainWindow;
 }
 
-export function createOverlayWindow(iconPath: string) {
+export function createOverlayWindow(
+  mainWindow: Electron.BrowserWindow,
+  iconPath: string
+) {
+  if (!mainWindow) return;
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
   const overlayWindow = new BrowserWindow({
+    parent: mainWindow,
     icon: iconPath,
     width: 450,
     height,
     transparent: true, // Transparent background
     frame: false,
     show: false,
-    x: width - 450, // Ensures it appears on the right edge
+    x: width - 450,
     y: 0,
     alwaysOnTop: true,
     resizable: false,
@@ -70,33 +68,37 @@ export function createOverlayWindow(iconPath: string) {
       preload: getPreloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
+      session: mainWindow.webContents.session,
     },
   });
 
   const overlayURL = isDev()
     ? "http://localhost:3000/#/overlay"
-    : `file://${path.join(extractAsar(), "overlay.html")}`;
+    : `file://${path.join(extractAsar(), "OverlayUI.html")}`;
 
   overlayWindow.loadURL(overlayURL);
-
+  console.log("overlaywindow", session);
   return overlayWindow;
 }
 
-export function createAudioWindow() {
+export function createAudioWindow(mainWindow: Electron.BrowserWindow) {
+  if (!mainWindow) return;
   const audioWindow = new BrowserWindow({
+    parent: mainWindow, // ✅ Set parent
     show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: getPreloadPath(),
+      session: mainWindow.webContents.session,
     },
   });
+  console.log("overlaywindow", session);
 
   const audioURL = isDev()
     ? "http://localhost:3000/#/audio"
-    : `file://${path.join(extractAsar(), "audio.html")}`;
+    : `file://${path.join(extractAsar(), "HiddenAudioPlayer.html")}`;
 
   audioWindow.loadURL(audioURL);
-
   return audioWindow;
 }
