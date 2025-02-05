@@ -178,7 +178,7 @@ def summarize_search_results(query: str, extracted_content: list):
 
     response = client.chat.completions.create(
         model=MODEL_NAME, 
-        messages=[{"role": "system", "content": "You are Echo, a game assistant chat ai. Summarize the following web content in a clear and friendly way."},
+        messages=[{"role": "system", "content": "You are Echo, a game assistant chat ai. Summarize the following web content in a clear and friendly way. avoid using astrix *. "},
                   {"role": "user", "content": prompt}],
         temperature=0.5,
         max_tokens=60000
@@ -198,7 +198,7 @@ def get_response(user_input: str):
 
 
     # Prepare messages with conversation history
-    messages = [{"role": "system", "content": "Your name is Echo. You are friendly and intelligent. You are a helpful game assistant with tool calling capabilities. Maintain context from the conversation and only call tools when necessary."}] + list(chat_history)
+    messages = [{"role": "system", "content": "Your name is Echo. You are friendly and intelligent. You are a helpful game assistant with tool calling capabilities. Maintain context from the conversation and only call tools when necessary. avoid using astrix *"}] + list(chat_history)
 
     lower_input = user_input.lower()
     tool_name = "auto" if any(word in lower_input for word in ["video", "trailer", "clip", "youtube", "image", "wallpaper", "photo", "pic"]) else "none"

@@ -57,7 +57,7 @@ class SpeechRecognition:
                         print(f"Recognized: {text}", file=sys.stderr)
 
                     # Trigger the wake-up action
-                    if "echo" in text.lower():
+                    if "hello" in text.lower():
                         print("wake-up", flush=True)
 
         except Exception as e:

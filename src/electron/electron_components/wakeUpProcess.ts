@@ -28,6 +28,10 @@ export function createWakeUpProcess() {
     stdio: ["pipe", "pipe", "pipe"],
   });
 
+  process.stdout.on("data", (data) => {
+    console.log(data.toString().trim());
+  });
+
   return {
     process,
     pause: () => {
