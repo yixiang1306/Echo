@@ -61,13 +61,9 @@ const Payment: React.FC = () => {
             <li className="mb-2">
               <strong>Ask</strong>
               <span className="text-indigo-500">Vox</span> premium subscription
-              <span className="float-right">
-                $10.00
-              </span>
+              <span className="float-right">$10.00</span>
             </li>
-            <li className="text-sm mb-6">
-              Billed monthly
-            </li>
+            <li className="text-sm mb-6">Billed monthly</li>
             <li className="mb-2">
               Subtotal<span className="float-right">$10.00</span>
             </li>
@@ -113,17 +109,17 @@ const Payment: React.FC = () => {
                   } outline-none focus:outline-none`}
                 />
                 <img
-                  src="/public/mastercard.png" // Replace with the path to your image
+                  src="./mastercard.png" // Replace with the path to your image
                   alt="MasterCard"
                   className="w-8 h-8 ml-2"
                 />
                 <img
-                  src="/public/visa.jpg" // Replace with the path to your image
+                  src="./visa.jpg" // Replace with the path to your image
                   alt="Visa"
                   className="w-8 h-8 ml-2"
                 />
                 <img
-                  src="/public/amex.png" // Replace with the path to your image
+                  src="./amex.png" // Replace with the path to your image
                   alt="American Express"
                   className="w-8 h-8 ml-2"
                 />
@@ -169,7 +165,9 @@ const Payment: React.FC = () => {
                   type="text"
                   placeholder="Full name on card"
                   className={`w-full p-3 border ${
-                    isDarkMode ? "border-gray-700 bg-gray-900 text-white" : "border-gray-200 bg-white text-gray-900"
+                    isDarkMode
+                      ? "border-gray-700 bg-gray-900 text-white"
+                      : "border-gray-200 bg-white text-gray-900"
                   } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 />
               </div>
@@ -184,7 +182,9 @@ const Payment: React.FC = () => {
                 </label>
                 <select
                   className={`w-full p-3 border ${
-                    isDarkMode ? "border-gray-700 bg-gray-900 text-white" : "border-gray-200 bg-white text-gray-900"
+                    isDarkMode
+                      ? "border-gray-700 bg-gray-900 text-white"
+                      : "border-gray-200 bg-white text-gray-900"
                   } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 >
                   <option>Singapore</option>

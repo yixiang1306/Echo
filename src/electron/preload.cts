@@ -1,4 +1,3 @@
-import { Session } from "@supabase/supabase-js";
 import { contextBridge, ipcRenderer } from "electron/renderer";
 
 enum MODEL_TYPE {

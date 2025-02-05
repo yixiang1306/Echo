@@ -1,10 +1,17 @@
-import { app, ipcMain } from "electron";
+import axios from "axios";
+import { ipcMain } from "electron";
 import { isDev, MODEL_TYPE } from "../util.js";
 import { createLLMProcess } from "./llmProcess.js";
-import axios from "axios";
-import path from "node:path";
-import { createOverlayWindow } from "./windows.js";
-import { createWakeUpProcess } from "./wakeUpProcess.js";
+import dotenv from "dotenv";
+import path from "path";
+import log from "electron-log";
+
+const envPath = isDev()
+  ? path.resolve(process.cwd(), ".env") // Development: Use .env in root folder
+  : path.join(process.resourcesPath, ".env"); // Production: Use bundled .env
+
+// Load environment variables
+dotenv.config({ path: envPath });
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 export function setupIpcHandlers(
@@ -12,6 +19,9 @@ export function setupIpcHandlers(
   audioWindow: Electron.BrowserWindow,
   llmProcess: ReturnType<typeof createLLMProcess>
 ) {
+  console.log("GOOGLE_API_KEY", GOOGLE_API_KEY);
+  log.info("Environment variables loaded.", process.env.SUPABASE_KEY);
+
   // Add other IPC handlers here...
   // (Move the audio, text-input, send-audio, and calculate-cost handlers here)
 
@@ -73,19 +83,18 @@ export function setupIpcHandlers(
   });
 
   ipcMain.handle("text-input", async (_, text: string) => {
-    
     return new Promise((resolve, reject) => {
       llmProcess.process.stdin.write(text + "\n");
       console.log("sent text...");
       console.log("waiting for response...");
-  
+
       llmProcess.process.stdout.once("data", (data) => {
         const responseText = data.toString().trim();
         console.log(responseText);
-  
+
         // Send response text immediately without waiting for TTS
         resolve(responseText);
-  
+
         // Request TTS from Google asynchronously
         (async () => {
           try {
@@ -102,10 +111,10 @@ export function setupIpcHandlers(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-  
+
             const base64Audio = ttsResponse.data.audioContent;
             console.log("TTS Audio Generated (Base64)");
-  
+
             // Send Base64 Audio to Frontend after response
             audioWindow.webContents.send("play-audio", base64Audio);
           } catch (ttsError) {
@@ -113,14 +122,13 @@ export function setupIpcHandlers(
           }
         })();
       });
-  
+
       llmProcess.process.stderr.once("data", (data) => {
         console.error(`Python Error: ${data}`);
         reject(data.toString());
       });
     });
   });
-  
 
   ipcMain.handle(
     "calculate-cost",

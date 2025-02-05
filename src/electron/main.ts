@@ -30,7 +30,6 @@ let audioWindow: Electron.BrowserWindow;
 let wakeUpProcess: ReturnType<typeof createWakeUpProcess>;
 let llmProcess: ReturnType<typeof createLLMProcess>;
 let isQuitting: boolean = false;
-
 app.commandLine.appendSwitch("disable-features", "ChunkedDataPipe");
 
 app.on("ready", async () => {
@@ -42,6 +41,8 @@ app.on("ready", async () => {
   mainWindow = createMainWindow(iconPath);
   audioWindow = createAudioWindow(mainWindow)!;
 
+  //IPC Functions
+  //Trigger Overlay and wakeup process from app ui
   ipcMain.on("open-windows", (event) => {
     // Get the sender's webContents
     const senderWebContents = event.sender;
@@ -58,7 +59,7 @@ app.on("ready", async () => {
       );
     }
   });
-
+  //Trigger Overlay and wakeup process when logout
   ipcMain.on("kill-windows", (event) => {
     const senderWebContents = event.sender;
 
@@ -81,11 +82,10 @@ app.on("ready", async () => {
       );
     }
   });
-
   // Setup Python process
   llmProcess = createLLMProcess();
-  // Setup tray
   createTray(iconPath, mainWindow);
+
   // Setup IPC handlers
   setupIpcHandlers(mainWindow, audioWindow, llmProcess);
 
@@ -98,11 +98,11 @@ app.on("ready", async () => {
   });
 
   // Global shortcuts
-
   globalShortcut.register("Alt+C", () =>
     audioWindow.webContents.send("stop-audio")
   );
-  if (wakeUpProcess?.process?.stdout) {
+
+  if (wakeUpProcess !== null) {
     wakeUpProcess.process.stdout.on("data", async (data: Buffer) => {
       if (data.toString().trim() === "wake-up") {
         console.log(true);
