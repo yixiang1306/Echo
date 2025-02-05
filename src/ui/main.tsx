@@ -4,7 +4,6 @@ import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./utility/authprovider";
-
 import "./main.css";
 import ApplicationUI from "./pages/ApplicationUI";
 import OverlayUI from "./pages/OverlayUI";

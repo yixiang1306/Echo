@@ -19,8 +19,12 @@ export function setupIpcHandlers(
   audioWindow: Electron.BrowserWindow,
   llmProcess: ReturnType<typeof createLLMProcess>
 ) {
-  console.log("GOOGLE_API_KEY", GOOGLE_API_KEY);
   log.info("Environment variables loaded.", process.env.SUPABASE_KEY);
+  if (mainWindow && audioWindow && llmProcess) {
+    log.info("IPC handlers set up.");
+  } else {
+    log.error("IPC handlers not set up.");
+  }
 
   // Add other IPC handlers here...
   // (Move the audio, text-input, send-audio, and calculate-cost handlers here)
