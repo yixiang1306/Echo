@@ -2,6 +2,9 @@
     "appId": "echo.app",
     "productName": "Echo",
     "files": ["dist-electron", "dist-react"],
+    "asarUnpack": [
+    "assets/icons/**"
+  ],
     "extraResources": [
       "dist-electron/preload.cjs",
       {
@@ -17,6 +20,10 @@
       {
         "from": ".env",
         "to": ".env"
+      },{
+        "from": "assets/",
+        "to": "assets/",
+        "filter": ["**/*"]
       }
     ],
     "mac": {
@@ -26,7 +33,7 @@
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "win": {
-      "target": "nsis", 
+      "target": "dir", 
       "icon": "assets/icons/echo-win.ico",
       "requestedExecutionLevel": "requireAdministrator"
 
