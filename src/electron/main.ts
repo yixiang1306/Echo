@@ -35,8 +35,6 @@ let isQuitting: boolean = false;
 let tray: Tray | null = null;
 app.commandLine.appendSwitch("disable-features", "ChunkedDataPipe");
 
-let isOverlayToggling = false; // Prevent spam
-
 const iconPath = isDev()
     ? path.join(app.getAppPath(), "assets", "icons", "echo-win.ico") // Use app.getAppPath() for dev
     : path.join(process.resourcesPath, "assets", "icons", "echo-win.ico"); // Use process.resourcesPath for prod
@@ -149,16 +147,13 @@ app.on("window-all-closed", cleanUpExtractedFiles);
 
 // Handle Alt+V
 async function handleOverlayToggle() {
-  if (isOverlayToggling) return; // Prevent rapid toggles
-  isOverlayToggling = true;
-
   console.log("Alt+V pressed.");
 
   if (overlayWindow!.isVisible()) {
     await slideOut(overlayWindow!);
     overlayWindow!.hide();
     console.log("hide overlay");
-    wakeUpProcess!.resume();
+   
   } else {
     overlayWindow!.show();
     console.log("show overlay");
@@ -166,10 +161,6 @@ async function handleOverlayToggle() {
     wakeUpProcess!.pause();
   }
 
-  // Set cooldown (adjust delay as needed)
-  setTimeout(() => {
-    isOverlayToggling = false;
-  }, 200); // Prevents spamming for 500ms
 }
 
 //Handle quitting parameters
@@ -177,6 +168,8 @@ async function handleOverlayToggle() {
 export function setQuitting(quit: boolean) {
   isQuitting = quit;
 }
+
+
 
 //IPC Functions
 
@@ -247,35 +240,43 @@ ipcMain.handle("text-input", async (_, text: string) => {
       const responseText = data.toString().trim();
       console.log(responseText);
 
-      // Send response text immediately without waiting for TTS
+      // Send response text immediately
       resolve(responseText);
 
-      // Request TTS from Google asynchronously
-      (async () => {
-        try {
-          const ttsResponse = await axios.post(
-            `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
-            {
-              input: { text: responseText },
-              voice: {
-                languageCode: "en-US",
-                name: "en-US-Journey-F",
-                ssmlGender: "NEUTRAL",
+      // Check if response is an image or a YouTube link
+      const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(responseText);
+      const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(responseText);
+
+      if (!isImage && !isYouTubeLink) {
+        // Request TTS from Google asynchronously
+        (async () => {
+          try {
+            const ttsResponse = await axios.post(
+              `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
+              {
+                input: { text: responseText },
+                voice: {
+                  languageCode: "en-US",
+                  name: "en-US-Journey-F",
+                  ssmlGender: "NEUTRAL",
+                },
+                audioConfig: { audioEncoding: "MP3" },
               },
-              audioConfig: { audioEncoding: "MP3" },
-            },
-            { headers: { "Content-Type": "application/json" } }
-          );
+              { headers: { "Content-Type": "application/json" } }
+            );
 
-          const base64Audio = ttsResponse.data.audioContent;
-          console.log("TTS Audio Generated (Base64)");
+            const base64Audio = ttsResponse.data.audioContent;
+            console.log("TTS Audio Generated (Base64)");
 
-          // Send Base64 Audio to Frontend after response
-          audioWindow.webContents.send("play-audio", base64Audio);
-        } catch (ttsError) {
-          console.error("TTS Error:", ttsError);
-        }
-      })();
+            // Send Base64 Audio to Frontend after response
+            audioWindow.webContents.send("play-audio", base64Audio);
+          } catch (ttsError) {
+            console.error("TTS Error:", ttsError);
+          }
+        })();
+      } else {
+        console.log("Response is an image or YouTube link, skipping TTS.");
+      }
     });
 
     llmProcess.process.stderr.once("data", (data) => {

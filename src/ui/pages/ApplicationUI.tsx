@@ -11,6 +11,9 @@ import {
   markUserAsOnline,
   syncCoinsAndSubscriptions,
 } from "../utility/syncFunctions";
+import { FaMicrophone, FaYoutube } from "react-icons/fa";
+import { CiGlobe, CiImageOn } from "react-icons/ci";
+import { IoIosSend } from "react-icons/io";
 
 export enum MODEL_TYPE {
   ASKVOX = "ASKVOX",
@@ -22,6 +25,7 @@ const ApplicationUI = () => {
   ]);
   const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [messageTag, setMessageTag] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -137,45 +141,26 @@ const ApplicationUI = () => {
   const sendMessage = async () => {
     if (userInput.trim() === "") return;
 
-    setMessages((prev) => [...prev, { role: "user", content: userInput }]);
+    const taggedMessage = messageTag ? `${userInput} ${messageTag}` : userInput;
 
-    if (!isSubscriptionActive && freeCoin <= 0 && walletCoin <= 0) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "Sorry, you do not have enough coins. Please purchase a subscription or top up your wallet.",
-        },
-      ]);
-      return;
-    }
+    setMessages((prev) => [...prev, { role: "user", content: userInput }]);
+    setUserInput("");
     setIsLoading(true);
-    //-------------for testing--------------
-    // const test = {
-    //   input: userInput,
-    //   output: "Hey How can I Help you today?",
-    // };
-    // await calculateCost(test, MODEL_TYPE.ASKVOX);
 
     try {
+      console.log(taggedMessage);
       //@ts-ignore
-      const response = await window.electronAPI.textInput(userInput);
+      const response = await window.electronAPI.textInput(taggedMessage);
+
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: response },
       ]);
-      const conversation_data = {
-        input: userInput,
-        output: String(response),
-      };
-      await calculateCost(conversation_data, MODEL_TYPE.ASKVOX);
-      setUserInput("");
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => [
         ...prev,
-        { role: "Vox", content: "Error processing your request." },
+        { role: "assistant", content: "Error processing your request." },
       ]);
     } finally {
       setIsLoading(false);
@@ -340,6 +325,55 @@ const ApplicationUI = () => {
   //--------------------Get theme context --------------------------
   const { isDarkMode } = useTheme();
 
+  //To handle LLM response and return component -> img,txt,video
+  const handleLLMResponse = (message: string, role: string): JSX.Element => {
+    const imageRegex = /\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i;
+    const youtubeRegex =
+      /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/i;
+
+    if (imageRegex.test(message)) {
+      return (
+        <div className="w-full animate-pop-up">
+          <a href={message} target="_blank" rel="noopener noreferrer">
+            <img src={message} alt="Image" className="rounded-lg w-full" />
+          </a>
+        </div>
+      );
+    } else if (youtubeRegex.test(message)) {
+      const match = message.match(youtubeRegex);
+      const videoId = match ? match[1] : null;
+
+      if (videoId) {
+        return (
+          <div className="relative w-full aspect-video rounded-lg overflow-hidden">
+            <iframe
+              src={`https://www.youtube.com/embed/${videoId}`}
+              title="YouTube video player"
+              className="absolute top-0 left-0 w-full h-full"
+              allowFullScreen
+            ></iframe>
+          </div>
+        );
+      }
+    }
+
+    return (
+      <p
+        className={`px-4 py-2 rounded-lg shadow-md animate-pop-up ${
+          role === "user"
+            ? isDarkMode
+              ? "bg-blue-700 text-white"
+              : "bg-blue-500 text-white"
+            : isDarkMode
+            ? "bg-gray-700 text-gray-200"
+            : "bg-gray-200 text-gray-800"
+        }`}
+      >
+        {message}
+      </p>
+    );
+  };
+
   return (
     <div
       className={`flex h-screen ${
@@ -399,16 +433,16 @@ const ApplicationUI = () => {
       <div
         className={`flex-grow flex flex-col ${
           isDarkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
-        } p-8 relative max-w-[60%] mx-auto`}
+        } p-8 relative max-w-[500px] mx-auto`}
       >
         {/* Dropdown Menu */}
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-0">
           <div className="flex items-center gap-8">
             <div className="flex gap-8">
               {/* Token Balance Tooltip */}
               <div className="relative group flex gap-2 items-center">
-                <CircleDollarSign className=" size-8 text-yellow-400" />
-                <p className="text-xl">{freeCoin.toFixed(4)}</p>
+                <CircleDollarSign className="  text-yellow-400" />
+                <p className="">{freeCoin.toFixed(4)}</p>
                 <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
                   Daily Free Balance
                 </div>
@@ -416,16 +450,16 @@ const ApplicationUI = () => {
 
               {/* Wallet Balance Tooltip */}
               <div className="relative group flex gap-2 items-center">
-                <Wallet className="size-8 text-blue-400" />
-                <p className="text-xl">{walletCoin.toFixed(4)}</p>
+                <Wallet className=" text-blue-400" />
+                <p className="">{walletCoin.toFixed(4)}</p>
                 <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
                   Your Wallet Balance
                 </div>
               </div>
               {isSubscriptionActive && (
                 <div className="relative group flex gap-2 items-center">
-                  <CircleCheckBig className="size-8 text-green-600" />
-                  <p className="text-xl"></p>
+                  <CircleCheckBig className=" text-green-600" />
+                  <p className=""></p>
                   <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg ">
                     Your monthly Subscription is active
                   </div>
@@ -485,7 +519,7 @@ const ApplicationUI = () => {
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto mt-6 scrollbar-hide">
+        <div className="flex-grow overflow-y-auto mt-20 scrollbar-hide text-sm ">
           {messages.map((message, index) => (
             <div
               key={index}
@@ -493,31 +527,19 @@ const ApplicationUI = () => {
                 message.role === "user" ? "justify-end" : "justify-start"
               } my-4`}
             >
-              <div
-                className={`max-w-xs px-4 py-2 rounded-lg shadow-md ${
-                  message.role === "user"
-                    ? isDarkMode
-                      ? "bg-blue-700 text-white"
-                      : "bg-blue-500 text-white"
-                    : isDarkMode
-                    ? "bg-gray-700 text-gray-200"
-                    : "bg-gray-200 text-gray-800"
-                }`}
-              >
-                {message.content}
-              </div>
+              {handleLLMResponse(message.content, message.role)}
             </div>
           ))}
           {isLoading && (
             <div className="flex justify-start mb-4">
               <div
-                className={`max-w-xs px-4 py-2 rounded-lg shadow-md ${
+                className={`max-w-xs px-4 py-2 rounded-lg shadow-md animate-pop-up${
                   isDarkMode
                     ? "bg-gray-700 text-gray-200"
                     : "bg-gray-200 text-gray-800"
-                } animate-pulse`}
+                } `}
               >
-                ...
+                <span className="">...</span>
               </div>
             </div>
           )}
@@ -525,7 +547,7 @@ const ApplicationUI = () => {
         </div>
 
         {/* User Input */}
-        <div className="relative w-full">
+        {/* <div className="relative w-full">
           <input
             type="text"
             value={userInput}
@@ -549,6 +571,91 @@ const ApplicationUI = () => {
                 className="h-6 w-6"
               />
             </button>
+          </div>
+        </div> */}
+
+        <div className="pointer-events-auto w-full">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                className="flex-grow p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Type a message..."
+              />
+              <button
+                onClick={sendMessage}
+                className="px-2 py-2 text-xl bg-blue-500 rounded-lg hover:scale-110 hover:shadow-md hover:shadow-blue-500 transition-transform duration-300"
+              >
+                <IoIosSend />
+              </button>
+              <button
+                onClick={handleRecord}
+                className={`px-2 py-2 text-xl rounded-lg ${
+                  isRecording
+                    ? "bg-red-500 hover:shadow-red-500"
+                    : "bg-green-600 hover:shadow-green-600"
+                } hover:scale-110 hover:shadow-md transition-transform duration-300`}
+              >
+                <FaMicrophone />
+              </button>
+            </div>
+
+            {/* Toggleable Message Tags */}
+            <div className="flex text-sm gap-2 ">
+              {/* Search Button */}
+              <button
+                onClick={() =>
+                  setMessageTag((prev) =>
+                    prev === "websearch" ? null : "websearch"
+                  )
+                }
+                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300 ${
+                  messageTag === "websearch"
+                    ? "bg-blue-500 shadow-md shadow-blue-500"
+                    : "bg-blue-500 hover:scale-110 hover:shadow-md hover:shadow-blue-500"
+                }`}
+              >
+                <CiGlobe />
+                Search
+              </button>
+
+              {/* Image Button */}
+              <button
+                onClick={() =>
+                  setMessageTag((prev) =>
+                    prev === "show me an image" ? null : "show me an image"
+                  )
+                }
+                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300  ${
+                  messageTag === "show me an image"
+                    ? "bg-purple-700 shadow-md shadow-purple-700"
+                    : "bg-purple-700 hover:scale-110 hover:shadow-md hover:shadow-purple-700"
+                }`}
+              >
+                <CiImageOn />
+                Image
+              </button>
+
+              {/* Video Button */}
+              <button
+                onClick={() =>
+                  setMessageTag((prev) =>
+                    prev === "show me a video" ? null : "show me a video"
+                  )
+                }
+                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300  ${
+                  messageTag === "show me a video"
+                    ? "bg-red-500 shadow-md shadow-red-500"
+                    : "bg-red-500 hover:scale-110 hover:shadow-md hover:shadow-red-500"
+                }`}
+              >
+                <FaYoutube />
+                Video
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -23,7 +23,7 @@ YOUTUBE_SEARCH_URL = os.getenv("YOUTUBE_SEARCH_URL")
 # LLM CONFIG
 MODEL_NAME = "NalDice/askvox-llama3.3-70b-16bit"
 temperature = 0.5
-max_tokens = 60000
+max_tokens = 10000
 
 # Context Window (stores last N interactions)
 CONTEXT_WINDOW_SIZE = 10  # Adjust this value based on available token limits
@@ -56,17 +56,30 @@ client = OpenAI(
 
 #Main Functions for Images & Videos
 def search_wallhaven_image(search_param: str):
-    """Fetch an image from Wallhaven"""
-    params = {"q": search_param}
-    response = requests.get(WALLPAPER_HEAVEN_ENDPOINT, params=params)
+    """Fetch an image from the first three pages of Wallhaven, sorted by views"""
+    all_images = []
 
-    if response.status_code == 200:
-        data = response.json()
-        if "data" in data and len(data["data"]) > 0:
-            return random.choice(data["data"])["path"]
-    
+    for i in range(1, 4):  # Loop through pages 1, 2, and 3
+        params = {
+            "q": search_param,  # Search query
+            "sorting": "views",  # Sorting by most viewed images
+            "order": "desc",  # Order by descending (most popular first)
+            "ai_art_filter": "1",  # AI-generated images filter (1 = allow AI images)
+            "page": i,  # Iterate through pages 1 to 3
+        }
+        
+        response = requests.get(WALLPAPER_HEAVEN_ENDPOINT, params=params)
+
+        if response.status_code == 200:
+            data = response.json()
+            if "data" in data and len(data["data"]) > 0:
+                all_images.extend(data["data"])  # Add all images from the page
+
+    # If we have collected images from all pages, return a random one
+    if all_images:
+        return random.choice(all_images)["path"]
+
     return "Sorry, I couldn't find an image of your request. Please try again."
-
 def search_youtube_video(search_param: str):
     """Fetch a video from YouTube and return an embed link"""
     params = {
@@ -158,10 +171,10 @@ def extract_text_from_url(url):
             text = " ".join(soup.stripped_strings)
 
             # Return first 10000 characters to avoid LLM overload
-            return text[:10000]
+            return text[:30000]
 
     except Exception as e:
-        return f"Error extracting content from {url}: {str(e)}"
+        return " "
 
 # Fetch search result links from web
 def search_web(query: str):
@@ -215,7 +228,7 @@ def get_response(user_input: str):
     global chat_history
 
     # **Detect if the user wants a web search**
-    if any(word in user_input.lower() for word in ["web search", "look up", "search online", "find on the web", "search on the website","websearch" ]):
+    if any(word in user_input.lower() for word in ["web search", "look up", "search online", "find on the web", "search on the website","websearch", "search it on the web" ]):
         return search_web(user_input.replace("web search", "").strip())
 
     # Prepare messages with conversation history
