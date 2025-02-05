@@ -28,6 +28,7 @@ export function createMainWindow(iconPath: string) {
     height: 600,
     minWidth: 800,
     minHeight: 600,
+    show: true,
     icon: iconPath,
     webPreferences: {
       preload: getPreloadPath(),
@@ -38,7 +39,7 @@ export function createMainWindow(iconPath: string) {
 
   const startURL = isDev()
     ? "http://localhost:3000/#/app"
-    : `file://${path.join(extractAsar(), "ApplicationUI.html")}`;
+    : `file://${extractAsar()}#/app`;
 
   mainWindow.loadURL(startURL);
   return mainWindow;
@@ -74,10 +75,9 @@ export function createOverlayWindow(
 
   const overlayURL = isDev()
     ? "http://localhost:3000/#/overlay"
-    : `file://${path.join(extractAsar(), "OverlayUI.html")}`;
+    : `file://${extractAsar()}#/overlay`;
 
   overlayWindow.loadURL(overlayURL);
-  console.log("overlaywindow", session);
   return overlayWindow;
 }
 
@@ -93,11 +93,10 @@ export function createAudioWindow(mainWindow: Electron.BrowserWindow) {
       session: mainWindow.webContents.session,
     },
   });
-  console.log("overlaywindow", session);
 
   const audioURL = isDev()
     ? "http://localhost:3000/#/audio"
-    : `file://${path.join(extractAsar(), "HiddenAudioPlayer.html")}`;
+    : `file://${extractAsar()}#/audio`;
 
   audioWindow.loadURL(audioURL);
   return audioWindow;
