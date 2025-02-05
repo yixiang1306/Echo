@@ -33,7 +33,7 @@ const ApplicationUI = () => {
   const [freeCoin, setFreeCoin] = useState(5.0);
   const [walletCoin, setWalletCoin] = useState(5.0);
   const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
-  const [chatHistory, setChatHistory] = useState<string[]>([
+  const [chatHistory] = useState<string[]>([
     "Composite bow stats",
     "How do I beat Battlemage",
     "How do I get to Abyssal Woods",
@@ -291,9 +291,9 @@ const ApplicationUI = () => {
     ]);
   };
 
-  const clearChatHistory = () => {
-    setChatHistory([]);
-  };
+  // const clearChatHistory = () => {
+  //   setChatHistory([]);
+  // };
 
   //--------------------Calculate Cost --------------------------
   const calculateCost = async (
@@ -372,11 +372,7 @@ const ApplicationUI = () => {
           onClick={startNewChat}
           title="Start New Chat"
         >
-          <img
-            src="/public/new_chat.png"
-            alt="Start New Chat"
-            className="w-6 h-6"
-          />
+          <img src="./new_chat.png" alt="Start New Chat" className="w-6 h-6" />
         </button>
 
         <h2 className="pt-12 mb-4">History</h2>
@@ -544,11 +540,11 @@ const ApplicationUI = () => {
           />
           <div className="absolute inset-y-0 right-0 flex items-center gap-2 pr-2">
             <button onClick={sendMessage} className="p-1 rounded-lg">
-              <img src="/send.png" alt="Send" className="h-6 w-6" />
+              <img src="./send.png" alt="Send" className="h-6 w-6" />
             </button>
             <button onClick={handleRecord} className="p-1 rounded-lg">
               <img
-                src={isRecording ? "/red_mic.png" : "/blacked_mic.png"}
+                src={isRecording ? "./red_mic.png" : "./blacked_mic.png"}
                 alt={isRecording ? "Stop Recording" : "Start Recording"}
                 className="h-6 w-6"
               />

@@ -1,8 +1,7 @@
+import { Session } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
-import { Session } from "@supabase/supabase-js";
-import { markUserAsOnline, syncCoinsAndSubscriptions } from "./syncFunctions";
 
 type AuthContextType = {
   session: Session | null;
