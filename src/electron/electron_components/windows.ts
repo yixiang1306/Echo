@@ -71,7 +71,10 @@ export function createOverlayWindow(
       nodeIntegration: false,
       session: mainWindow.webContents.session,
     },
+    
   });
+
+  overlayWindow.isAlwaysOnTop();
 
   const overlayURL = isDev()
     ? "http://localhost:3000/#/overlay"

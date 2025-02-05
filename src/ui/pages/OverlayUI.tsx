@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { IoIosSend } from "react-icons/io";
+import { FaMicrophone, FaYoutube } from "react-icons/fa";
+import { CiGlobe, CiImageOn } from "react-icons/ci";
+
 const OverlayUI = () => {
   const [messages, setMessages] = useState([
     { role: "Vox", content: "Hello! How can I assist you today?" },
@@ -6,7 +10,7 @@ const OverlayUI = () => {
   const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false); // Loading state
-
+  const [messageTag, setMessageTag] = useState<string>("");
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -113,32 +117,68 @@ const OverlayUI = () => {
     };
   };
 
-  const handleLLMResponse = (message: string): JSX.Element => {
+  const handleLLMResponse = (message: string, role: string): JSX.Element => {
     // Regular expressions for checking image and video URLs
     const imageRegex = /\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i;
-    const videoRegex =
-      /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\/.+/i;
+    const youtubeRegex =
+      /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/i;
 
     if (imageRegex.test(message)) {
-      return <img src={message} alt="Image" width={"100%"} />;
-      // Handle image logic here (e.g., display in UI)
-    } else if (videoRegex.test(message)) {
-      // Handle video logic here (e.g., embed video)
-      return <video src={message} controls />;
-    } else {
-      // Handle plain text logic here
-      return <p>{message}</p>;
+      return (
+        <div className="w-full animate-pop-up">
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              window.open(message, "_blank");
+            }}
+          >
+            <img
+              src={message}
+              alt="Image"
+              width={"100%"}
+              className="rounded-lg"
+            />
+          </a>
+        </div>
+      );
+    } else if (youtubeRegex.test(message)) {
+      const match = message.match(youtubeRegex);
+      const videoId = match ? match[1] : null;
+
+      if (videoId) {
+        return (
+          <div className="w-full animate-pop-up">
+            <iframe
+              width="100%"
+              src={`https://www.youtube.com/embed/${videoId}`}
+              title="YouTube video player"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="rounded-lg"
+            ></iframe>
+          </div>
+        );
+      }
     }
+
+    return (
+      <p
+        className={`px-4 py-2 rounded-lg animate-pop-up ${
+          role === "user"
+            ? "bg-blue-600 text-white"
+            : "bg-gray-700 text-gray-200"
+        }`}
+      >
+        {message}
+      </p>
+    );
   };
 
   return (
-    <div className="flex flex-col h-screen items-center justify-center bg-transparent text-white">
-      {/* Header */}
-      <div className="p-4">
-        <h1 className="text-2xl font-bold">AskVox</h1>
-      </div>
+    <div className="flex flex-col h-screen items-center justify-center  text-white text-sm gap-3">
       {/* Chat Area */}
-      <div className="flex-grow overflow-y-auto p-4 space-y-4 max-h-[70vh] scrollbar-hide">
+      <div className="flex-grow overflow-y-auto  w-[300px] space-y-4 max-h-[70vh]  scrollbar-hide rounded-lg">
         {messages.map((message, index) => (
           <div
             key={index}
@@ -147,15 +187,8 @@ const OverlayUI = () => {
             }`}
           >
             {/* make this div pop up animation */}
-            <div
-              className={`max-w-xs px-4 py-2 rounded-lg animate-pop-up ${
-                message.role === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-700 text-gray-200"
-              }`}
-            >
-              {handleLLMResponse(message.content)}
-            </div>
+
+            {handleLLMResponse(message.content, message.role)}
           </div>
         ))}
         {/* Loading Animation */}
@@ -169,30 +202,58 @@ const OverlayUI = () => {
         <div ref={chatEndRef} />
       </div>
       {/* Input Area */}
-      <div className="p-4 bg-gray-800 rounded-lg w-full  max-w-md">
-        <div className="flex items-center space-x-4">
-          <input
-            type="text"
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            className="flex-grow  p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Type a message..."
-          />
-          <button
-            onClick={sendMessage}
-            className="px-4 py-2 bg-blue-500 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Send
-          </button>
-          <button
-            onClick={handleRecord}
-            className={`px-4 py-2 rounded-lg ${
-              isRecording ? "bg-red-600" : "bg-green-600"
-            } hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500`}
-          >
-            {isRecording ? "Stop" : "Record"}
-          </button>
+      <div className="pointer-events-auto w-[300px]">
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <input
+              type="text"
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              className="flex-grow  p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Type a message..."
+            />
+            <button
+              onClick={sendMessage}
+              className="px-2 py-2 text-xl bg-blue-500 rounded-lg hover:scale-110 hover:shadow-md hover:shadow-blue-500 focus:outline-none transition-transform duration-300"
+            >
+              <IoIosSend />
+            </button>
+            <button
+              onClick={handleRecord}
+              className={`px-2 py-2 text-xl rounded-lg ${
+                isRecording
+                  ? "bg-red-500 hover:shadow-red-500"
+                  : "bg-green-600 hover:shadow-green-600"
+              } hover:scale-110 hover:shadow-md  transition-transform duration-300`}
+            >
+              <FaMicrophone />
+            </button>
+          </div>
+
+          <div className="flex text-sm gap-2">
+            <button
+              onClick={() => setMessageTag("websearch")}
+              className="flex items-center  gap-2 px-4 py-2  bg-blue-500 rounded-full hover:scale-110 hover:shadow-md hover:shadow-blue-500 focus:outline-none transition-transform duration-300"
+            >
+              <CiGlobe />
+              search
+            </button>
+            <button
+              onClick={() => setMessageTag("show me an image")}
+              className="flex items-center  gap-2 px-4 py-2  bg-purple-500 rounded-full hover:scale-110 hover:shadow-md hover:shadow-purple-500 focus:outline-none transition-transform duration-300"
+            >
+              <CiImageOn />
+              image
+            </button>
+            <button
+              onClick={() => setMessageTag("show me a video")}
+              className="flex items-center  gap-2 px-4 py-2  bg-red-500 rounded-full hover:scale-110 hover:shadow-md hover:shadow-red-500 focus:outline-none transition-transform duration-300"
+            >
+              <FaYoutube />
+              video
+            </button>
+          </div>
         </div>
       </div>
     </div>

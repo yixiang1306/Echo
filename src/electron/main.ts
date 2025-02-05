@@ -32,6 +32,9 @@ let llmProcess: ReturnType<typeof createLLMProcess>;
 let isQuitting: boolean = false;
 app.commandLine.appendSwitch("disable-features", "ChunkedDataPipe");
 
+let isOverlayToggling = false; // Prevent spam
+
+
 app.on("ready", async () => {
   const iconPath = isDev()
     ? path.join(app.getAppPath(), "assets", "icons", "echo-win.ico") // Use app.getAppPath() for dev
@@ -50,9 +53,39 @@ app.on("ready", async () => {
     // Check if the sender is the main window before proceeding
     if (mainWindow && senderWebContents === mainWindow.webContents) {
       console.log("✅ Opening other windows from MAIN window");
-      overlayWindow = createOverlayWindow(mainWindow, iconPath)!;
-      wakeUpProcess = createWakeUpProcess();
+      if(!wakeUpProcess) wakeUpProcess = createWakeUpProcess();
+
+      if(!overlayWindow){ 
+        console.log("yes");
+        overlayWindow = createOverlayWindow(mainWindow, iconPath)!;
+        overlayWindow.on("blur" , async() => {
+        await slideOut(overlayWindow!);
+        overlayWindow!.hide();
+        wakeUpProcess!.resume();
+      });
+      };
+      // Global shortcuts
+      globalShortcut.register("Alt+C", () =>
+        audioWindow.webContents.send("stop-audio")
+      );
       globalShortcut.register("Alt+V", () => handleOverlayToggle());
+
+      wakeUpProcess.process.stdout.on("data", async (data: Buffer) => {
+        console.log(data.toString().trim());
+        if (data.toString().trim() === "wake-up") {
+          console.log("true");
+          overlayWindow?.show();
+          if (overlayWindow) {
+            await slideIn(overlayWindow);
+          }
+        }
+      
+      
+      
+      });
+
+      
+
     } else {
       console.warn(
         "⚠️ Unauthorized attempt to open windows from a non-main window."
@@ -95,24 +128,8 @@ app.on("ready", async () => {
       event.preventDefault();
       mainWindow.hide();
     }
+  
   });
-
-  // Global shortcuts
-  globalShortcut.register("Alt+C", () =>
-    audioWindow.webContents.send("stop-audio")
-  );
-
-  if (wakeUpProcess !== null) {
-    wakeUpProcess.process.stdout.on("data", async (data: Buffer) => {
-      if (data.toString().trim() === "wake-up") {
-        console.log(true);
-        overlayWindow?.show();
-        if (overlayWindow) {
-          await slideIn(overlayWindow);
-        }
-      }
-    });
-  }
 });
 
 // Cleanup before quit
@@ -132,7 +149,11 @@ app.on("window-all-closed", cleanUpExtractedFiles);
 
 // Handle Alt+V
 async function handleOverlayToggle() {
+  if (isOverlayToggling) return; // Prevent rapid toggles
+  isOverlayToggling = true;
+
   console.log("Alt+V pressed.");
+
   if (overlayWindow!.isVisible()) {
     await slideOut(overlayWindow!);
     overlayWindow!.hide();
@@ -144,6 +165,11 @@ async function handleOverlayToggle() {
     await slideIn(overlayWindow!);
     wakeUpProcess!.pause();
   }
+
+  // Set cooldown (adjust delay as needed)
+  setTimeout(() => {
+    isOverlayToggling = false;
+  }, 200); // Prevents spamming for 500ms
 }
 
 //Handle quitting parameters
