@@ -22,14 +22,12 @@ const envPath = isDev()
 
 // Load environment variables
 dotenv.config({ path: envPath });
-log.info("Environment variables SUPABASE_KEY.", process.env.SUPABASE_KEY);
-log.info("Environment variables GOOGLE_API_KEY.", process.env.GOOGLE_API_KEY);
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 let mainWindow: Electron.BrowserWindow;
 let overlayWindow: Electron.BrowserWindow | null = null;
 let audioWindow: Electron.BrowserWindow;
-let wakeUpProcess: ReturnType<typeof createWakeUpProcess>;
+let wakeUpProcess: ReturnType<typeof createWakeUpProcess> | null = null;
 let llmProcess: ReturnType<typeof createLLMProcess>;
 let isQuitting: boolean = false;
 let tray: Tray | null = null;
@@ -76,7 +74,7 @@ app.on("ready", async () => {
         overlayWindow.destroy(); // Destroy it completely
         overlayWindow = null; // Remove reference
       }
-      wakeUpProcess.kill();
+      wakeUpProcess?.kill();
       console.log("✅ wakeUpProcess killed successfully");
       globalShortcut.unregister("Alt+V");
       console.log("✅ Unregistered global shortcut");
@@ -96,6 +94,9 @@ app.on("ready", async () => {
       event.preventDefault();
       mainWindow.hide();
     }
+  });
+  ipcMain.on("quit-app", () => {
+    app.quit(); // Quit the Electron app when requested
   });
 
   // Global shortcuts
