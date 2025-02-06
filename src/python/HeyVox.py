@@ -41,7 +41,7 @@ class SpeechRecognition:
 
     def process_audio(self):
         """Process audio input for speech recognition."""
-        print("Listening for wake-up command...", file=sys.stderr)
+
         try:
             while self.is_running:
                 # Pause functionality
@@ -50,15 +50,19 @@ class SpeechRecognition:
                         continue
 
                 data = self.stream.read(4000, exception_on_overflow=False)
+             
                 if self.recognizer.AcceptWaveform(data):
                     result = json.loads(self.recognizer.Result())
                     text = result.get("text", "").strip()
+                   
                     if text:
-                        print(f"Recognized: {text}", file=sys.stderr)
+                        # Trigger the wake-up action
+                        if "hello" in text.lower():
+                            
+                            print("wake-up", flush=True)
 
-                    # Trigger the wake-up action
-                    if "echo" in text.lower():
-                        print("wake-up", flush=True)
+                        else:
+                            print(text.lower(), flush=True)
 
         except Exception as e:
             print(f"Error during audio processing: {e}", file=sys.stderr)

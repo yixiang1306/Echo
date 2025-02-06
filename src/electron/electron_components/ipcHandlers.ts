@@ -75,48 +75,57 @@ export function setupIpcHandlers(
       llmProcess.process.stdin.write(text + "\n");
       console.log("sent text...");
       console.log("waiting for response...");
-
+  
       llmProcess.process.stdout.once("data", (data) => {
         const responseText = data.toString().trim();
         console.log(responseText);
-
-        // Send response text immediately without waiting for TTS
+  
+        // Send response text immediately
         resolve(responseText);
-
-        // Request TTS from Google asynchronously
-        (async () => {
-          try {
-            const ttsResponse = await axios.post(
-              `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
-              {
-                input: { text: responseText },
-                voice: {
-                  languageCode: "en-US",
-                  name: "en-US-Journey-F",
-                  ssmlGender: "NEUTRAL",
+  
+        // Check if response is an image or a YouTube link
+        const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(responseText);
+        const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(responseText);
+  
+        if (!isImage && !isYouTubeLink) {
+          // Request TTS from Google asynchronously
+          (async () => {
+            try {
+              const ttsResponse = await axios.post(
+                `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
+                {
+                  input: { text: responseText },
+                  voice: {
+                    languageCode: "en-US",
+                    name: "en-US-Journey-F",
+                    ssmlGender: "NEUTRAL",
+                  },
+                  audioConfig: { audioEncoding: "MP3" },
                 },
-                audioConfig: { audioEncoding: "MP3" },
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-
-            const base64Audio = ttsResponse.data.audioContent;
-            console.log("TTS Audio Generated (Base64)");
-
-            // Send Base64 Audio to Frontend after response
-            audioWindow.webContents.send("play-audio", base64Audio);
-          } catch (ttsError) {
-            console.error("TTS Error:", ttsError);
-          }
-        })();
+                { headers: { "Content-Type": "application/json" } }
+              );
+  
+              const base64Audio = ttsResponse.data.audioContent;
+              console.log("TTS Audio Generated (Base64)");
+  
+              // Send Base64 Audio to Frontend after response
+              audioWindow.webContents.send("play-audio", base64Audio);
+            } catch (ttsError) {
+              console.error("TTS Error:", ttsError);
+            }
+          })();
+        } else {
+          console.log("Response is an image or YouTube link, skipping TTS.");
+        }
       });
-
+  
       llmProcess.process.stderr.once("data", (data) => {
         console.error(`Python Error: ${data}`);
         reject(data.toString());
       });
     });
   });
+  
 
   ipcMain.handle(
     "calculate-cost",

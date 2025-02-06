@@ -52,9 +52,33 @@ app.on("ready", async () => {
     // Check if the sender is the main window before proceeding
     if (mainWindow && senderWebContents === mainWindow.webContents) {
       console.log("✅ Opening other windows from MAIN window");
-      overlayWindow = createOverlayWindow(mainWindow, iconPath)!;
-      wakeUpProcess = createWakeUpProcess();
+      if (!wakeUpProcess) wakeUpProcess = createWakeUpProcess();
+
+      if (!overlayWindow) {
+        console.log("yes");
+        overlayWindow = createOverlayWindow(mainWindow, iconPath)!;
+        overlayWindow.on("blur", async () => {
+          await slideOut(overlayWindow!);
+          overlayWindow!.hide();
+          wakeUpProcess!.resume();
+        });
+      }
+      // Global shortcuts
+      globalShortcut.register("Alt+C", () =>
+        audioWindow.webContents.send("stop-audio")
+      );
       globalShortcut.register("Alt+V", () => handleOverlayToggle());
+
+      wakeUpProcess.process.stdout.on("data", async (data: Buffer) => {
+        console.log(data.toString().trim());
+        if (data.toString().trim() === "wake-up") {
+          console.log("true");
+          overlayWindow?.show();
+          if (overlayWindow) {
+            await slideIn(overlayWindow);
+          }
+        }
+      });
     } else {
       console.warn(
         "⚠️ Unauthorized attempt to open windows from a non-main window."
@@ -95,26 +119,6 @@ app.on("ready", async () => {
       mainWindow.hide();
     }
   });
-  ipcMain.on("quit-app", () => {
-    app.quit(); // Quit the Electron app when requested
-  });
-
-  // Global shortcuts
-  globalShortcut.register("Alt+C", () =>
-    audioWindow.webContents.send("stop-audio")
-  );
-
-  if (wakeUpProcess !== null) {
-    wakeUpProcess.process.stdout.on("data", async (data: Buffer) => {
-      if (data.toString().trim() === "wake-up") {
-        console.log(true);
-        overlayWindow?.show();
-        if (overlayWindow) {
-          await slideIn(overlayWindow);
-        }
-      }
-    });
-  }
 });
 
 // Cleanup before quit
@@ -135,11 +139,11 @@ app.on("window-all-closed", cleanUpExtractedFiles);
 // Handle Alt+V
 async function handleOverlayToggle() {
   console.log("Alt+V pressed.");
+
   if (overlayWindow!.isVisible()) {
     await slideOut(overlayWindow!);
     overlayWindow!.hide();
     console.log("hide overlay");
-    wakeUpProcess!.resume();
   } else {
     overlayWindow!.show();
     console.log("show overlay");
@@ -223,35 +227,45 @@ ipcMain.handle("text-input", async (_, text: string) => {
       const responseText = data.toString().trim();
       console.log(responseText);
 
-      // Send response text immediately without waiting for TTS
+      // Send response text immediately
       resolve(responseText);
 
-      // Request TTS from Google asynchronously
-      (async () => {
-        try {
-          const ttsResponse = await axios.post(
-            `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
-            {
-              input: { text: responseText },
-              voice: {
-                languageCode: "en-US",
-                name: "en-US-Journey-F",
-                ssmlGender: "NEUTRAL",
+      // Check if response is an image or a YouTube link
+      const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(responseText);
+      const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(
+        responseText
+      );
+
+      if (!isImage && !isYouTubeLink) {
+        // Request TTS from Google asynchronously
+        (async () => {
+          try {
+            const ttsResponse = await axios.post(
+              `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
+              {
+                input: { text: responseText },
+                voice: {
+                  languageCode: "en-US",
+                  name: "en-US-Journey-F",
+                  ssmlGender: "NEUTRAL",
+                },
+                audioConfig: { audioEncoding: "MP3" },
               },
-              audioConfig: { audioEncoding: "MP3" },
-            },
-            { headers: { "Content-Type": "application/json" } }
-          );
+              { headers: { "Content-Type": "application/json" } }
+            );
 
-          const base64Audio = ttsResponse.data.audioContent;
-          console.log("TTS Audio Generated (Base64)");
+            const base64Audio = ttsResponse.data.audioContent;
+            console.log("TTS Audio Generated (Base64)");
 
-          // Send Base64 Audio to Frontend after response
-          audioWindow.webContents.send("play-audio", base64Audio);
-        } catch (ttsError) {
-          console.error("TTS Error:", ttsError);
-        }
-      })();
+            // Send Base64 Audio to Frontend after response
+            audioWindow.webContents.send("play-audio", base64Audio);
+          } catch (ttsError) {
+            console.error("TTS Error:", ttsError);
+          }
+        })();
+      } else {
+        console.log("Response is an image or YouTube link, skipping TTS.");
+      }
     });
 
     llmProcess.process.stderr.once("data", (data) => {

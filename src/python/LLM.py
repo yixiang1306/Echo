@@ -16,18 +16,37 @@ load_dotenv()
 RUNPOD_API_KEY = os.getenv("RUNPOD_KEY")
 RUNPOD_SERVER_ENDPOINT = os.getenv("RUNPOD_SERVER_ENDPOINT")
 WALLPAPER_HEAVEN_ENDPOINT = os.getenv("WALLPAPER_HEAVEN_ENDPOINT")
-
-# Ensure GOOGLE_APPLICATION_CREDENTIALS is set
 YOUTUBE_API_KEY = os.getenv("GOOGLE_API_KEY")
 YOUTUBE_SEARCH_URL = os.getenv("YOUTUBE_SEARCH_URL")
 
+
+# LLM CONFIG
+MODEL_NAME = "NalDice/askvox-llama3.3-70b-16bit"
+temperature = 0.5
+max_tokens = 10000
+
 # Context Window (stores last N interactions)
-CONTEXT_WINDOW_SIZE = 5  # Adjust this value based on available token limits
+CONTEXT_WINDOW_SIZE = 10  # Adjust this value based on available token limits
 chat_history = deque(maxlen=CONTEXT_WINDOW_SIZE * 2)  # Stores both user and assistant messages
 
-
-# Model
-MODEL_NAME = "NalDice/askvox-llama3.3-70b-16bit"
+#FOR NORMAL CONVERSATION
+system_prompt = '''
+Your name is Echo.
+You are friendly and intelligent. 
+You are a helpful game assistant with tool calling capabilities. 
+Maintain context from the conversation and only call tools when necessary. 
+avoid using special characters and emojis.
+'''
+#FOR SUMMARIZATION
+summerize_system_prompt = '''
+Your name is Echo.
+You are friendly and intelligent.
+You are a helpful game assistant.
+Summarize the following web content in a clear and friendly way.
+Summarize this information in a clear, concise, and user-friendly manner.
+avoid summarizing unrelated information. 
+avoid using special characters and emojis. 
+'''
 
 # Initialize OpenAI Client
 client = OpenAI(
@@ -35,20 +54,34 @@ client = OpenAI(
     base_url=f"{RUNPOD_SERVER_ENDPOINT}/v1",
 )
 
+#Main Functions for Images & Videos
 def search_wallhaven_image(search_param: str):
-    """Fetch an image from Wallhaven"""
-    params = {"q": search_param}
-    response = requests.get(WALLPAPER_HEAVEN_ENDPOINT, params=params)
+    """Fetch an image from the first three pages of Wallhaven, sorted by views"""
+    all_images = []
 
-    if response.status_code == 200:
-        data = response.json()
-        if "data" in data and len(data["data"]) > 0:
-            return random.choice(data["data"])["path"]
-    
-    return "No image found."
+    for i in range(1, 4):  # Loop through pages 1, 2, and 3
+        params = {
+            "q": search_param,  # Search query
+            "sorting": "views",  # Sorting by most viewed images
+            "order": "desc",  # Order by descending (most popular first)
+            "ai_art_filter": "1",  # AI-generated images filter (1 = allow AI images)
+            "page": i,  # Iterate through pages 1 to 3
+        }
+        
+        response = requests.get(WALLPAPER_HEAVEN_ENDPOINT, params=params)
 
+        if response.status_code == 200:
+            data = response.json()
+            if "data" in data and len(data["data"]) > 0:
+                all_images.extend(data["data"])  # Add all images from the page
+
+    # If we have collected images from all pages, return a random one
+    if all_images:
+        return random.choice(all_images)["path"]
+
+    return "Sorry, I couldn't find an image of your request. Please try again."
 def search_youtube_video(search_param: str):
-    """Fetch a video from YouTube"""
+    """Fetch a video from YouTube and return an embed link"""
     params = {
         "part": "snippet",
         "q": search_param,
@@ -63,10 +96,9 @@ def search_youtube_video(search_param: str):
         if "items" in data and len(data["items"]) > 0:
             random_video = random.choice(data["items"])
             video_id = random_video["id"]["videoId"]
-            return f"https://www.youtube.com/watch?v={video_id}"
+            return f"https://www.youtube.com/embed/{video_id}"  # Embed link format
     
-    return "No video found."
-
+    return "Sorry, I couldn't find a video of your request. Please try again."
 
 # Functions for Images & Videos
 def get_image(search_param: str):
@@ -121,6 +153,7 @@ tool_functions = {
 }
 
 
+# Text Extraction fro web
 def extract_text_from_url(url):
     """Extracts readable text from a given URL."""
     try:
@@ -137,12 +170,13 @@ def extract_text_from_url(url):
             # Get visible text
             text = " ".join(soup.stripped_strings)
 
-            # Return first 3000 characters to avoid LLM overload
-            return text[:8000]
+            # Return first 10000 characters to avoid LLM overload
+            return text[:30000]
 
     except Exception as e:
-        return f"Error extracting content from {url}: {str(e)}"
+        return " "
 
+# Fetch search result links from web
 def search_web(query: str):
     """Fetches top 3 Google search results, scrapes content, and summarizes them."""
     try:
@@ -166,6 +200,7 @@ def search_web(query: str):
     except Exception as e:
         return f"Error fetching search results: {str(e)}"
 
+# Summarize search results. This will be used for web searching.
 def summarize_search_results(query: str, extracted_content: list):
     """Use AI to summarize extracted web content."""
     prompt = f"""
@@ -173,48 +208,46 @@ def summarize_search_results(query: str, extracted_content: list):
 
     {chr(10).join(extracted_content)}
 
-    Summarize this information in a clear, concise, and user-friendly manner. avoid summarize unrelated information. 
+    Summarize this information in a clear, concise, and user-friendly manner. avoid summarizing unrelated information. 
     """
+
+    messages=[{"role": "system", "content": summerize_system_prompt},
+                  {"role": "user", "content": prompt}]
 
     response = client.chat.completions.create(
         model=MODEL_NAME, 
-        messages=[{"role": "system", "content": "You are Echo, a game assistant chat ai. Summarize the following web content in a clear and friendly way."},
-                  {"role": "user", "content": prompt}],
-        temperature=0.5,
-        max_tokens=60000
+        messages=messages,
+        temperature=temperature,
+        max_tokens=max_tokens
     )
 
     return response.choices[0].message.content if response.choices else "I couldn't retrieve useful information."
 
+# Main function for normal response.
 def get_response(user_input: str):
     global chat_history
 
-    # Store user input in history
-    chat_history.append({"role": "user", "content": user_input})
-
     # **Detect if the user wants a web search**
-    if any(word in user_input.lower() for word in ["web search", "look up", "search online", "find on the web", "search on the website", ]):
+    if any(word in user_input.lower() for word in ["web search", "look up", "search online", "find on the web", "search on the website","websearch", "search it on the web" ]):
         return search_web(user_input.replace("web search", "").strip())
 
-
     # Prepare messages with conversation history
-    messages = [{"role": "system", "content": "Your name is Echo. You are friendly and intelligent. You are a helpful game assistant with tool calling capabilities. Maintain context from the conversation and only call tools when necessary."}] + list(chat_history)
+    messages = [{"role": "system", "content": system_prompt}] + list(chat_history)
 
     lower_input = user_input.lower()
-    tool_name = "auto" if any(word in lower_input for word in ["video", "trailer", "clip", "youtube", "image", "wallpaper", "photo", "pic"]) else "none"
+    tool_name = "auto" if any(word in lower_input for word in ["video", "trailer", "clip", "youtube", "image","img", "wallpaper", "photo", "pic"]) else "none"
 
     response_stream = client.chat.completions.create(
         model=MODEL_NAME,
         messages=messages,
-        temperature=0.5,
-        max_tokens=60000,
+        temperature=temperature,
+        max_tokens=max_tokens,
         tools=tools,
         tool_choice=tool_name
     )
 
     if response_stream.choices[0].message.content:
         assistant_response = response_stream.choices[0].message.content
-        chat_history.append({"role": "assistant", "content": assistant_response})
 
         # **Fallback to Web Search if AI doesn't know**
         if "I don't know" in assistant_response or "I'm not sure" in assistant_response:
@@ -230,7 +263,6 @@ def get_response(user_input: str):
 
         if function_name in tool_functions:
             response = tool_functions[function_name](function_args["search_param"])
-            chat_history.append({"role": "assistant", "content": response})
             return response
 
     # **Fallback to Web Search if no response is given**
@@ -242,7 +274,15 @@ if __name__ == "__main__":
         try:
             user_input = sys.stdin.readline().strip()
             if user_input:
+                # Store user input in history
+                chat_history.append({"role": "user", "content": user_input})
+
                 response = get_response(user_input)
+                response = response.replace("*", "")  # Remove asterisks from response
+
+                # Store assistant response in history
+                chat_history.append({"role": "assistant", "content": response})
+
                 print(response, flush=True)
-        except Exception as e:
-            print(f"Error: {str(e)}\nI'm sorry, It seems like the server is down. Please try again later.", flush=True)
+        except Exception:
+            print("I'm sorry, It seems like the server is down. Please try again later.", flush=True)
