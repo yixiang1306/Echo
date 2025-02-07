@@ -1,7 +1,7 @@
 import "regenerator-runtime/runtime";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./utility/authprovider";
 
@@ -34,13 +34,12 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/overlay" element={<OverlayUI />} />
               <Route path="/audio" element={<HiddenAudioPlayer />} />
               <Route path="/upgrade" element={<Upgrade />} />
-              <Route
-                path="/settings"
-                element={<Settings clearChatHistory={() => {}} />}
-              />
+              <Route path="/settings" element={<Settings/>}/>
               <Route path="/updateAcc" element={<UpdateAcc />} />
               <Route path="/payment" element={<Payment />} />
             </Route>
+            {/* Fallback Route */}
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </AuthProvider>
       </HashRouter>

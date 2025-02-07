@@ -33,12 +33,16 @@ const ApplicationUI = () => {
   const [freeCoin, setFreeCoin] = useState(5.0);
   const [walletCoin, setWalletCoin] = useState(5.0);
   const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
-  const [chatHistory, setChatHistory] = useState<string[]>([
-    "Composite bow stats",
-    "How do I beat Battlemage",
-    "How do I get to Abyssal Woods",
-  ]);
+  const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
   const { session } = useAuth();
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+
+  interface ChatHistoryItem {
+    id: string;
+    title: string;
+    created_at: string;
+    preview: string;
+  }
 
   //------------------ Function the current session and resize handler -------------------------
 
@@ -118,6 +122,51 @@ const ApplicationUI = () => {
     fetchWallet();
   }, [currentSession]);
 
+  useEffect(() => {
+    const fetchChatHistory = async () => {
+      if (!currentSession) return;
+  
+      try {
+        // Fetch all chats for the current user
+        const { data: chats, error: chatsError } = await supabase
+          .from("chats")
+          .select("id, title, created_at")
+          .eq("user_id", currentSession.user.id)
+          .order("created_at", { ascending: false });
+  
+        if (chatsError) {
+          console.error("Error fetching chat history:", chatsError.message);
+          return;
+        }
+  
+        // For each chat, fetch the latest message preview
+        const chatsWithPreview = await Promise.all(
+          chats.map(async (chat) => {
+            const { data: messages, error: messagesError } = await supabase
+              .from("messages")
+              .select("content")
+              .eq("chat_id", chat.id)
+              .order("created_at", { ascending: false })
+              .limit(1);
+  
+            if (messagesError) {
+              console.error("Error fetching chat messages:", messagesError.message);
+              return { ...chat, preview: "No messages" };
+            }
+  
+            return { ...chat, preview: messages[0]?.content || "No messages" };
+          })
+        );
+  
+        setChatHistory(chatsWithPreview);
+      } catch (error) {
+        console.error("Error fetching chat history:", error);
+      }
+    };
+  
+    fetchChatHistory();
+  }, [currentSession]);
+
   //------------------ Function   -------------------------
 
   useEffect(() => {
@@ -136,9 +185,12 @@ const ApplicationUI = () => {
 
   const sendMessage = async () => {
     if (userInput.trim() === "") return;
-
-    setMessages((prev) => [...prev, { role: "user", content: userInput }]);
-
+  
+    // Add user message to local state
+    const userMessage = { role: "user", content: userInput };
+    setMessages((prev) => [...prev, userMessage]);
+  
+    // Check if the user has enough coins
     if (!isSubscriptionActive && freeCoin <= 0 && walletCoin <= 0) {
       setMessages((prev) => [
         ...prev,
@@ -150,26 +202,39 @@ const ApplicationUI = () => {
       ]);
       return;
     }
+  
     setIsLoading(true);
-    //-------------for testing--------------
-    // const test = {
-    //   input: userInput,
-    //   output: "Hey How can I Help you today?",
-    // };
-    // await calculateCost(test, MODEL_TYPE.ASKVOX);
-
+  
     try {
+      // Insert user message into Supabase
+      await saveMessagesToSupabase(userInput);
+  
+      // Send the user input to the Electron API for processing
       //@ts-ignore
       const response = await window.electronAPI.textInput(userInput);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: response },
-      ]);
+  
+      // Add assistant message to local state
+      const assistantMessage = { role: "assistant", content: response };
+      setMessages((prev) => [...prev, assistantMessage]);
+  
+      // Insert assistant message into Supabase
+      await saveMessagesToSupabase(response, "assistant");
+  
+      // Calculate the cost of the conversation
       const conversation_data = {
         input: userInput,
         output: String(response),
       };
       await calculateCost(conversation_data, MODEL_TYPE.ASKVOX);
+  
+      // to implement chat title
+      /*
+      // Update the chat title if this is the first message
+      if (messages.length === 1) {
+        const generatedTitle = generateChatTitle(userInput);
+        await updateChatTitle(activeChatId!, generatedTitle);
+      } */
+  
       setUserInput("");
     } catch (error) {
       console.error("Error sending message:", error);
@@ -181,6 +246,60 @@ const ApplicationUI = () => {
       setIsLoading(false);
     }
   };
+
+  const saveMessagesToSupabase = async (content: string, role: string = "user") => {
+    if (!currentSession || !activeChatId) return;
+  
+    try {
+      await supabase.from("messages").insert([
+        { chat_id: activeChatId, user_id: currentSession.user.id, role, content },
+      ]);
+    } catch (error) {
+      console.error("Error saving message to Supabase:", error);
+    }
+  };
+
+  // to implement chat title
+  /*
+  const generateChatTitle = (message: string): string => {
+    const maxLength = 30; // Maximum length of the title
+    const trimmedMessage = message.trim();
+  
+    if (trimmedMessage.length <= maxLength) {
+      return trimmedMessage;
+    }
+  
+    // Extract the first few words
+    const words = trimmedMessage.split(" ");
+    const truncatedWords = words.slice(0, 5); // Take the first 5 words
+    return truncatedWords.join(" ") + "...";
+  };
+
+  const updateChatTitle = async (chatId: string, newTitle: string) => {
+    if (!currentSession) return;
+  
+    try {
+      // Update the chat title in Supabase
+      const { error } = await supabase
+        .from("chats")
+        .update({ title: newTitle })
+        .eq("id", chatId);
+  
+      if (error) {
+        console.error("Error updating chat title:", error.message);
+        return;
+      }
+  
+      // Update the chat title in the local state
+      setChatHistory((prev) =>
+        prev.map((chat) =>
+          chat.id === chatId ? { ...chat, title: newTitle } : chat
+        )
+      );
+    } catch (error) {
+      console.error("Error updating chat title:", error);
+    }
+  };  */
 
   //------------------ Function   -------------------------
 
@@ -255,12 +374,52 @@ const ApplicationUI = () => {
   //------------------ Function Sign out   ------------------------
 
   const handleCleanupSession = async () => {
-    //@ts-ignore
-    await window.electron.killWindows();
-    await markUserAsOffline(currentSession!.user.id);
-    const { error } = await supabase.auth.signOut();
-    console.error("error sign out", error);
-    setIsModalVisible(false);
+    try {
+      // Step 1: Kill Electron windows (if applicable)
+      try {
+        //@ts-ignore
+        await window.electron.killWindows();
+        console.log("Electron windows killed successfully.");
+      } catch (error) {
+        console.error("Error killing Electron windows:", error);
+      }
+  
+      // Step 2: Mark the user as offline
+      try {
+        if (currentSession) {
+          await markUserAsOffline(currentSession.user.id);
+          console.log("User marked as offline.");
+        }
+      } catch (error) {
+        console.error("Error marking user as offline:", error);
+      }
+  
+      // Step 3: Sign out from Supabase
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.error("Error signing out from Supabase:", error.message);
+        } else {
+          console.log("User signed out successfully.");
+        }
+      } catch (error) {
+        console.error("Error during Supabase sign-out:", error);
+      }
+  
+      // Step 4: Clear Supabase auth tokens from storage
+      try {
+        localStorage.removeItem("supabase.auth.token");
+        sessionStorage.removeItem("supabase.auth.token");
+        console.log("Supabase auth tokens cleared from storage.");
+      } catch (error) {
+        console.error("Error clearing Supabase auth tokens:", error);
+      }
+  
+      // Step 5: Hide the logout modal
+      setIsModalVisible(false);
+    } catch (error) {
+      console.error("Unexpected error during logout cleanup:", error);
+    }
   };
 
   const handleLogout = async () => {
@@ -268,6 +427,10 @@ const ApplicationUI = () => {
   };
 
   const handleConfirmLogout = async () => {
+    if (!currentSession) {
+      console.error("No active session found. Cannot log out.");
+      return;
+    }
     await handleCleanupSession();
   };
 
@@ -282,18 +445,76 @@ const ApplicationUI = () => {
   };
 
   const goToSettings = () => {
-    navigate("/settings");
+    navigate("/settings", { state: { userId: currentSession?.user.id } });
   };
 
-  const startNewChat = () => {
-    setMessages([
-      { role: "Vox", content: "Hello! How can I assist you today?" },
-    ]);
+  const startNewChat = async () => {
+    if (!currentSession) return;
+  
+    try {
+      const { data: newChat, error } = await supabase
+        .from("chats")
+        .insert([{ user_id: currentSession.user.id }])
+        .select();
+  
+      if (error) {
+        console.error("Error creating new chat:", error.message);
+        return;
+      }
+  
+      setMessages([{ role: "Vox", content: "Hello! How can I assist you today?" }]);
+      setActiveChatId(newChat[0].id); // Set the new chat as active
+      setChatHistory((prev) => [
+        { id: newChat[0].id, title: "New Chat", preview: "No messages", created_at: new Date().toISOString() },
+        ...prev,
+      ]);
+    } catch (error) {
+      console.error("Error starting new chat:", error);
+    }
   };
 
-  const clearChatHistory = () => {
-    setChatHistory([]);
+  const clearChatHistory = async () => {
+    if (!currentSession) return;
+    try {
+      // Delete all chats for the current user
+      const { error } = await supabase
+        .from("chats")
+        .delete()
+        .eq("user_id", currentSession.user.id);
+  
+      if (error) {
+        console.error("Error clearing chat history:", error.message);
+        return;
+      }
+  
+      // Reset local state
+      setChatHistory([]);
+      setMessages([{ role: "Vox", content: "Hello! How can I assist you today?" }]);
+    } catch (error) {
+      console.error("Error clearing chat history:", error);
+    }
   };
+
+  const loadChat = async (chatId: string) => {
+    try {
+      const { data: messages, error } = await supabase
+        .from("messages")
+        .select("role, content")
+        .eq("chat_id", chatId)
+        .order("created_at", { ascending: true });
+  
+      if (error) {
+        console.error("Error loading chat messages:", error.message);
+        return;
+      }
+  
+      setMessages(messages);
+      setActiveChatId(chatId); // Set the active chat ID
+    } catch (error) {
+      console.error("Error loading chat:", error);
+    }
+  };
+  
 
   //--------------------Calculate Cost --------------------------
   const calculateCost = async (
@@ -366,27 +587,38 @@ const ApplicationUI = () => {
           isSidebarVisible ? "w-1/5" : "hidden"
         }`}
       >
-        {/* New Chat Button */}
-        <button
-          className="self-end mt-1 mb-4 bg-transparent border-none cursor-pointer"
-          onClick={startNewChat}
-          title="Start New Chat"
-        >
-          <img
-            src="/public/new_chat.png"
-            alt="Start New Chat"
-            className="w-6 h-6"
-          />
-        </button>
+          {/* New Chat Button */}
+          <button
+            className="self-end mt-1 mb-4 bg-transparent border-none cursor-pointer"
+            onClick={startNewChat}
+            title="Start New Chat"
+          >
+            <img
+              src="/public/new_chat.png"
+              alt="Start New Chat"
+              className="w-6 h-6"
+            />
+          </button>
 
-        <h2 className="pt-12 mb-4">History</h2>
-        <ul className="space-y-4">
-          {chatHistory.length > 0 ? (
-            chatHistory.map((item, index) => <li key={index}>{item}</li>)
-          ) : (
-            <li>No history available</li>
-          )}
-        </ul>
+          {/* Chat History */}
+          <div className="chat-history">
+            <h3 className="pb-4">History</h3>
+            {chatHistory.length > 0 ? (
+              chatHistory.map((chat, index) => (
+                <div
+                  key={index}
+                  className="chat-item"
+                  onClick={() => loadChat(chat.id)} // Load chat when clicked
+                >
+                  <strong className="hover:text-blue-500">{chat.title}</strong>
+                  
+                </div>
+              ))
+            ) : (
+              <p>No history available</p>
+            )}
+          </div>
+
         <button
           onClick={goToUpgrade}
           className={`mt-auto ${
