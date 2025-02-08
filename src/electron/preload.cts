@@ -24,9 +24,20 @@ contextBridge.exposeInMainWorld("tokenManagerApi", {
 contextBridge.exposeInMainWorld("electronAPI", {
   toggleRecording: (recording: boolean) =>
     ipcRenderer.send("toggle-recording", recording),
-  textInput: (text: string) => ipcRenderer.invoke("text-input", text),
+  sendText: (text: string) => ipcRenderer.send("text-input", text),
   sendAudio: (base64Audio: string) =>
     ipcRenderer.invoke("send-audio", base64Audio),
+
+  // Streaming Listeners
+  onStreamText: (callback: (textChunk: string) => void) =>
+    ipcRenderer.on("stream-text", (_, textChunk) => callback(textChunk)),
+
+  onStreamComplete: (callback: (fullText: string) => void) =>
+    ipcRenderer.on("stream-complete", (_, fullText) => callback(fullText)),
+
+  onPlayAudio: (callback: (audioBase64: string) => void) =>
+    ipcRenderer.on("play-audio", (_, audioBase64) => callback(audioBase64)),
+
 });
 
 // Expose a new audioManagerAPI

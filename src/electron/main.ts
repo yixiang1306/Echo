@@ -217,62 +217,125 @@ ipcMain.handle("stop-audio", () => {
   }
 });
 
-ipcMain.handle("text-input", async (_, text: string) => {
-  return new Promise((resolve, reject) => {
-    llmProcess.process.stdin.write(text + "\n");
-    console.log("sent text...");
-    console.log("waiting for response...");
+// ipcMain.handle("text-input", async (_, text: string) => {
+//   return new Promise((resolve, reject) => {
+//     llmProcess.process.stdin.write(text + "\n");
+//     console.log("sent text...");
+//     console.log("waiting for response...");
 
-    llmProcess.process.stdout.once("data", (data) => {
-      const responseText = data.toString().trim();
-      console.log(responseText);
+//     llmProcess.process.stdout.on("data", (data) => {
+//       const responseText = data.toString().trim();
+//       console.log(responseText);
 
-      // Send response text immediately
-      resolve(responseText);
+//       // Send response text immediately
+//       resolve(responseText);
 
-      // Check if response is an image or a YouTube link
-      const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(responseText);
-      const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(
-        responseText
+//       // Check if response is an image or a YouTube link
+//       const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(responseText);
+//       const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(responseText);
+
+//       if (!isImage && !isYouTubeLink) {
+//         // Request TTS from Google asynchronously
+//         (async () => {
+//           try {
+//             const ttsResponse = await axios.post(
+//               `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
+//               {
+//                 input: { text: responseText },
+//                 voice: {
+//                   languageCode: "en-US",
+//                   name: "en-US-Journey-F",
+//                   ssmlGender: "NEUTRAL",
+//                 },
+//                 audioConfig: { audioEncoding: "MP3" },
+//               },
+//               { headers: { "Content-Type": "application/json" } }
+//             );
+
+//             const base64Audio = ttsResponse.data.audioContent;
+//             console.log("TTS Audio Generated (Base64)");
+
+//             // Send Base64 Audio to Frontend after response
+//             audioWindow.webContents.send("play-audio", base64Audio);
+//           } catch (ttsError) {
+//             console.error("TTS Error:", ttsError);
+//           }
+//         })();
+//       } else {
+//         console.log("Response is an image or YouTube link, skipping TTS.");
+//       }
+//     });
+
+//     llmProcess.process.stderr.once("data", (data) => {
+//       console.error(`Python Error: ${data}`);
+//       reject(data.toString());
+//     });
+//   });
+// });
+
+ipcMain.on("text-input", async (_, text: string) => {
+  llmProcess.process.stdin.write(text + "\n");
+  console.log("Sent text to Python...");
+
+  let fullResponse = ""; // Stores the entire response
+  let startAudio = false;
+
+  // Remove existing listeners to prevent duplication
+  llmProcess.process.stdout.removeAllListeners("data");
+  // Handle real-time streaming
+  llmProcess.process.stdout.on("data", (chunk) => {
+    let textChunk = chunk.toString();
+    if (textChunk === "*") {
+      textChunk = "";
+    }
+    console.log("Received chunk:", textChunk);
+
+    // Send each streamed chunk to the frontend
+    mainWindow.webContents.send("stream-text", textChunk);
+
+    // Accumulate response
+    fullResponse += textChunk;
+  });
+
+  console.log(fullResponse);
+
+  // Check if the response is an image or YouTube link
+  const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(fullResponse);
+  const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(
+    fullResponse
+  );
+
+  if (!isImage && !isYouTubeLink) {
+    console.log("translating to audio...");
+    try {
+      const ttsResponse = await axios.post(
+        `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
+        {
+          input: { text: fullResponse.trim() },
+          voice: {
+            languageCode: "en-US",
+            name: "en-US-Journey-F",
+            ssmlGender: "NEUTRAL",
+          },
+          audioConfig: { audioEncoding: "MP3" },
+        },
+        { headers: { "Content-Type": "application/json" } }
       );
 
-      if (!isImage && !isYouTubeLink) {
-        // Request TTS from Google asynchronously
-        (async () => {
-          try {
-            const ttsResponse = await axios.post(
-              `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
-              {
-                input: { text: responseText },
-                voice: {
-                  languageCode: "en-US",
-                  name: "en-US-Journey-F",
-                  ssmlGender: "NEUTRAL",
-                },
-                audioConfig: { audioEncoding: "MP3" },
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
+      const base64Audio = ttsResponse.data.audioContent;
+      console.log("TTS Audio Generated (Base64)");
 
-            const base64Audio = ttsResponse.data.audioContent;
-            console.log("TTS Audio Generated (Base64)");
+      // Send Base64 Audio to Frontend
+      audioWindow.webContents.send("play-audio", base64Audio);
+    } catch (ttsError) {
+      console.error("TTS Error:", ttsError);
+    }
+  } else {
+    console.log("Response is an image or YouTube link, skipping TTS.");
+  }
 
-            // Send Base64 Audio to Frontend after response
-            audioWindow.webContents.send("play-audio", base64Audio);
-          } catch (ttsError) {
-            console.error("TTS Error:", ttsError);
-          }
-        })();
-      } else {
-        console.log("Response is an image or YouTube link, skipping TTS.");
-      }
-    });
-
-    llmProcess.process.stderr.once("data", (data) => {
-      console.error(`Python Error: ${data}`);
-      reject(data.toString());
-    });
-  });
+  // Send full response to frontend
+  mainWindow.webContents.send("stream-complete", fullResponse.trim());
 });
 
 ipcMain.handle(

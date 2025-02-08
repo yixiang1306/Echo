@@ -156,17 +156,31 @@ const ApplicationUI = () => {
 
     try {
       console.log(taggedMessage);
-      //@ts-ignore
-      const response = await window.electronAPI.textInput(taggedMessage);
 
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: response },
-      ]);
-      calculateCost(
-        { input: taggedMessage, output: response },
-        MODEL_TYPE.ASKVOX
-      );
+      let aiResponse = "";
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]); // Placeholder for streaming
+
+      // Use window.electronAPI.sendText for sending the message
+      //@ts-ignore
+      window.electronAPI.sendText(userInput);
+
+      // Listen for streamed text chunks
+      //@ts-ignore
+      window.electronAPI.onStreamText((textChunk) => {
+        aiResponse += textChunk;
+        setMessages((prev) =>
+          prev.map((msg, index) =>
+            index === prev.length - 1 ? { ...msg, content: aiResponse } : msg
+          )
+        );
+      });
+
+      // Handle when streaming is complete
+      //@ts-ignore
+      window.electronAPI.onStreamComplete((fullText) => {
+        console.log("Streaming Complete:", fullText);
+        setIsLoading(false);
+      });
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => [
