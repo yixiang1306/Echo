@@ -1,43 +1,36 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "../context/ThemeContext"; // Import the useTheme hook
+import { useTheme } from "../context/ThemeContext";
 import { v4 as uuidv4 } from "uuid";
 import { supabase } from "../utility/supabaseClient";
 import { useAuth } from "../utility/authprovider";
 import { Session } from "@supabase/supabase-js";
 
-const Payment: React.FC = () => {
+const PayPerUsePayment: React.FC = () => {
   const { session } = useAuth();
   const navigate = useNavigate();
-  const { isDarkMode } = useTheme(); // Access the theme context
+  const { isDarkMode } = useTheme();
 
-  const GST = 0.09;
-  const subscription_amount = 25;
-  const total_amount = subscription_amount + subscription_amount * GST;
+  const GST = 0.09; // 9% GST
+  const creditPrice = 1; // Each credit costs $1
+  const [credits, setCredits] = useState(1); // Default to 1 credit
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
 
   useEffect(() => {
     setCurrentSession(session);
   }, []);
 
-  const handleComfirmPayment = async (event: React.FormEvent) => {
+  // Calculate the total amount dynamically
+  const totalAmount = credits * creditPrice + credits * creditPrice * GST;
+
+  const handleConfirmPayment = async (event: React.FormEvent) => {
     event.preventDefault();
     const cardInput = document.getElementById(
       "cardNumber"
     ) as HTMLInputElement | null;
-
-    // Ensure input exists and extract digits safely
     const cardNumber = cardInput?.value.replace(/\D/g, "") || "";
-
-    // Extract last 4 digits safely (fallback to empty string if input is too short)
     const lastFourDigits = cardNumber.length >= 4 ? cardNumber.slice(-4) : "";
 
-    // const expiryDate = (
-    //   document.getElementById("expiryDate") as HTMLInputElement
-    // )?.value.trim();
-    // const cvc = (
-    //   document.getElementById("cvc") as HTMLInputElement
-    // )?.value.trim();
     const cardHolderName = (
       document.getElementById("cardHolderName") as HTMLInputElement
     )?.value.trim();
@@ -46,7 +39,7 @@ const Payment: React.FC = () => {
     )?.value;
 
     try {
-      // Insert transaction record into Supabase
+      // Insert transaction record
       const { error: TransactionError } = await supabase
         .from("Transaction")
         .insert([
@@ -54,51 +47,32 @@ const Payment: React.FC = () => {
             id: uuidv4(),
             accountId: currentSession?.user.id,
             createdAt: new Date().toISOString(),
-            type: "MONTHLY_SUBSCRIPTION",
-            amount: total_amount,
+            type: "PAY_PER_USE",
+            amount: totalAmount,
             cardId: lastFourDigits,
-            cardHolderName: cardHolderName,
-            billingAddress: billingAddress,
+            cardHolderName,
+            billingAddress,
           },
         ]);
 
       if (TransactionError)
-        throw "Error inserting transaction:" + TransactionError.message;
-
-      // subscription
-
-      const currentExpiryDate = new Date();
-      const newExpiryDate = new Date(
-        currentExpiryDate.setMonth(currentExpiryDate.getMonth() + 1)
-      ).toISOString();
-
-      const { error: subscriptionError } = await supabase
-        .from("Subscription")
-        .update({
-          expiredAt: newExpiryDate,
-        })
-        .eq("accountId", currentSession?.user.id);
-
-      if (subscriptionError) {
         throw new Error(
-          "Error updating Subscription: " + subscriptionError.message
+          "Error inserting transaction: " + TransactionError.message
         );
+
+      const { error: CreditError } = await supabase.rpc(
+        "increment_wallet_amount",
+        {
+          account_id: currentSession?.user.id, // Ensure it's a UUID (string format)
+          amount_to_add: credits.toFixed(2), // Float value
+        }
+      );
+
+      if (CreditError) {
+        console.error("Failed to add credits:", CreditError.message);
       }
 
-      const { error: UserError } = await supabase
-        .from("User")
-        .update({
-          userType: "MONTHLY_SUBSCRIPTION",
-        })
-        .eq("accountId", currentSession?.user.id);
-
-      if (UserError) {
-        throw new Error("Error updating user: " + UserError.message);
-      }
-
-      console.log("Payment successful! Your subscription is activated");
-
-      alert("Payment successful! Your subscription is activated.");
+      alert(`Payment successful! You have added ${credits} credits.`);
       navigate("/app");
     } catch (error) {
       console.error("Payment error:", error);
@@ -144,16 +118,33 @@ const Payment: React.FC = () => {
               isDarkMode ? "text-white" : "text-gray-900"
             }`}
           >
-            Subscribe to AskVox Premium Subscription
+            Echo Credit Top up
           </h1>
           <p
             className={`text-4xl font-bold mb-4 ${
               isDarkMode ? "text-white" : "text-gray-900"
             }`}
           >
-            $ {subscription_amount}
-            <span className="text-2xl font-normal"> per month</span>
+            $ {creditPrice}
+            <span className="text-2xl font-normal"> per credit</span>
           </p>
+          {/* Credit Input */}
+          <div className="mb-6">
+            <label className="block text-lg font-bold mb-2">
+              How many credits do you want to top-up?
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="500"
+              value={credits}
+              onChange={(e) =>
+                setCredits(Math.max(1, parseInt(e.target.value) || 1))
+              }
+              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-black"
+            />
+          </div>
+
           <ul
             className={`list-none p-0 mb-6 ${
               isDarkMode ? "text-gray-400" : "text-gray-700"
@@ -161,26 +152,22 @@ const Payment: React.FC = () => {
           >
             <li className="mb-2">
               <strong>Ask</strong>
-              <span className="text-indigo-500">Vox</span> premium subscription
-              <span className="float-right">
-                ${subscription_amount.toFixed(2)}
-              </span>
+              <span className="text-indigo-500">Vox</span> Echo Top up
+              <span className="float-right">${credits.toFixed(2)}</span>
             </li>
             <li className="text-sm mb-6">Billed monthly</li>
             <li className="mb-2">
               Subtotal
-              <span className="float-right">
-                ${subscription_amount.toFixed(2)}
-              </span>
+              <span className="float-right">${credits.toFixed(2)}</span>
             </li>
             <li className="mb-2">
               Gst(9%)
-              <span className="float-right">${subscription_amount * GST}</span>
+              <span className="float-right">${(credits * GST).toFixed(2)}</span>
             </li>
             <hr className="border-t border-gray-700 my-6" />
             <li className="text-lg font-semibold">
               Total due
-              <span className="float-right">$ {total_amount}</span>
+              <span className="float-right">$ {totalAmount}</span>
             </li>
           </ul>
         </div>
@@ -197,7 +184,7 @@ const Payment: React.FC = () => {
           >
             Payment method
           </h2>
-          <form onSubmit={handleComfirmPayment}>
+          <form onSubmit={handleConfirmPayment}>
             <div className="space-y-4">
               {/* Card Information */}
               <div
@@ -331,4 +318,4 @@ const Payment: React.FC = () => {
   );
 };
 
-export default Payment;
+export default PayPerUsePayment;
