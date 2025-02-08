@@ -195,21 +195,23 @@ def search_web(query: str):
         if not extracted_content:
             return "Couldn't extract content from the search results."
 
-        return summarize_search_results(query, extracted_content)
+        return sumamrize_search_response(query, extracted_content)
 
     except Exception as e:
         return f"Error fetching search results: {str(e)}"
 
 # Summarize search results. This will be used for web searching.
-def summarize_search_results(query: str, extracted_content: list):
-    """Use AI to summarize extracted web content."""
+def sumamrize_search_response(query: str, extracted_content: list):
+    #Use AI to summarize extracted web content
     prompt = f"""
     The user asked: '{query}'. I have gathered relevant content from different websites:
 
     {chr(10).join(extracted_content)}
 
-    Summarize this information in a clear, concise, and user-friendly manner. avoid summarizing unrelated information. 
+    Summarize this information in a clear, concise, and user-friendly manner depending on the user's question. avoid summarizing unrelated information. analyze the content and provide a concise summary based on the user question. 
     """
+
+    full_response = ""
 
     messages=[{"role": "system", "content": summerize_system_prompt},
                   {"role": "user", "content": prompt}]
@@ -218,24 +220,51 @@ def summarize_search_results(query: str, extracted_content: list):
         model=MODEL_NAME, 
         messages=messages,
         temperature=temperature,
-        max_tokens=max_tokens
+        max_tokens=max_tokens,
+        stream=True
     )
 
-    return response.choices[0].message.content if response.choices else "I couldn't retrieve useful information."
+    for chunk in response:
+        full_response += chunk.choices[0].delta.content
+        print(chunk.choices[0].delta.content, end="", flush=True)
+
+    #add summary to chat history
+    chat_history.append({"role": "assistant", "content": full_response})
+
+
+    
+
+  
 
 # Main function for normal response.
 def get_response(user_input: str):
     global chat_history
+    streamConfig = True
+    tool_name = "none"
+    full_response = ""
+
+    lower_input = user_input.lower()
+
+    # Add user input to conversation history
+    chat_history.append({"role": "user", "content": user_input})
+
+    
 
     # **Detect if the user wants a web search**
-    if any(word in user_input.lower() for word in ["web search", "look up", "search online", "find on the web", "search on the website","websearch", "search it on the web" ]):
+    if any(word in lower_input for word in ["web search", "look up", "search online", "find on the web", "search on the website","websearch", "search it on the web" ]):
         return search_web(user_input.replace("web search", "").strip())
+    
+    # **Detect if the user wants a tool call**
+    if any(word in lower_input for word in ["video", "trailer", "clip", "youtube", "image","img", "wallpaper", "photo", "pic"]):
+        tool_name = "auto"
+        streamConfig = False 
+    else:
+        tool_name = "none"
+        streamConfig = True
+    
 
     # Prepare messages with conversation history
     messages = [{"role": "system", "content": system_prompt}] + list(chat_history)
-
-    lower_input = user_input.lower()
-    tool_name = "auto" if any(word in lower_input for word in ["video", "trailer", "clip", "youtube", "image","img", "wallpaper", "photo", "pic"]) else "none"
 
     response_stream = client.chat.completions.create(
         model=MODEL_NAME,
@@ -243,46 +272,68 @@ def get_response(user_input: str):
         temperature=temperature,
         max_tokens=max_tokens,
         tools=tools,
-        tool_choice=tool_name
+        tool_choice=tool_name,
+        stream=streamConfig
     )
 
-    if response_stream.choices[0].message.content:
-        assistant_response = response_stream.choices[0].message.content
+    if(streamConfig):
+        for chunk in response_stream:
+            full_response += chunk.choices[0].delta.content
+            
+            #this will output the full response of the LLM
+            print(chunk.choices[0].delta.content, end="", flush=True)
 
-        # **Fallback to Web Search if AI doesn't know**
-        if "I don't know" in assistant_response or "I'm not sure" in assistant_response:
-            return search_web(user_input)
+    else:
+        # Extract tool calls
+        tool_calls = response_stream.choices[0].message.tool_calls
+        if tool_calls:
+            function_name = tool_calls[0].function.name
+            function_args = json.loads(tool_calls[0].function.arguments)
 
-        return assistant_response
+            if function_name in tool_functions:
+                full_response = tool_functions[function_name](function_args["search_param"])
 
-    # Extract tool calls
-    tool_calls = response_stream.choices[0].message.tool_calls
-    if tool_calls:
-        function_name = tool_calls[0].function.name
-        function_args = json.loads(tool_calls[0].function.arguments)
+                #this will output the full response of the tool
+                print(full_response, end="", flush=True) 
 
-        if function_name in tool_functions:
-            response = tool_functions[function_name](function_args["search_param"])
-            return response
+    # Add assistant response to conversation history
+    chat_history.append({"role": "assistant", "content": full_response})   
 
-    # **Fallback to Web Search if no response is given**
-    return search_web(user_input)
+
+
+
 
 # Read input from Electron's stdin
+# if __name__ == "__main__":
+#     while True:
+#         try:
+#             user_input = sys.stdin.readline().strip()
+#             if user_input:
+#                 # Store user input in history
+#                 chat_history.append({"role": "user", "content": user_input})
+
+#                 response = get_response(user_input)
+#                 response = response.replace("*", "")  # Remove asterisks from response
+
+#                 # Store assistant response in history
+#                 chat_history.append({"role": "assistant", "content": response})
+
+#                 print(response, flush=True)
+#         except Exception:
+#             print("I'm sorry, It seems like the server is down. Please try again later.", flush=True)
+
+
+
+
+
 if __name__ == "__main__":
     while True:
         try:
             user_input = sys.stdin.readline().strip()
             if user_input:
-                # Store user input in history
-                chat_history.append({"role": "user", "content": user_input})
-
-                response = get_response(user_input)
-                response = response.replace("*", "")  # Remove asterisks from response
-
-                # Store assistant response in history
-                chat_history.append({"role": "assistant", "content": response})
-
-                print(response, flush=True)
+                get_response(user_input)
+               
         except Exception:
-            print("I'm sorry, It seems like the server is down. Please try again later.", flush=True)
+            print("I'm sorry, the server is down. Please try again later.", flush=True)
+
+
