@@ -2,36 +2,36 @@ import { Session } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
+import { useLoading } from "./loadingContext";
 
 type AuthContextType = {
   session: Session | null;
-  loading: boolean;
 };
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
-  loading: true,
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { setLoading } = useLoading();
   const navigate = useNavigate();
 
   useEffect(() => {
-    let isMounted = true; // ✅ Prevents state updates on unmounted components
+    let isMounted = true; // Prevents state updates on unmounted components
 
     const initializeSession = async () => {
+      setLoading(true);
       try {
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
 
         if (data?.session && isMounted) {
-          console.log("✅ Existing session found:", data.session);
+          console.log("Existing session found:", data.session);
           setSession(data.session);
         }
       } catch (error) {
-        console.error("❌ Error retrieving session:", error);
+        console.error("Error retrieving session:", error);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -66,9 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, loading }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={{ session }}>{children}</AuthContext.Provider>
   );
 };
 

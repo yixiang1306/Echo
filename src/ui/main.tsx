@@ -16,32 +16,42 @@ import UpdateAcc from "./pages/UpdateAcc";
 import Payment from "./pages/Payment";
 import Settings from "./pages/Settings";
 import ProtectedRoute from "./utility/protectedroute";
+import { LoadingProvider } from "./utility/loadingContext";
+import PayPerUsePayment from "./pages/PayPerUsePayment";
+import Feedback from "./pages/Feedback";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
       <HashRouter>
-        <AuthProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Start />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            {/* Protected Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/app" element={<ApplicationUI />} />
-              <Route path="/overlay" element={<OverlayUI />} />
-              <Route path="/audio" element={<HiddenAudioPlayer />} />
-              <Route path="/upgrade" element={<Upgrade />} />
-              <Route
-                path="/settings"
-                element={<Settings clearChatHistory={() => {}} />}
-              />
-              <Route path="/updateAcc" element={<UpdateAcc />} />
-              <Route path="/payment" element={<Payment />} />
-            </Route>
-          </Routes>
-        </AuthProvider>
+        <LoadingProvider>
+          <AuthProvider>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Start />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              {/* Protected Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/app" element={<ApplicationUI />} />
+                <Route path="/overlay" element={<OverlayUI />} />
+                <Route path="/audio" element={<HiddenAudioPlayer />} />
+                <Route path="/upgrade" element={<Upgrade />} />
+                <Route
+                  path="/settings"
+                  element={<Settings clearChatHistory={() => {}} />}
+                />
+                <Route path="/updateAcc" element={<UpdateAcc />} />
+                <Route path="/payment" element={<Payment />} />
+                <Route
+                  path="/pay_per_use_payment"
+                  element={<PayPerUsePayment />}
+                />
+                <Route path="/feedback" element={<Feedback />} />
+              </Route>
+            </Routes>
+          </AuthProvider>
+        </LoadingProvider>
       </HashRouter>
     </ThemeProvider>
   </StrictMode>

@@ -22,22 +22,20 @@ const envPath = isDev()
 
 // Load environment variables
 dotenv.config({ path: envPath });
-log.info("Environment variables SUPABASE_KEY.", process.env.SUPABASE_KEY);
-log.info("Environment variables GOOGLE_API_KEY.", process.env.GOOGLE_API_KEY);
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 let mainWindow: Electron.BrowserWindow;
 let overlayWindow: Electron.BrowserWindow | null = null;
 let audioWindow: Electron.BrowserWindow;
-let wakeUpProcess: ReturnType<typeof createWakeUpProcess>;
+let wakeUpProcess: ReturnType<typeof createWakeUpProcess> | null = null;
 let llmProcess: ReturnType<typeof createLLMProcess>;
 let isQuitting: boolean = false;
 let tray: Tray | null = null;
 app.commandLine.appendSwitch("disable-features", "ChunkedDataPipe");
 
 const iconPath = isDev()
-    ? path.join(app.getAppPath(), "assets", "icons", "echo-win.ico") // Use app.getAppPath() for dev
-    : path.join(process.resourcesPath, "assets", "icons", "echo-win.ico"); // Use process.resourcesPath for prod
+  ? path.join(app.getAppPath(), "assets", "icons", "echo-win.ico") // Use app.getAppPath() for dev
+  : path.join(process.resourcesPath, "assets", "icons", "echo-win.ico"); // Use process.resourcesPath for prod
 
 app.on("ready", async () => {
   // Create windows
@@ -54,17 +52,17 @@ app.on("ready", async () => {
     // Check if the sender is the main window before proceeding
     if (mainWindow && senderWebContents === mainWindow.webContents) {
       console.log("✅ Opening other windows from MAIN window");
-      if(!wakeUpProcess) wakeUpProcess = createWakeUpProcess();
+      if (!wakeUpProcess) wakeUpProcess = createWakeUpProcess();
 
-      if(!overlayWindow){ 
+      if (!overlayWindow) {
         console.log("yes");
         overlayWindow = createOverlayWindow(mainWindow, iconPath)!;
-        overlayWindow.on("blur" , async() => {
-        await slideOut(overlayWindow!);
-        overlayWindow!.hide();
-        wakeUpProcess!.resume();
-      });
-      };
+        overlayWindow.on("blur", async () => {
+          await slideOut(overlayWindow!);
+          overlayWindow!.hide();
+          wakeUpProcess!.resume();
+        });
+      }
       // Global shortcuts
       globalShortcut.register("Alt+C", () =>
         audioWindow.webContents.send("stop-audio")
@@ -80,13 +78,7 @@ app.on("ready", async () => {
             await slideIn(overlayWindow);
           }
         }
-      
-      
-      
       });
-
-      
-
     } else {
       console.warn(
         "⚠️ Unauthorized attempt to open windows from a non-main window."
@@ -106,7 +98,7 @@ app.on("ready", async () => {
         overlayWindow.destroy(); // Destroy it completely
         overlayWindow = null; // Remove reference
       }
-      wakeUpProcess.kill();
+      wakeUpProcess?.kill();
       console.log("✅ wakeUpProcess killed successfully");
       globalShortcut.unregister("Alt+V");
       console.log("✅ Unregistered global shortcut");
@@ -126,7 +118,6 @@ app.on("ready", async () => {
       event.preventDefault();
       mainWindow.hide();
     }
-  
   });
 });
 
@@ -153,14 +144,12 @@ async function handleOverlayToggle() {
     await slideOut(overlayWindow!);
     overlayWindow!.hide();
     console.log("hide overlay");
-   
   } else {
     overlayWindow!.show();
     console.log("show overlay");
     await slideIn(overlayWindow!);
     wakeUpProcess!.pause();
   }
-
 }
 
 //Handle quitting parameters
@@ -168,8 +157,6 @@ async function handleOverlayToggle() {
 export function setQuitting(quit: boolean) {
   isQuitting = quit;
 }
-
-
 
 //IPC Functions
 
@@ -289,7 +276,7 @@ ipcMain.handle("stop-audio", () => {
 ipcMain.on("text-input", async (_, text: string) => {
   llmProcess.process.stdin.write(text + "\n");
   console.log("Sent text to Python...");
-  
+
   let fullResponse = ""; // Stores the entire response
   let startAudio = false;
 
@@ -298,7 +285,7 @@ ipcMain.on("text-input", async (_, text: string) => {
   // Handle real-time streaming
   llmProcess.process.stdout.on("data", (chunk) => {
     let textChunk = chunk.toString();
-    if (textChunk === "*"){
+    if (textChunk === "*") {
       textChunk = "";
     }
     console.log("Received chunk:", textChunk);
@@ -309,15 +296,14 @@ ipcMain.on("text-input", async (_, text: string) => {
     // Accumulate response
     fullResponse += textChunk;
   });
-  
 
   console.log(fullResponse);
 
   // Check if the response is an image or YouTube link
   const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(fullResponse);
-  const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(fullResponse);
-
-  
+  const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(
+    fullResponse
+  );
 
   if (!isImage && !isYouTubeLink) {
     console.log("translating to audio...");
@@ -351,8 +337,6 @@ ipcMain.on("text-input", async (_, text: string) => {
   // Send full response to frontend
   mainWindow.webContents.send("stream-complete", fullResponse.trim());
 });
-
-
 
 ipcMain.handle(
   "calculate-cost",

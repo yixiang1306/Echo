@@ -139,6 +139,13 @@ const ApplicationUI = () => {
   //------------------ Function   -------------------------
 
   const sendMessage = async () => {
+    if (freeCoin <= 0 && walletCoin <= 0) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "You don't have enough coin" },
+      ]);
+      return;
+    }
     if (userInput.trim() === "") return;
 
     const taggedMessage = messageTag ? `${userInput} ${messageTag}` : userInput;
@@ -221,6 +228,13 @@ const ApplicationUI = () => {
 
   // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
+    if (freeCoin <= 0 && walletCoin <= 0) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "You don't have enough coin" },
+      ]);
+      return;
+    }
     setIsLoading(true); // Start loading animation
 
     const reader = new FileReader();
@@ -243,6 +257,10 @@ const ApplicationUI = () => {
           ...prev,
           { role: "assistant", content: llm_response },
         ]);
+        calculateCost(
+          { input: response, output: llm_response },
+          MODEL_TYPE.ASKVOX
+        );
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
         setMessages((prev) => [
