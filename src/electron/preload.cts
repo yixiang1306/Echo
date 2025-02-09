@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("electron", {
   getEnv: () => ipcRenderer.invoke("get-env"),
   openWindows: () => ipcRenderer.send("open-windows"),
   killWindows: () => ipcRenderer.send("kill-windows"),
+  quitApp: () => ipcRenderer.send("quit-app"),
 });
 
 contextBridge.exposeInMainWorld("tokenManagerApi", {

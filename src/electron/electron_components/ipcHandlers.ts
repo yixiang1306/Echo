@@ -1,17 +1,8 @@
 import axios from "axios";
 import { ipcMain } from "electron";
-import { isDev, MODEL_TYPE } from "../util.js";
+import { MODEL_TYPE } from "../util.js";
 import { createLLMProcess } from "./llmProcess.js";
-import dotenv from "dotenv";
-import path from "path";
-import log from "electron-log";
 
-const envPath = isDev()
-  ? path.resolve(process.cwd(), ".env") // Development: Use .env in root folder
-  : path.join(process.resourcesPath, ".env"); // Production: Use bundled .env
-
-// Load environment variables
-dotenv.config({ path: envPath });
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 export function setupIpcHandlers(
@@ -19,13 +10,6 @@ export function setupIpcHandlers(
   audioWindow: Electron.BrowserWindow,
   llmProcess: ReturnType<typeof createLLMProcess>
 ) {
-  log.info("Environment variables loaded.", process.env.SUPABASE_KEY);
-  if (mainWindow && audioWindow && llmProcess) {
-    log.info("IPC handlers set up.");
-  } else {
-    log.error("IPC handlers not set up.");
-  }
-
   // Add other IPC handlers here...
   // (Move the audio, text-input, send-audio, and calculate-cost handlers here)
 

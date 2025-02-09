@@ -33,7 +33,7 @@
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "win": {
-      "target": "dir", 
+      "target": "msi", 
       "icon": "assets/icons/echo-win.ico",
       "requestedExecutionLevel": "requireAdministrator"
 

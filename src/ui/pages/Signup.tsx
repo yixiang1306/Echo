@@ -20,14 +20,11 @@ function Signup() {
       {
         email,
         password,
-        options: {
-          emailRedirectTo: "https://askvox-admin.vercel.app/email-comfirm",
-        },
       }
     );
     setMessage(
       signupError
-        ? signupError.message
+        ? "signuperror " + signupError.message
         : "Sign-up successful! Check your email."
     );
 
@@ -66,6 +63,17 @@ function Signup() {
           accountId: signupData?.user?.id,
           amount: 0.0,
           updatedAt: new Date().toISOString(),
+        },
+      ])
+      .select();
+    await supabase
+      .from("Subscription")
+      .insert([
+        {
+          id: uuidv4(), // Unique ID for each record
+          accountId: signupData?.user?.id,
+          createdAt: new Date().toISOString(),
+          expiredAt: new Date().toISOString(),
         },
       ])
       .select();

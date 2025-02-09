@@ -37,7 +37,10 @@ const Settings: React.FC<SettingsProps> = ({ clearChatHistory }) => {
 
         {/* Options */}
         <div className="flex flex-col items-center justify-center space-y-4 text-gray-700 dark:text-gray-300">
-          <button onClick={() => navigate("/updateAcc")}>Profile Settings</button>
+          <button onClick={() => navigate("/updateAcc")}>
+            Profile Settings
+          </button>
+          <button onClick={() => navigate("/feedback")}>Feedback</button>
           <button onClick={clearChatHistory}>Clear Chat History</button>
           <button
             onClick={toggleTheme}
