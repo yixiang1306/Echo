@@ -1,7 +1,7 @@
 import { BrowserWindow } from "electron";
 import { screen } from "electron";
 
-export async function slideIn(overlayWindow: BrowserWindow) {
+export async function slideIn(window: BrowserWindow) {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   let currentX = width;
   const targetX = width - 450;
@@ -10,7 +10,7 @@ export async function slideIn(overlayWindow: BrowserWindow) {
     const interval = setInterval(() => {
       if (currentX > targetX) {
         currentX -= 10;
-        overlayWindow.setBounds({ x: currentX, y: 0, width: 450, height });
+        window.setBounds({ x: currentX, y: 0, width: 450, height });
       } else {
         clearInterval(interval);
         resolve();
@@ -19,7 +19,7 @@ export async function slideIn(overlayWindow: BrowserWindow) {
   });
 }
 
-export async function slideOut(overlayWindow: BrowserWindow) {
+export async function slideOut(window: BrowserWindow) {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   let currentX = width - 450;
   const targetX = width;
@@ -28,7 +28,7 @@ export async function slideOut(overlayWindow: BrowserWindow) {
     const interval = setInterval(() => {
       if (currentX < targetX) {
         currentX += 10;
-        overlayWindow.setBounds({ x: currentX, y: 0, width: 450, height });
+        window.setBounds({ x: currentX, y: 0, width: 450, height });
       } else {
         clearInterval(interval);
         resolve();

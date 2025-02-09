@@ -71,7 +71,6 @@ export function createSideBarWindow(
       nodeIntegration: false,
       session: mainWindow.webContents.session,
     },
-    
   });
 
   sideBarWindow.isAlwaysOnTop();
@@ -119,7 +118,7 @@ export function createOverlayWindow(
     height,
     transparent: true, // Transparent background
     frame: false,
-    show: false,
+    show: true,
     x: width - 450,
     y: 0,
     alwaysOnTop: true,
@@ -135,6 +134,9 @@ export function createOverlayWindow(
   });
 
   overlayWindow.isAlwaysOnTop();
+
+  // ✅ Make the window click-through (mouse ignores it)
+  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
 
   const overlayURL = isDev()
     ? "http://localhost:3000/#/overlay"

@@ -11,6 +11,7 @@ import { createWakeUpProcess } from "./electron_components/wakeUpProcess.js";
 import {
   createAudioWindow,
   createMainWindow,
+  createOverlayWindow,
   createSideBarWindow,
 } from "./electron_components/windows.js";
 import { isDev, MODEL_TYPE } from "./util.js";
@@ -26,6 +27,7 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 let mainWindow: Electron.BrowserWindow;
 let sideBarWindow: Electron.BrowserWindow | null = null;
+let overlayWindow: Electron.BrowserWindow | null = null;
 let audioWindow: Electron.BrowserWindow;
 let wakeUpProcess: ReturnType<typeof createWakeUpProcess> | null = null;
 let llmProcess: ReturnType<typeof createLLMProcess>;
@@ -57,22 +59,31 @@ app.on("ready", async () => {
       if(!sideBarWindow){ 
         console.log("yes");
         sideBarWindow = createSideBarWindow(mainWindow, iconPath)!;
+        overlayWindow = createOverlayWindow(mainWindow, iconPath)!;
+
+
+        if(overlayWindow){
+          console.log("overlay window created");
+        }
+
+        // Handle window events
         sideBarWindow.on("blur" , async() => {
-        await slideOut(sideBarWindow!);
-        sideBarWindow!.hide();
-        wakeUpProcess!.resume();
-      });
+          await slideOut(sideBarWindow!);
+          sideBarWindow!.hide();
+        });
       };
       // Global shortcuts
       keyBinding();
 
+      // WakeUp Process Listener
       wakeUpProcess.process.stdout.on("data", async (data: Buffer) => {
         console.log(data.toString().trim());
+
         if (data.toString().trim() === "wake-up") {
           console.log("true");
-          sideBarWindow?.show();
-          if (sideBarWindow) {
-            await slideIn(sideBarWindow);
+          overlayWindow?.show();
+          if (overlayWindow) {
+            await slideIn(overlayWindow);
           }
         }
       });
@@ -89,13 +100,23 @@ app.on("ready", async () => {
     if (mainWindow && senderWebContents === mainWindow.webContents) {
       console.log("Closing other windows from MAIN window");
 
-      // ✅ Destroy the overlay window properly
+      // ✅ Destroy the sideBar window properly
       if (sideBarWindow) {
         sideBarWindow.close(); // Close the window
         sideBarWindow.destroy(); // Destroy it completely
         sideBarWindow = null; // Remove reference
       }
-      wakeUpProcess?.kill();
+
+      // ✅ Destroy the overlay window properly
+      if (overlayWindow) {
+        overlayWindow.close(); // Close the window
+        overlayWindow.destroy(); // Destroy it completely
+        overlayWindow = null; // Remove reference
+      }
+
+
+      wakeUpProcess?.kill(); // Kill the WakeUp process
+
       console.log("✅ wakeUpProcess killed successfully");
       globalShortcut.unregister("Alt+V");
       console.log("✅ Unregistered global shortcut");
@@ -105,7 +126,8 @@ app.on("ready", async () => {
       );
     }
   });
-  // Setup Python process
+
+  // Setup LLM process
   llmProcess = createLLMProcess();
   // setupIpcHandlers(mainWindow, audioWindow, llmProcess);
 
@@ -140,9 +162,13 @@ function keyBinding() {
     audioWindow.webContents.send("stop-audio")
   );
   globalShortcut.register("Alt+V", () => handleSideBarToggle());
+
+  globalShortcut.register("Alt+B", () => handleOverlayToggle());
+
+
 }
 
-// Handle Alt+V
+// Handle SideBar Toggle
 async function handleSideBarToggle() {
   console.log("Alt+V pressed.");
 
@@ -154,9 +180,23 @@ async function handleSideBarToggle() {
     sideBarWindow!.show();
     console.log("show overlay");
     await slideIn(sideBarWindow!);
+  }
+}
+
+//Handle Overlay Toggle
+
+async function handleOverlayToggle() {
+  if (overlayWindow!.isVisible()) {
+    await slideOut(overlayWindow!);
+    overlayWindow!.hide();
+    wakeUpProcess!.resume(); // Resume Python WakeUp listening
+  } else {
+    overlayWindow!.show();
+    await slideIn(overlayWindow!);
     wakeUpProcess!.pause();
   }
 }
+
 
 //Handle quitting parameters
 
@@ -223,7 +263,6 @@ ipcMain.handle("stop-audio", () => {
   }
 });
 
-
 ipcMain.on("text-input", async (_, text: string, window: string) => {
 
   let currentWindow = mainWindow;
@@ -271,8 +310,6 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
   
 });
 
-
-
 ipcMain.handle(
   "calculate-cost",
   (_, text: { input: string; output: string }, model: MODEL_TYPE) => {
@@ -294,10 +331,6 @@ ipcMain.handle(
     return { inputTokens, outputTokens, totalCost: totalCost.toFixed(6) };
   }
 );
-
-
-
-
 
 async function processTTS(fullResponse: string) {
    
