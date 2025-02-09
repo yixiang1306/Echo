@@ -19,6 +19,7 @@ import ApplicationSideBarUI from "./pages/ApplicationSideBarUI";
 import { LoadingProvider } from "./utility/loadingContext";
 import PayPerUsePayment from "./pages/PayPerUsePayment";
 import Feedback from "./pages/Feedback";
+import OverlayUI from "./pages/OverlayUI";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -34,7 +35,8 @@ createRoot(document.getElementById("root")!).render(
               {/* Protected Routes */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/app" element={<ApplicationUI />} />
-                <Route path="/overlay" element={<ApplicationSideBarUI />} />
+                <Route path="/app" element={<OverlayUI />} />
+                <Route path="/sidebar" element={<ApplicationSideBarUI />} />
                 <Route path="/audio" element={<HiddenAudioPlayer />} />
                 <Route path="/upgrade" element={<Upgrade />} />
                 <Route

@@ -64,10 +64,7 @@ app.on("ready", async () => {
       });
       };
       // Global shortcuts
-      globalShortcut.register("Alt+C", () =>
-        audioWindow.webContents.send("stop-audio")
-      );
-      globalShortcut.register("Alt+V", () => handleOverlayToggle());
+      keyBinding();
 
       wakeUpProcess.process.stdout.on("data", async (data: Buffer) => {
         console.log(data.toString().trim());
@@ -136,8 +133,17 @@ function cleanUpExtractedFiles() {
 
 app.on("window-all-closed", cleanUpExtractedFiles);
 
+
+//KEY BINDING
+function keyBinding() {
+  globalShortcut.register("Alt+C", () =>
+    audioWindow.webContents.send("stop-audio")
+  );
+  globalShortcut.register("Alt+V", () => handleSideBarToggle());
+}
+
 // Handle Alt+V
-async function handleOverlayToggle() {
+async function handleSideBarToggle() {
   console.log("Alt+V pressed.");
 
   if (sideBarWindow!.isVisible()) {

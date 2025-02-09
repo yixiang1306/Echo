@@ -76,11 +76,11 @@ export function createSideBarWindow(
 
   sideBarWindow.isAlwaysOnTop();
 
-  const overlayURL = isDev()
-    ? "http://localhost:3000/#/overlay"
-    : `file://${extractAsar()}#/overlay`;
+  const sidebarURL = isDev()
+    ? "http://localhost:3000/#/sidebar"
+    : `file://${extractAsar()}#/sidebar`;
 
-    sideBarWindow.loadURL(overlayURL);
+    sideBarWindow.loadURL(sidebarURL);
   return sideBarWindow;
 }
 
@@ -103,4 +103,43 @@ export function createAudioWindow(mainWindow: Electron.BrowserWindow) {
 
   audioWindow.loadURL(audioURL);
   return audioWindow;
+}
+
+export function createOverlayWindow(
+  mainWindow: Electron.BrowserWindow,
+  iconPath: string
+) {
+  if (!mainWindow) return;
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
+  const overlayWindow = new BrowserWindow({
+    parent: mainWindow,
+    icon: iconPath,
+    width: 450,
+    height,
+    transparent: true, // Transparent background
+    frame: false,
+    show: false,
+    x: width - 450,
+    y: 0,
+    alwaysOnTop: true,
+    resizable: false,
+    skipTaskbar: true,
+    webPreferences: {
+      preload: getPreloadPath(),
+      contextIsolation: true,
+      nodeIntegration: false,
+      session: mainWindow.webContents.session,
+    },
+    
+  });
+
+  overlayWindow.isAlwaysOnTop();
+
+  const overlayURL = isDev()
+    ? "http://localhost:3000/#/overlay"
+    : `file://${extractAsar()}#/overlay`;
+
+    overlayWindow.loadURL(overlayURL);
+  return overlayWindow;
 }
