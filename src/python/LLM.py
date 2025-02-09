@@ -9,6 +9,7 @@ from collections import deque
 from googlesearch import search  # <-- Google Search
 from bs4 import BeautifulSoup
 
+sys.stdout.reconfigure(encoding='utf-8')
 # Load environment variables
 load_dotenv()
 
@@ -115,13 +116,13 @@ tools = [
         "type": "function",
         "function": {
             "name": "get_video",
-            "description": "Fetches a video related to the user's request.",
+            "description": "Fetches a video related to the user's question.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "search_param": {
+                    "user_question": {
                         "type": "string",
-                        "description": "Video search query, e.g., 'game trailer'."
+                        "description": "the user's question. eg. show me a video of raiden shogun?"
                     }
                 },
                 "required": ["search_param"]
@@ -208,7 +209,7 @@ def sumamrize_search_response(query: str, extracted_content: list):
 
     {chr(10).join(extracted_content)}
 
-    Summarize this information in a clear, concise, and user-friendly manner depending on the user's question. avoid summarizing unrelated information. analyze the content and provide a concise summary based on the user question. 
+    Summarize this information in a clear, concise, and user-friendly manner. avoid summarizing unrelated information. 
     """
 
     full_response = ""
@@ -224,17 +225,20 @@ def sumamrize_search_response(query: str, extracted_content: list):
         stream=True
     )
 
+
     for chunk in response:
-        full_response += chunk.choices[0].delta.content
-        print(chunk.choices[0].delta.content, end="", flush=True)
+        # Extract and clean up the content
+        chunk_content = chunk.choices[0].delta.content.replace("*", "")
+
+        full_response += chunk_content
+            
+        #this will output the full response of the LLM
+        print(chunk_content, end="", flush=True)
 
     #add summary to chat history
     chat_history.append({"role": "assistant", "content": full_response})
 
-
-    
-
-  
+    print("<END>", flush=True)
 
 # Main function for normal response.
 def get_response(user_input: str):
@@ -248,8 +252,6 @@ def get_response(user_input: str):
     # Add user input to conversation history
     chat_history.append({"role": "user", "content": user_input})
 
-    
-
     # **Detect if the user wants a web search**
     if any(word in lower_input for word in ["web search", "look up", "search online", "find on the web", "search on the website","websearch", "search it on the web" ]):
         return search_web(user_input.replace("web search", "").strip())
@@ -262,7 +264,6 @@ def get_response(user_input: str):
         tool_name = "none"
         streamConfig = True
     
-
     # Prepare messages with conversation history
     messages = [{"role": "system", "content": system_prompt}] + list(chat_history)
 
@@ -278,10 +279,13 @@ def get_response(user_input: str):
 
     if(streamConfig):
         for chunk in response_stream:
-            full_response += chunk.choices[0].delta.content
+            # Extract and clean up the content
+            chunk_content = chunk.choices[0].delta.content.replace("*", "")
+
+            full_response += chunk_content
             
             #this will output the full response of the LLM
-            print(chunk.choices[0].delta.content, end="", flush=True)
+            print(chunk_content, end="", flush=True)
 
     else:
         # Extract tool calls
@@ -290,41 +294,18 @@ def get_response(user_input: str):
             function_name = tool_calls[0].function.name
             function_args = json.loads(tool_calls[0].function.arguments)
 
+
             if function_name in tool_functions:
-                full_response = tool_functions[function_name](function_args["search_param"])
+                full_response = tool_functions[function_name](next(iter(function_args.values())))
 
                 #this will output the full response of the tool
                 print(full_response, end="", flush=True) 
 
     # Add assistant response to conversation history
-    chat_history.append({"role": "assistant", "content": full_response})   
+    chat_history.append({"role": "assistant", "content": full_response})
 
-
-
-
-
-# Read input from Electron's stdin
-# if __name__ == "__main__":
-#     while True:
-#         try:
-#             user_input = sys.stdin.readline().strip()
-#             if user_input:
-#                 # Store user input in history
-#                 chat_history.append({"role": "user", "content": user_input})
-
-#                 response = get_response(user_input)
-#                 response = response.replace("*", "")  # Remove asterisks from response
-
-#                 # Store assistant response in history
-#                 chat_history.append({"role": "assistant", "content": response})
-
-#                 print(response, flush=True)
-#         except Exception:
-#             print("I'm sorry, It seems like the server is down. Please try again later.", flush=True)
-
-
-
-
+    print("<END>", flush=True)
+ 
 
 if __name__ == "__main__":
     while True:
@@ -332,7 +313,9 @@ if __name__ == "__main__":
             user_input = sys.stdin.readline().strip()
             if user_input:
                 get_response(user_input)
-               
+           
+      
+
         except Exception:
             print("I'm sorry, the server is down. Please try again later.", flush=True)
 

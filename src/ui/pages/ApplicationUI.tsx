@@ -26,7 +26,6 @@ const ApplicationUI = () => {
   const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [messageTag, setMessageTag] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
@@ -138,29 +137,31 @@ const ApplicationUI = () => {
 
   //------------------ Function   -------------------------
 
-  const sendMessage = async () => {
+  const sendMessage = () => {
     if (userInput.trim() === "") return;
 
     const taggedMessage = messageTag ? `${userInput} ${messageTag}` : userInput;
 
     setMessages((prev) => [...prev, { role: "user", content: userInput }]);
-    setUserInput("");
-    setIsLoading(true);
 
     try {
-      console.log(taggedMessage);
-
       let aiResponse = "";
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]); // Placeholder for streaming
 
-      // Use window.electronAPI.sendText for sending the message
+      // Send the message via Electron API
       //@ts-ignore
-      window.electronAPI.sendText(userInput);
+      window.llmAPI.sendText(taggedMessage, "main");
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "..." }, // Append new assistant message
+      ]);
 
       // Listen for streamed text chunks
       //@ts-ignore
-      window.electronAPI.onStreamText((textChunk) => {
+      window.llmAPI.onStreamText((textChunk) => {
         aiResponse += textChunk;
+
+        // Update the last assistant message progressively
         setMessages((prev) =>
           prev.map((msg, index) =>
             index === prev.length - 1 ? { ...msg, content: aiResponse } : msg
@@ -170,9 +171,8 @@ const ApplicationUI = () => {
 
       // Handle when streaming is complete
       //@ts-ignore
-      window.electronAPI.onStreamComplete((fullText) => {
+      window.llmAPI.onStreamComplete((fullText) => {
         console.log("Streaming Complete:", fullText);
-        setIsLoading(false);
       });
     } catch (error) {
       console.error("Error sending message:", error);
@@ -180,9 +180,9 @@ const ApplicationUI = () => {
         ...prev,
         { role: "assistant", content: "Error processing your request." },
       ]);
-    } finally {
-      setIsLoading(false);
     }
+
+    setUserInput("");
   };
 
   //------------------ Function   -------------------------
@@ -190,7 +190,7 @@ const ApplicationUI = () => {
   // Handle recording toggle
   const handleRecord = () => {
     //@ts-ignore
-    window.electronAPI.toggleRecording(!isRecording);
+    window.llmAPI.toggleRecording(!isRecording);
 
     if (!isRecording) {
       navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
@@ -221,8 +221,6 @@ const ApplicationUI = () => {
 
   // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
-    setIsLoading(true); // Start loading animation
-
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
@@ -232,25 +230,45 @@ const ApplicationUI = () => {
 
       try {
         //@ts-ignore
-        const response = await window.electronAPI.sendAudio(base64Audio);
+        const response = await window.llmAPI.sendAudio(base64Audio);
 
         setMessages((prev) => [...prev, { role: "user", content: response }]);
 
+        let aiResponse = "";
+
+        // Send the message via Electron API
         //@ts-ignore
-        const llm_response = await window.electronAPI.textInput(response);
+        window.llmAPI.sendText(response, "main");
 
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: llm_response },
+          { role: "assistant", content: "..." }, // Append new assistant message
         ]);
+
+        // Listen for streamed text chunks
+        //@ts-ignore
+        window.llmAPI.onStreamText((textChunk) => {
+          aiResponse += textChunk;
+
+          // Update the last assistant message progressively
+          setMessages((prev) =>
+            prev.map((msg, index) =>
+              index === prev.length - 1 ? { ...msg, content: aiResponse } : msg
+            )
+          );
+        });
+
+        // Handle when streaming is complete
+        //@ts-ignore
+        window.llmAPI.onStreamComplete((fullText) => {
+          console.log("Streaming Complete:", fullText);
+        });
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: "Error processing your request." },
         ]);
-      } finally {
-        setIsLoading(false); // Stop loading animation
       }
     };
   };
@@ -548,49 +566,9 @@ const ApplicationUI = () => {
               {handleLLMResponse(message.content, message.role)}
             </div>
           ))}
-          {isLoading && (
-            <div className="flex justify-start mb-4">
-              <div
-                className={`max-w-xs px-4 py-2 rounded-lg shadow-md animate-pop-up${
-                  isDarkMode
-                    ? "bg-gray-700 text-gray-200"
-                    : "bg-gray-200 text-gray-800"
-                } `}
-              >
-                <span className="">...</span>
-              </div>
-            </div>
-          )}
+
           <div ref={chatEndRef} />
         </div>
-
-        {/* User Input */}
-        {/* <div className="relative w-full">
-          <input
-            type="text"
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            placeholder="Ask me anything"
-            className={`w-full px-4 py-2 border rounded-lg pr-28 ${
-              isDarkMode
-                ? "bg-gray-800 text-white border-gray-700"
-                : "bg-white text-black border-gray-300"
-            }`}
-          />
-          <div className="absolute inset-y-0 right-0 flex items-center gap-2 pr-2">
-            <button onClick={sendMessage} className="p-1 rounded-lg">
-              <img src="./send.png" alt="Send" className="h-6 w-6" />
-            </button>
-            <button onClick={handleRecord} className="p-1 rounded-lg">
-              <img
-                src={isRecording ? "./red_mic.png" : "./blacked_mic.png"}
-                alt={isRecording ? "Stop Recording" : "Start Recording"}
-                className="h-6 w-6"
-              />
-            </button>
-          </div>
-        </div> */}
 
         <div className="pointer-events-auto w-full">
           <div className="space-y-2">

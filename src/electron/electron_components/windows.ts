@@ -45,14 +45,14 @@ export function createMainWindow(iconPath: string) {
   return mainWindow;
 }
 
-export function createOverlayWindow(
+export function createSideBarWindow(
   mainWindow: Electron.BrowserWindow,
   iconPath: string
 ) {
   if (!mainWindow) return;
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
-  const overlayWindow = new BrowserWindow({
+  const sideBarWindow = new BrowserWindow({
     parent: mainWindow,
     icon: iconPath,
     width: 450,
@@ -74,14 +74,14 @@ export function createOverlayWindow(
     
   });
 
-  overlayWindow.isAlwaysOnTop();
+  sideBarWindow.isAlwaysOnTop();
 
   const overlayURL = isDev()
     ? "http://localhost:3000/#/overlay"
     : `file://${extractAsar()}#/overlay`;
 
-  overlayWindow.loadURL(overlayURL);
-  return overlayWindow;
+    sideBarWindow.loadURL(overlayURL);
+  return sideBarWindow;
 }
 
 export function createAudioWindow(mainWindow: Electron.BrowserWindow) {

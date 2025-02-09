@@ -6,7 +6,6 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./utility/authprovider";
 import "./main.css";
 import ApplicationUI from "./pages/ApplicationUI";
-import OverlayUI from "./pages/OverlayUI";
 import HiddenAudioPlayer from "./pages/HiddenAudioPlayer";
 import Start from "./pages/Start";
 import Login from "./pages/Login";
@@ -16,6 +15,7 @@ import UpdateAcc from "./pages/UpdateAcc";
 import Payment from "./pages/Payment";
 import Settings from "./pages/Settings";
 import ProtectedRoute from "./utility/protectedroute";
+import ApplicationSideBarUI from "./pages/ApplicationSideBarUI";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -30,7 +30,7 @@ createRoot(document.getElementById("root")!).render(
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/app" element={<ApplicationUI />} />
-              <Route path="/overlay" element={<OverlayUI />} />
+              <Route path="/overlay" element={<ApplicationSideBarUI />} />
               <Route path="/audio" element={<HiddenAudioPlayer />} />
               <Route path="/upgrade" element={<Upgrade />} />
               <Route

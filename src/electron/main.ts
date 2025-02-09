@@ -11,7 +11,7 @@ import { createWakeUpProcess } from "./electron_components/wakeUpProcess.js";
 import {
   createAudioWindow,
   createMainWindow,
-  createOverlayWindow,
+  createSideBarWindow,
 } from "./electron_components/windows.js";
 import { isDev, MODEL_TYPE } from "./util.js";
 import axios from "axios";
@@ -27,7 +27,7 @@ log.info("Environment variables GOOGLE_API_KEY.", process.env.GOOGLE_API_KEY);
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 let mainWindow: Electron.BrowserWindow;
-let overlayWindow: Electron.BrowserWindow | null = null;
+let sideBarWindow: Electron.BrowserWindow | null = null;
 let audioWindow: Electron.BrowserWindow;
 let wakeUpProcess: ReturnType<typeof createWakeUpProcess>;
 let llmProcess: ReturnType<typeof createLLMProcess>;
@@ -56,12 +56,12 @@ app.on("ready", async () => {
       console.log("✅ Opening other windows from MAIN window");
       if(!wakeUpProcess) wakeUpProcess = createWakeUpProcess();
 
-      if(!overlayWindow){ 
+      if(!sideBarWindow){ 
         console.log("yes");
-        overlayWindow = createOverlayWindow(mainWindow, iconPath)!;
-        overlayWindow.on("blur" , async() => {
-        await slideOut(overlayWindow!);
-        overlayWindow!.hide();
+        sideBarWindow = createSideBarWindow(mainWindow, iconPath)!;
+        sideBarWindow.on("blur" , async() => {
+        await slideOut(sideBarWindow!);
+        sideBarWindow!.hide();
         wakeUpProcess!.resume();
       });
       };
@@ -75,9 +75,9 @@ app.on("ready", async () => {
         console.log(data.toString().trim());
         if (data.toString().trim() === "wake-up") {
           console.log("true");
-          overlayWindow?.show();
-          if (overlayWindow) {
-            await slideIn(overlayWindow);
+          sideBarWindow?.show();
+          if (sideBarWindow) {
+            await slideIn(sideBarWindow);
           }
         }
       
@@ -101,10 +101,10 @@ app.on("ready", async () => {
       console.log("Closing other windows from MAIN window");
 
       // ✅ Destroy the overlay window properly
-      if (overlayWindow) {
-        overlayWindow.close(); // Close the window
-        overlayWindow.destroy(); // Destroy it completely
-        overlayWindow = null; // Remove reference
+      if (sideBarWindow) {
+        sideBarWindow.close(); // Close the window
+        sideBarWindow.destroy(); // Destroy it completely
+        sideBarWindow = null; // Remove reference
       }
       wakeUpProcess.kill();
       console.log("✅ wakeUpProcess killed successfully");
@@ -149,15 +149,15 @@ app.on("window-all-closed", cleanUpExtractedFiles);
 async function handleOverlayToggle() {
   console.log("Alt+V pressed.");
 
-  if (overlayWindow!.isVisible()) {
-    await slideOut(overlayWindow!);
-    overlayWindow!.hide();
+  if (sideBarWindow!.isVisible()) {
+    await slideOut(sideBarWindow!);
+    sideBarWindow!.hide();
     console.log("hide overlay");
    
   } else {
-    overlayWindow!.show();
+    sideBarWindow!.show();
     console.log("show overlay");
-    await slideIn(overlayWindow!);
+    await slideIn(sideBarWindow!);
     wakeUpProcess!.pause();
   }
 
@@ -230,94 +230,87 @@ ipcMain.handle("stop-audio", () => {
   }
 });
 
-// ipcMain.handle("text-input", async (_, text: string) => {
-//   return new Promise((resolve, reject) => {
-//     llmProcess.process.stdin.write(text + "\n");
-//     console.log("sent text...");
-//     console.log("waiting for response...");
 
-//     llmProcess.process.stdout.on("data", (data) => {
-//       const responseText = data.toString().trim();
-//       console.log(responseText);
+ipcMain.on("text-input", async (_, text: string, window: string) => {
 
-//       // Send response text immediately
-//       resolve(responseText);
+  let currentWindow = mainWindow;
 
-//       // Check if response is an image or a YouTube link
-//       const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(responseText);
-//       const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(responseText);
+  switch (window) {
+    case "main":
+      currentWindow = mainWindow;
+      break;
+    case "sidebar":
+      currentWindow = sideBarWindow!;
+    default:
+      break;
+  }
 
-//       if (!isImage && !isYouTubeLink) {
-//         // Request TTS from Google asynchronously
-//         (async () => {
-//           try {
-//             const ttsResponse = await axios.post(
-//               `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
-//               {
-//                 input: { text: responseText },
-//                 voice: {
-//                   languageCode: "en-US",
-//                   name: "en-US-Journey-F",
-//                   ssmlGender: "NEUTRAL",
-//                 },
-//                 audioConfig: { audioEncoding: "MP3" },
-//               },
-//               { headers: { "Content-Type": "application/json" } }
-//             );
-
-//             const base64Audio = ttsResponse.data.audioContent;
-//             console.log("TTS Audio Generated (Base64)");
-
-//             // Send Base64 Audio to Frontend after response
-//             audioWindow.webContents.send("play-audio", base64Audio);
-//           } catch (ttsError) {
-//             console.error("TTS Error:", ttsError);
-//           }
-//         })();
-//       } else {
-//         console.log("Response is an image or YouTube link, skipping TTS.");
-//       }
-//     });
-
-//     llmProcess.process.stderr.once("data", (data) => {
-//       console.error(`Python Error: ${data}`);
-//       reject(data.toString());
-//     });
-//   });
-// });
-
-ipcMain.on("text-input", async (_, text: string) => {
+  
   llmProcess.process.stdin.write(text + "\n");
   console.log("Sent text to Python...");
   
   let fullResponse = ""; // Stores the entire response
-  let startAudio = false;
 
   // Remove existing listeners to prevent duplication
   llmProcess.process.stdout.removeAllListeners("data");
+  llmProcess.process.stdout.setEncoding('utf-8');
+
   // Handle real-time streaming
   llmProcess.process.stdout.on("data", (chunk) => {
     let textChunk = chunk.toString();
-    if (textChunk === "*"){
-      textChunk = "";
-    }
     console.log("Received chunk:", textChunk);
 
-    // Send each streamed chunk to the frontend
-    mainWindow.webContents.send("stream-text", textChunk);
-
-    // Accumulate response
-    fullResponse += textChunk;
-  });
+    if (textChunk.includes("<END>")) {
+      textChunk = textChunk.replace("<END>", "").trim();
+      fullResponse += textChunk;
+      console.log("end: ", fullResponse);
+      currentWindow.webContents.send("stream-text", textChunk);
+      currentWindow.webContents.send("stream-complete", fullResponse);
   
+      // Proceed to TTS
+      processTTS(fullResponse);
+    } else {
+      currentWindow.webContents.send("stream-text", textChunk);
+      fullResponse += textChunk;
+    }
+  });
 
-  console.log(fullResponse);
+  
+});
 
+
+
+ipcMain.handle(
+  "calculate-cost",
+  (_, text: { input: string; output: string }, model: MODEL_TYPE) => {
+    const getInputTokenCount = (text: string) =>
+      Math.ceil(text.trim().split(/\s+/).length * 1.33);
+
+    const pricing = {
+      [MODEL_TYPE.ASKVOX]: { input: 0.03 / 1000, output: 0.06 / 1000 },
+      [MODEL_TYPE.GPT_4o]: { input: 0.0015 / 1000, output: 0.002 / 1000 },
+    };
+
+    const modelPricing = pricing[model] || pricing[MODEL_TYPE.ASKVOX];
+
+    const inputTokens = getInputTokenCount(text.input);
+    const outputTokens = getInputTokenCount(text.output);
+    const totalCost =
+      inputTokens * modelPricing.input + outputTokens * modelPricing.output;
+
+    return { inputTokens, outputTokens, totalCost: totalCost.toFixed(6) };
+  }
+);
+
+
+
+
+
+async function processTTS(fullResponse: string) {
+   
   // Check if the response is an image or YouTube link
   const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(fullResponse);
   const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(fullResponse);
-
-  
 
   if (!isImage && !isYouTubeLink) {
     console.log("translating to audio...");
@@ -347,31 +340,4 @@ ipcMain.on("text-input", async (_, text: string) => {
   } else {
     console.log("Response is an image or YouTube link, skipping TTS.");
   }
-
-  // Send full response to frontend
-  mainWindow.webContents.send("stream-complete", fullResponse.trim());
-});
-
-
-
-ipcMain.handle(
-  "calculate-cost",
-  (_, text: { input: string; output: string }, model: MODEL_TYPE) => {
-    const getInputTokenCount = (text: string) =>
-      Math.ceil(text.trim().split(/\s+/).length * 1.33);
-
-    const pricing = {
-      [MODEL_TYPE.ASKVOX]: { input: 0.03 / 1000, output: 0.06 / 1000 },
-      [MODEL_TYPE.GPT_4o]: { input: 0.0015 / 1000, output: 0.002 / 1000 },
-    };
-
-    const modelPricing = pricing[model] || pricing[MODEL_TYPE.ASKVOX];
-
-    const inputTokens = getInputTokenCount(text.input);
-    const outputTokens = getInputTokenCount(text.output);
-    const totalCost =
-      inputTokens * modelPricing.input + outputTokens * modelPricing.output;
-
-    return { inputTokens, outputTokens, totalCost: totalCost.toFixed(6) };
-  }
-);
+}

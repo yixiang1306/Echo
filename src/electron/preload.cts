@@ -20,10 +20,10 @@ contextBridge.exposeInMainWorld("tokenManagerApi", {
     ipcRenderer.invoke("calculate-cost", text, model),
 });
 
-contextBridge.exposeInMainWorld("electronAPI", {
+contextBridge.exposeInMainWorld("llmAPI", {
   toggleRecording: (recording: boolean) =>
     ipcRenderer.send("toggle-recording", recording),
-  sendText: (text: string) => ipcRenderer.send("text-input", text),
+  sendText: (text: string, window: string) => ipcRenderer.send("text-input", text,window),
   sendAudio: (base64Audio: string) =>
     ipcRenderer.invoke("send-audio", base64Audio),
 

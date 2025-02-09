@@ -3,13 +3,12 @@ import { IoIosSend } from "react-icons/io";
 import { FaMicrophone, FaYoutube } from "react-icons/fa";
 import { CiGlobe, CiImageOn } from "react-icons/ci";
 
-const OverlayUI = () => {
+const ApplicationSideBarUI = () => {
   const [messages, setMessages] = useState([
     { role: "assistant", content: "Hello! How can I assist you today?" },
   ]);
   const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Loading state
   const [messageTag, setMessageTag] = useState<string | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -22,33 +21,52 @@ const OverlayUI = () => {
   }, [messages]);
 
   // Handle text message submission
-  const sendMessage = async () => {
+  const sendMessage = () => {
     if (userInput.trim() === "") return;
 
     const taggedMessage = messageTag ? `${userInput} ${messageTag}` : userInput;
 
     setMessages((prev) => [...prev, { role: "user", content: userInput }]);
-    setUserInput("");
-    setIsLoading(true);
 
     try {
-      console.log(taggedMessage);
+      let aiResponse = "";
+
+      // Send the message via Electron API
       //@ts-ignore
-      const response = await window.electronAPI.textInput(taggedMessage);
+      window.llmAPI.sendText(taggedMessage, "sidebar");
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: response },
+        { role: "assistant", content: "..." }, // Append new assistant message
       ]);
+
+      // Listen for streamed text chunks
+      //@ts-ignore
+      window.llmAPI.onStreamText((textChunk) => {
+        aiResponse += textChunk;
+
+        // Update the last assistant message progressively
+        setMessages((prev) =>
+          prev.map((msg, index) =>
+            index === prev.length - 1 ? { ...msg, content: aiResponse } : msg
+          )
+        );
+      });
+
+      // Handle when streaming is complete
+      //@ts-ignore
+      window.llmAPI.onStreamComplete((fullText) => {
+        console.log("Streaming Complete:", fullText);
+      });
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "Error processing your request." },
       ]);
-    } finally {
-      setIsLoading(false);
     }
+
+    setUserInput("");
   };
 
   // Handle recording toggle
@@ -85,36 +103,54 @@ const OverlayUI = () => {
 
   // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
-    setIsLoading(true);
-
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
-      if (!reader.result) return;
+      if (reader.result === null) return;
 
-      const base64Audio = (reader.result as string).split(",")[1];
+      const base64Audio = (reader.result as string).split(",")[1]; // Extract base64 data
 
       try {
         //@ts-ignore
-        const response = await window.electronAPI.sendAudio(base64Audio);
+        const response = await window.llmAPI.sendAudio(base64Audio);
 
         setMessages((prev) => [...prev, { role: "user", content: response }]);
 
+        let aiResponse = "";
+
+        // Send the message via Electron API
         //@ts-ignore
-        const llm_response = await window.electronAPI.textInput(response);
+        window.llmAPI.sendText(response, "overlay");
 
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: llm_response },
+          { role: "assistant", content: "..." }, // Append new assistant message
         ]);
+
+        // Listen for streamed text chunks
+        //@ts-ignore
+        window.llmAPI.onStreamText((textChunk) => {
+          aiResponse += textChunk;
+
+          // Update the last assistant message progressively
+          setMessages((prev) =>
+            prev.map((msg, index) =>
+              index === prev.length - 1 ? { ...msg, content: aiResponse } : msg
+            )
+          );
+        });
+
+        // Handle when streaming is complete
+        //@ts-ignore
+        window.llmAPI.onStreamComplete((fullText) => {
+          console.log("Streaming Complete:", fullText);
+        });
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: "Error processing your request." },
         ]);
-      } finally {
-        setIsLoading(false);
       }
     };
   };
@@ -177,13 +213,7 @@ const OverlayUI = () => {
             {handleLLMResponse(message.content, message.role)}
           </div>
         ))}
-        {isLoading && (
-          <div className="flex justify-start ">
-            <div className="max-w-xs px-4 py-2 rounded-lg bg-gray-700 text-gray-200 animate-pop-up">
-              <span className="animate-pulse">...</span>
-            </div>
-          </div>
-        )}
+
         <div ref={chatEndRef} />
       </div>
 
@@ -276,4 +306,4 @@ const OverlayUI = () => {
   );
 };
 
-export default OverlayUI;
+export default ApplicationSideBarUI;
