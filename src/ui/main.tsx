@@ -1,24 +1,24 @@
-import "regenerator-runtime/runtime";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Route, Routes } from "react-router-dom";
+import "regenerator-runtime/runtime";
 import { ThemeProvider } from "./context/ThemeContext";
-import { AuthProvider } from "./utility/authprovider";
 import "./main.css";
-import ApplicationUI from "./pages/ApplicationUI";
-import HiddenAudioPlayer from "./pages/HiddenAudioPlayer";
-import Start from "./pages/Start";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Upgrade from "./pages/Upgrade";
-import UpdateAcc from "./pages/UpdateAcc";
-import Payment from "./pages/Payment";
-import Settings from "./pages/Settings";
-import ProtectedRoute from "./utility/protectedroute";
 import ApplicationSideBarUI from "./pages/ApplicationSideBarUI";
-import { LoadingProvider } from "./utility/loadingContext";
-import PayPerUsePayment from "./pages/PayPerUsePayment";
+import ApplicationUI from "./pages/ApplicationUI";
 import Feedback from "./pages/Feedback";
+import HiddenAudioPlayer from "./pages/HiddenAudioPlayer";
+import Login from "./pages/Login";
+import Payment from "./pages/Payment";
+import PayPerUsePayment from "./pages/PayPerUsePayment";
+import Settings from "./pages/Settings";
+import Signup from "./pages/Signup";
+import Start from "./pages/Start";
+import UpdateAcc from "./pages/UpdateAcc";
+import Upgrade from "./pages/Upgrade";
+import { AuthProvider } from "./utility/authprovider";
+import ProtectedRoute from "./utility/protectedroute";
+import { LoadingProvider } from "./utility/loadingContext";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

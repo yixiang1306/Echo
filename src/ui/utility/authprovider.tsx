@@ -6,67 +6,78 @@ import { useLoading } from "./loadingContext";
 
 type AuthContextType = {
   session: Session | null;
+  isSessionLoading: boolean;
 };
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
+  isSessionLoading: true,
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
+  const [isSessionLoading, setIsSessionLoading] = useState(true); // ✅ Track loading state
   const { setLoading } = useLoading();
   const navigate = useNavigate();
 
   useEffect(() => {
-    let isMounted = true; // Prevents state updates on unmounted components
+    let isMounted = true;
 
     const initializeSession = async () => {
       setLoading(true);
       try {
+        // ✅ Get current session (also retrieves refresh token)
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
 
-        if (data?.session && isMounted) {
-          console.log("Existing session found:", data.session);
+        if (isMounted) {
           setSession(data.session);
+          console.log("Existing session found:", data.session);
         }
       } catch (error) {
         console.error("Error retrieving session:", error);
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          setIsSessionLoading(false);
+        }
       }
     };
 
     initializeSession();
 
-    // Listen for auth state changes only in the main window
-    if (window.opener == null) {
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        async (_event, session) => {
-          console.log("🔄 Auth event:", _event, session);
+    // ✅ Listen for authentication state changes (session refresh)
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        console.log("🔄 Auth event:", _event, session);
 
-          if (_event === "SIGNED_IN" && session) {
-            console.log("✅ User signed in:", session.user.id);
-            setSession(session);
-          }
-
-          if (_event === "SIGNED_OUT") {
-            console.log("🚪 User signed out, redirecting...");
-            setSession(null);
-            navigate("/");
-          }
+        if (_event === "SIGNED_IN" && session) {
+          console.log("User signed in:", session.user.id);
+          setSession(session);
+        } else if (_event === "SIGNED_OUT") {
+          console.log("User signed out, redirecting...");
+          setSession(null);
+          navigate("/");
+        } else if (_event === "TOKEN_REFRESHED" && session) {
+          console.log("Session refreshed:", session);
+          setSession(session);
+        } else if (_event === "USER_UPDATED" && session) {
+          console.log("User updated:", session);
+          setSession(session);
         }
-      );
+      }
+    );
 
-      return () => {
-        authListener.subscription.unsubscribe();
-        isMounted = false;
-      };
-    }
+    return () => {
+      authListener.subscription.unsubscribe();
+      isMounted = false;
+    };
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ session, isSessionLoading }}>
+      {children}
+    </AuthContext.Provider>
   );
 };
 
