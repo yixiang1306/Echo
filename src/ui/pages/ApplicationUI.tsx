@@ -19,6 +19,7 @@ export enum MODEL_TYPE {
   ASKVOX = "ASKVOX",
   GPT_4o = "GPT_4o",
 }
+
 const ApplicationUI = () => {
   const [messages, setMessages] = useState([
     { role: "Vox", content: "Hello! How can I assist you today?" },
@@ -137,18 +138,7 @@ const ApplicationUI = () => {
 
   //------------------ Function   -------------------------
 
-<<<<<<< HEAD
   const sendMessage = () => {
-=======
-  const sendMessage = async () => {
-    if (freeCoin <= 0 && walletCoin <= 0) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "You don't have enough coin" },
-      ]);
-      return;
-    }
->>>>>>> 3bf4c357eed2fb278fc169fd9e97b72afa7c2b53
     if (userInput.trim() === "") return;
 
     const taggedMessage = messageTag ? `${userInput} ${messageTag}` : userInput;
@@ -232,18 +222,6 @@ const ApplicationUI = () => {
 
   // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
-<<<<<<< HEAD
-=======
-    if (freeCoin <= 0 && walletCoin <= 0) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "You don't have enough coin" },
-      ]);
-      return;
-    }
-    setIsLoading(true); // Start loading animation
-
->>>>>>> 3bf4c357eed2fb278fc169fd9e97b72afa7c2b53
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
@@ -267,7 +245,6 @@ const ApplicationUI = () => {
           ...prev,
           { role: "assistant", content: "..." }, // Append new assistant message
         ]);
-<<<<<<< HEAD
 
         // Listen for streamed text chunks
         //@ts-ignore
@@ -287,12 +264,6 @@ const ApplicationUI = () => {
         window.llmAPI.onStreamComplete((fullText) => {
           console.log("Streaming Complete:", fullText);
         });
-=======
-        calculateCost(
-          { input: response, output: llm_response },
-          MODEL_TYPE.ASKVOX
-        );
->>>>>>> 3bf4c357eed2fb278fc169fd9e97b72afa7c2b53
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
         setMessages((prev) => [

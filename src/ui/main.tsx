@@ -34,7 +34,7 @@ createRoot(document.getElementById("root")!).render(
               {/* Protected Routes */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/app" element={<ApplicationUI />} />
-                <Route path="/overlay" element={<OverlayUI />} />
+                <Route path="/overlay" element={<ApplicationSideBarUI />} />
                 <Route path="/audio" element={<HiddenAudioPlayer />} />
                 <Route path="/upgrade" element={<Upgrade />} />
                 <Route
