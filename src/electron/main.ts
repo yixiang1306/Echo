@@ -80,11 +80,8 @@ app.on("ready", async () => {
         console.log(data.toString().trim());
 
         if (data.toString().trim() === "wake-up") {
-          console.log("true");
-          overlayWindow?.show();
-          if (overlayWindow) {
-            await slideIn(overlayWindow);
-          }
+          overlayWindow?.webContents.send("wake-up-command");
+          wakeUpProcess?.pause();
         }
       });
     } else {
@@ -186,15 +183,10 @@ async function handleSideBarToggle() {
 //Handle Overlay Toggle
 
 async function handleOverlayToggle() {
-  if (overlayWindow!.isVisible()) {
-    await slideOut(overlayWindow!);
-    overlayWindow!.hide();
-    wakeUpProcess!.resume(); // Resume Python WakeUp listening
-  } else {
-    overlayWindow!.show();
-    await slideIn(overlayWindow!);
-    wakeUpProcess!.pause();
-  }
+    console.log("ALT+B is pressed")
+    if(overlayWindow){
+      overlayWindow.webContents.send("toggle-overlay");
+    }
 }
 
 
@@ -285,7 +277,7 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
   console.log("Sent text to Python...");
 
   let fullResponse = ""; // Stores the entire response
-
+  let isFirstChunk = true;
   // Remove existing listeners to prevent duplication
   llmProcess.process.stdout.removeAllListeners("data");
   llmProcess.process.stdout.setEncoding('utf-8');
@@ -294,6 +286,14 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
   llmProcess.process.stdout.on("data", (chunk) => {
     let textChunk = chunk.toString();
     console.log("Received chunk:", textChunk);
+
+
+    // **Send "stream-start" event only once when the first chunk arrives**
+    if (isFirstChunk) {
+      currentWindow.webContents.send("stream-start");
+      console.log("stream-started");
+      isFirstChunk = false;
+    }
 
     if (textChunk.includes("<END>")) {
       textChunk = textChunk.replace("<END>", "").trim();

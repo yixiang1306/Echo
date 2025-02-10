@@ -117,7 +117,7 @@ export function createOverlayWindow(
     width: 450,
     height,
     transparent: true, // Transparent background
-    frame: false,
+    frame: true,
     show: true,
     x: width - 450,
     y: 0,

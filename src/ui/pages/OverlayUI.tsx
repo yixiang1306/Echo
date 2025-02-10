@@ -72,36 +72,36 @@ const OverlayUI = () => {
   };
 
   // Handle recording toggle
-  const handleRecord = () => {
-    if (isRecording) {
-      if (mediaRecorder.current) {
-        mediaRecorder.current.stop();
-        mediaRecorder.current.stream
-          .getTracks()
-          .forEach((track) => track.stop());
-      }
-      setIsRecording(false);
-      return;
-    }
+  // const handleRecord = () => {
+  //   if (isRecording) {
+  //     if (mediaRecorder.current) {
+  //       mediaRecorder.current.stop();
+  //       mediaRecorder.current.stream
+  //         .getTracks()
+  //         .forEach((track) => track.stop());
+  //     }
+  //     setIsRecording(false);
+  //     return;
+  //   }
 
-    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-      const recorder = new MediaRecorder(stream);
-      const audioChunks: Blob[] = [];
+  //   navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+  //     const recorder = new MediaRecorder(stream);
+  //     const audioChunks: Blob[] = [];
 
-      recorder.ondataavailable = (event) => {
-        audioChunks.push(event.data);
-      };
+  //     recorder.ondataavailable = (event) => {
+  //       audioChunks.push(event.data);
+  //     };
 
-      recorder.onstop = () => {
-        const blob = new Blob(audioChunks, { type: "audio/wav" });
-        sendAudio(blob);
-      };
+  //     recorder.onstop = () => {
+  //       const blob = new Blob(audioChunks, { type: "audio/wav" });
+  //       sendAudio(blob);
+  //     };
 
-      recorder.start();
-      mediaRecorder.current = recorder;
-      setIsRecording(true);
-    });
-  };
+  //     recorder.start();
+  //     mediaRecorder.current = recorder;
+  //     setIsRecording(true);
+  //   });
+  // };
 
   // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
@@ -203,10 +203,17 @@ const OverlayUI = () => {
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isAwake, setIsAwake] = useState<boolean>(true);
-  const [isOpen, setIsOpen] = useState<boolean>(true);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isThinking, setIsThinking] = useState<boolean>(false);
   const [isBlinking, setIsBlinking] = useState<boolean>(false);
+  const [isStreaming, setIsStreaming] = useState<boolean>(false);
 
+  //Handle Thinking
+  useEffect(() => {
+    setIsThinking(isStreaming);
+  }, [isStreaming]);
+
+  //Eye Movements
   useEffect(() => {
     const interval = setInterval(() => {
       setPosition({
@@ -218,7 +225,7 @@ const OverlayUI = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Blinking effect every 4 seconds
+  // Blinking effect
   useEffect(() => {
     const blinkInterval = setInterval(() => {
       setIsBlinking(true);
@@ -228,6 +235,138 @@ const OverlayUI = () => {
     return () => clearInterval(blinkInterval);
   }, []);
 
+  const sleep = () => {
+    setTimeout(() => {
+      setIsAwake(false);
+    }, 3000);
+  };
+
+  const startRecording = () => {
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then(async (stream) => {
+        const recorder = new MediaRecorder(stream);
+        const audioChunks: Blob[] = [];
+        const audioContext = new AudioContext();
+
+        // Ensure AudioContext is active
+        await audioContext.resume();
+
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+
+        analyser.fftSize = 2048; // Larger FFT size for better resolution
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        analyser.getByteFrequencyData(dataArray);
+        console.log("Frequency Data:", Array.from(dataArray));
+
+        let hasSound = false;
+        let silenceTimeout: NodeJS.Timeout | null = null;
+
+        const checkSilence = () => {
+          analyser.getByteTimeDomainData(dataArray);
+          console.log("Data Array:", dataArray); // Debugging
+
+          // Compute volume
+          const volume =
+            dataArray.reduce((sum, val) => sum + Math.abs(val - 128), 0) /
+            bufferLength;
+          console.log("Volume:", volume);
+
+          if (volume > 10) {
+            hasSound = true;
+            if (silenceTimeout) {
+              clearTimeout(silenceTimeout);
+              silenceTimeout = null;
+            }
+          } else {
+            if (!silenceTimeout) {
+              silenceTimeout = setTimeout(() => {
+                console.log("Silence Detected - Stopping Recording...");
+                stopRecording();
+              }, 5000);
+            }
+          }
+
+          if (isRecording) {
+            requestAnimationFrame(checkSilence);
+          }
+        };
+
+        //start monitoring silence
+        checkSilence();
+
+        recorder.ondataavailable = (event) => {
+          audioChunks.push(event.data);
+        };
+
+        recorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: "audio/wav" });
+
+          if (hasSound) {
+            console.log("Sending audio...");
+            sendAudio(blob);
+          } else {
+            console.log("No voice detected - Audio discarded.");
+          }
+
+          stream.getTracks().forEach((track) => track.stop());
+          audioContext.close();
+        };
+
+        recorder.start();
+        mediaRecorder.current = recorder;
+        setIsRecording(true);
+        hasSound = false;
+        checkSilence();
+      });
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder.current) {
+      mediaRecorder.current.stop();
+      mediaRecorder.current.stream.getTracks().forEach((track) => track.stop());
+    }
+    setIsRecording(false);
+  };
+
+  //Electron API listeners
+  //@ts-ignore
+  window.overlayManagerAPI.removeToggleOverlayListener();
+  //@ts-ignore
+  window.overlayManagerAPI.onToggleOverlay(() => {
+    setIsOpen((prev) => !prev);
+  });
+
+  //@ts-ignore
+  window.llmAPI.removeStreamStartListener();
+  //@ts-ignore
+  window.llmAPI.onStreamStart(() => {
+    setIsStreaming(true);
+  });
+
+  //@ts-ignore
+  window.llmAPI.removeStreamCompleteListener();
+  //@ts-ignore
+  window.llmAPI.onStreamComplete(() => {
+    setIsStreaming(false);
+    sleep();
+  });
+
+  //@ts-ignore
+  window.overlayManagerAPI.removeWakeUpCommandListener();
+  //@ts-ignore
+  window.overlayManagerAPI.onWakeUpCommand(() => {
+    if (!isOpen) setIsOpen(true);
+    setIsAwake(true);
+    startRecording();
+  });
+
   return (
     <div className="flex flex-col h-screen text-white  text-sm gap-3 relative">
       {/* AI ICON */}
@@ -235,6 +374,7 @@ const OverlayUI = () => {
       {/* MAIN TAG FOR OPEN AND CLOSE */}
       <motion.div
         className="absolute top-10 right-10"
+        initial={false}
         animate={{
           scale: isOpen ? 1 : 0, // Open/close transition
         }}
@@ -294,7 +434,15 @@ const OverlayUI = () => {
       </motion.div>
 
       {/* Chat Area (Only Shows Latest Assistant Response) */}
-      <div className="flex-grow overflow-y-auto w-[320px] max-h-[70vh]  p-1 before:scrollbar-hide rounded-lg mt-[110px] ml-9">
+      <motion.div
+        className="overflow-y-auto w-[360px] max-h-[70vh] p-1 before:scrollbar-hide rounded-lg mt-[110px]"
+        initial={false}
+        animate={{
+          scale: isOpen ? 1 : 0,
+        }}
+        transition={{ delay: 0.2, duration: 0.6, ease: "easeInOut" }}
+        style={{ originX: 1, originY: 0 }}
+      >
         {messages
           .filter((msg) => msg.role === "assistant") // Filter only assistant messages
           .slice(-1) // Keep only the latest one
@@ -304,7 +452,7 @@ const OverlayUI = () => {
             </div>
           ))}
         <div ref={chatEndRef} />
-      </div>
+      </motion.div>
       {/* Input Area */}
       <div className="pointer-events-auto w-[300px]">
         <div className="space-y-2">
@@ -324,7 +472,7 @@ const OverlayUI = () => {
               <IoIosSend />
             </button>
             <button
-              onClick={handleRecord}
+              onClick={startRecording}
               className={`px-2 py-2 text-xl rounded-lg ${
                 isRecording
                   ? "bg-red-500 hover:shadow-red-500"

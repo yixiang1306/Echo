@@ -318,5 +318,6 @@ if __name__ == "__main__":
 
         except Exception:
             print("I'm sorry, the server is down. Please try again later.", flush=True)
+            print("<END>", flush=True)
 
 
