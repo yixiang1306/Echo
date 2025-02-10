@@ -13,7 +13,7 @@ const Settings: React.FC<SettingsProps> = ({ clearChatHistory }) => {
     <div className="fixed top-0 left-0 w-full h-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
       {/* Close Button */}
       <div
-        className="absolute top-5 right-5 text-3xl cursor-pointer text-gray-900 dark:text-gray-200"
+        className="test-close-btn absolute top-5 right-5 text-3xl cursor-pointer text-gray-900 dark:text-gray-200"
         onClick={() => navigate("/app")}
       >
         &times;
@@ -31,20 +31,30 @@ const Settings: React.FC<SettingsProps> = ({ clearChatHistory }) => {
         </div>
 
         {/* Title */}
-        <h1 className="text-lg font-bold mb-6 text-gray-900 dark:text-gray-200">
+        <h1 className="test-setting-text text-lg font-bold mb-6 text-gray-900 dark:text-gray-200">
           Settings
         </h1>
 
         {/* Options */}
         <div className="flex flex-col items-center justify-center space-y-4 text-gray-700 dark:text-gray-300">
-          <button onClick={() => navigate("/updateAcc")}>
+          <button
+            className="test-update-acc-btn"
+            onClick={() => navigate("/updateAcc")}
+          >
             Profile Settings
           </button>
-          <button onClick={() => navigate("/feedback")}>Feedback</button>
-          <button onClick={clearChatHistory}>Clear Chat History</button>
+          <button
+            className="test-feedback-btn"
+            onClick={() => navigate("/feedback")}
+          >
+            Feedback
+          </button>
+          <button className="test-clear-History-btn" onClick={clearChatHistory}>
+            Clear Chat History
+          </button>
           <button
             onClick={toggleTheme}
-            className="mt-4 px-4 py-2 bg-indigo-500 text-white rounded-lg shadow-md"
+            className="test-darkmode_btn mt-4 px-4 py-2 bg-indigo-500 text-white rounded-lg shadow-md"
           >
             {isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
           </button>

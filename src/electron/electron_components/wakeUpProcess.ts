@@ -38,7 +38,7 @@ export function createWakeUpProcess() {
       processWakeup.stdin.write("resume\n");
     },
     kill: () => {
-      processWakeup.kill();
+      processWakeup.kill("SIGKILL");
       console.log("WakeUp process killed");
     },
   };

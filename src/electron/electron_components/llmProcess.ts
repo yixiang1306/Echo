@@ -28,7 +28,7 @@ export function createLLMProcess() {
   return {
     process: processLLM,
     kill: () => {
-      processLLM.kill();
+      processLLM.kill("SIGKILL");
       console.log("LLM process killed");
     },
   };

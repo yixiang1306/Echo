@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { app, globalShortcut, ipcMain, Tray } from "electron";
+import { app, BrowserWindow, globalShortcut, ipcMain, Tray } from "electron";
 import log from "electron-log";
 import fs from "fs";
 import os from "node:os";
@@ -25,7 +25,7 @@ const envPath = isDev()
 dotenv.config({ path: envPath });
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
-let mainWindow: Electron.BrowserWindow;
+let mainWindow: Electron.BrowserWindow | null = null;
 let sideBarWindow: Electron.BrowserWindow | null = null;
 let overlayWindow: Electron.BrowserWindow | null = null;
 let audioWindow: Electron.BrowserWindow;
@@ -130,20 +130,32 @@ app.on("ready", async () => {
   mainWindow.on("close", (event) => {
     if (!isQuitting) {
       event.preventDefault();
-      mainWindow.hide();
+      mainWindow!.hide();
+    } else {
+      mainWindow = null; // Ensure no references to the window
     }
   });
 });
 
 // Cleanup before quit
 app.on("before-quit", () => {
+  console.log(process.eventNames()); // Lists active event listeners
+  console.log(app.eventNames()); // Check Electron-specific listeners
+  globalShortcut.unregisterAll();
   wakeUpProcess?.kill();
+  wakeUpProcess = null;
   llmProcess.kill();
-  if (tray) tray.destroy();
-  if (sideBarWindow) sideBarWindow.destroy();
-  if (audioWindow) audioWindow.destroy();
-
+  // Remove all event listeners
   ipcMain.removeAllListeners();
+  app.removeAllListeners();
+
+  // Destroy all windows
+  BrowserWindow.getAllWindows().forEach((win) => win.destroy());
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+  app.exit(0);
 });
 
 function cleanUpExtractedFiles() {
@@ -157,7 +169,6 @@ function cleanUpExtractedFiles() {
 app.on("window-all-closed", () => {
   cleanUpExtractedFiles();
   ipcMain.removeAllListeners();
-  app.quit();
 });
 
 //KEY BINDING
@@ -291,7 +302,7 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
 
     // **Send "stream-start" event only once when the first chunk arrives**
     if (isFirstChunk) {
-      currentWindow.webContents.send("stream-start");
+      currentWindow?.webContents.send("stream-start");
       console.log("stream-started");
       isFirstChunk = false;
     }
@@ -300,13 +311,13 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
       textChunk = textChunk.replace("<END>", "").trim();
       fullResponse += textChunk;
       console.log("end: ", fullResponse);
-      currentWindow.webContents.send("stream-text", textChunk);
-      currentWindow.webContents.send("stream-complete", fullResponse);
+      currentWindow?.webContents.send("stream-text", textChunk);
+      currentWindow?.webContents.send("stream-complete", fullResponse);
 
       // Proceed to TTS
       processTTS(fullResponse);
     } else {
-      currentWindow.webContents.send("stream-text", textChunk);
+      currentWindow?.webContents.send("stream-text", textChunk);
       fullResponse += textChunk;
     }
   });

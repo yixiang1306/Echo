@@ -413,13 +413,13 @@ const ApplicationUI = () => {
 
   return (
     <div
-      className={`flex h-screen ${
+      className={`flex h-screen  ${
         isDarkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
       } ${!isSidebarVisible ? "sidebar-hidden" : ""}`}
     >
       {/* Sidebar Toggle Button */}
       <button
-        className="fixed top-4 left-4 z-50 bg-transparent border-none cursor-pointer"
+        className="sidebar-toggle-button fixed top-4 left-4 z-50 bg-transparent border-none cursor-pointer"
         onClick={toggleSidebar}
       >
         <img
@@ -431,7 +431,7 @@ const ApplicationUI = () => {
 
       {/* Sidebar */}
       <div
-        className={`flex flex-col justify-between ${
+        className={`sidebar-test flex flex-col justify-between ${
           isDarkMode ? "bg-gray-800 text-white" : "bg-gray-900 text-white"
         } p-4 transition-all duration-300 ${
           isSidebarVisible ? "w-1/5" : "hidden"
@@ -478,7 +478,7 @@ const ApplicationUI = () => {
             <div className="flex gap-8">
               {/* Token Balance Tooltip */}
               <div className="relative group flex gap-2 items-center">
-                <CircleDollarSign className="  text-yellow-400" />
+                <CircleDollarSign className="free-coin text-yellow-400" />
                 <p className="">{freeCoin.toFixed(4)}</p>
                 <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
                   Daily Free Balance
@@ -487,7 +487,7 @@ const ApplicationUI = () => {
 
               {/* Wallet Balance Tooltip */}
               <div className="relative group flex gap-2 items-center">
-                <Wallet className=" text-blue-400" />
+                <Wallet className="wallet-coin text-blue-400" />
                 <p className="">{walletCoin.toFixed(4)}</p>
                 <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
                   Your Wallet Balance
@@ -508,7 +508,7 @@ const ApplicationUI = () => {
               <img
                 src="./user.png"
                 alt="Profile"
-                className="w-8 h-8 rounded-full cursor-pointer"
+                className="profile-icon w-8 h-8 rounded-full cursor-pointer"
                 onClick={toggleDropdown}
               />
               {dropdownOpen && (
@@ -525,7 +525,7 @@ const ApplicationUI = () => {
                     }`}
                   >
                     <li
-                      className={`px-4 py-2 cursor-pointer ${
+                      className={`test-go-to-settings-btn px-4 py-2 cursor-pointer ${
                         isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
                       }`}
                       onClick={goToSettings}
@@ -541,7 +541,7 @@ const ApplicationUI = () => {
                       Upgrade Plan
                     </li>
                     <li
-                      className={`px-4 py-2 cursor-pointer ${
+                      className={`logout-option px-4 py-2 cursor-pointer ${
                         isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
                       }`}
                       onClick={handleLogout}
@@ -556,12 +556,14 @@ const ApplicationUI = () => {
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-grow overflow-y-auto mt-20 scrollbar-hide text-sm ">
+        <div className="message-box flex-grow overflow-y-auto mt-20 scrollbar-hide text-sm ">
           {messages.map((message, index) => (
             <div
               key={index}
               className={`flex ${
-                message.role === "user" ? "justify-end" : "justify-start"
+                message.role === "user"
+                  ? "user-message justify-end"
+                  : "system-message justify-start"
               } my-4`}
             >
               {handleLLMResponse(message.content, message.role)}
@@ -579,18 +581,18 @@ const ApplicationUI = () => {
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                className="flex-grow p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="chat-input flex-grow p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Type a message..."
               />
               <button
                 onClick={sendMessage}
-                className="px-2 py-2 text-xl bg-blue-500 rounded-lg hover:scale-110 hover:shadow-md hover:shadow-blue-500 transition-transform duration-300"
+                className="send-button px-2 py-2 text-xl bg-blue-500 rounded-lg hover:scale-110 hover:shadow-md hover:shadow-blue-500 transition-transform duration-300"
               >
                 <IoIosSend />
               </button>
               <button
                 onClick={handleRecord}
-                className={`px-2 py-2 text-xl rounded-lg ${
+                className={`microphone-button px-2 py-2 text-xl rounded-lg ${
                   isRecording
                     ? "bg-red-500 hover:shadow-red-500"
                     : "bg-green-600 hover:shadow-green-600"
@@ -609,7 +611,7 @@ const ApplicationUI = () => {
                     prev === "websearch" ? null : "websearch"
                   )
                 }
-                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300 ${
+                className={`web-search-btn flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300 ${
                   messageTag === "websearch"
                     ? "bg-blue-500 shadow-md shadow-blue-500"
                     : "bg-blue-500 hover:scale-110 hover:shadow-md hover:shadow-blue-500"
