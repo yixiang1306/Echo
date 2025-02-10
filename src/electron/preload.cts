@@ -24,15 +24,15 @@ contextBridge.exposeInMainWorld("tokenManagerApi", {
 contextBridge.exposeInMainWorld("llmAPI", {
   toggleRecording: (recording: boolean) =>
     ipcRenderer.send("toggle-recording", recording),
-  sendText: (text: string, window: string) => ipcRenderer.send("text-input", text,window),
+  sendText: (text: string, window: string) =>
+    ipcRenderer.send("text-input", text, window),
   sendAudio: (base64Audio: string) =>
     ipcRenderer.invoke("send-audio", base64Audio),
 
   // Streaming Listeners
 
-  onStreamStart: (callback:()=>void)=>
-    ipcRenderer.on("stream-start",()=> callback()),
-
+  onStreamStart: (callback: () => void) =>
+    ipcRenderer.on("stream-start", () => callback()),
 
   onStreamText: (callback: (textChunk: string) => void) =>
     ipcRenderer.on("stream-text", (_, textChunk) => callback(textChunk)),
@@ -43,19 +43,13 @@ contextBridge.exposeInMainWorld("llmAPI", {
   onPlayAudio: (callback: (audioBase64: string) => void) =>
     ipcRenderer.on("play-audio", (_, audioBase64) => callback(audioBase64)),
 
-
-   // Remove listeners to prevent memory leaks
-   removeStreamStartListener: () =>
+  // Remove listeners to prevent memory leaks
+  removeStreamStartListener: () =>
     ipcRenderer.removeAllListeners("stream-start"),
-  removeStreamTextListener: () =>
-    ipcRenderer.removeAllListeners("stream-text"),
+  removeStreamTextListener: () => ipcRenderer.removeAllListeners("stream-text"),
   removeStreamCompleteListener: () =>
     ipcRenderer.removeAllListeners("stream-complete"),
-  removePlayAudioListener: () =>
-    ipcRenderer.removeAllListeners("play-audio"),
-
-
-
+  removePlayAudioListener: () => ipcRenderer.removeAllListeners("play-audio"),
 });
 
 // Expose a new audioManagerAPI
@@ -74,20 +68,18 @@ contextBridge.exposeInMainWorld("audioManagerAPI", {
   removeStopAudioListener: () => ipcRenderer.removeAllListeners("stop-audio"),
 });
 
-
-contextBridge.exposeInMainWorld("overlayManagerAPI",{
-  
+contextBridge.exposeInMainWorld("overlayManagerAPI", {
   //Event listeners
-  onToggleOverlay: (callback:()=>void)=>
-    ipcRenderer.on("toggle-overlay",()=> callback()),
+  onToggleOverlay: (callback: () => void) =>
+    ipcRenderer.on("toggle-overlay", () => callback()),
 
-  onWakeUpCommand: (callback:()=>void)=>
-    ipcRenderer.on("wake-up-command",()=> callback()),
+  onWakeUpCommand: (callback: () => void) =>
+    ipcRenderer.on("wake-up-command", () => callback()),
 
   //remove listeners
-  removeToggleOverlayListener: () => ipcRenderer.removeAllListeners("toggle-overlay"),
+  removeToggleOverlayListener: () =>
+    ipcRenderer.removeAllListeners("toggle-overlay"),
 
-  removeWakeUpCommandListener: () => ipcRenderer.removeAllListeners("wake-up-command"),
+  removeWakeUpCommandListener: () =>
+    ipcRenderer.removeAllListeners("wake-up-command"),
 });
-
-// Expose Buffer to renderer process

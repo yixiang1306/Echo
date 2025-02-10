@@ -79,7 +79,7 @@ export function createSideBarWindow(
     ? "http://localhost:3000/#/sidebar"
     : `file://${extractAsar()}#/sidebar`;
 
-    sideBarWindow.loadURL(sidebarURL);
+  sideBarWindow.loadURL(sidebarURL);
   return sideBarWindow;
 }
 
@@ -130,7 +130,6 @@ export function createOverlayWindow(
       nodeIntegration: false,
       session: mainWindow.webContents.session,
     },
-    
   });
 
   overlayWindow.isAlwaysOnTop();
@@ -142,6 +141,6 @@ export function createOverlayWindow(
     ? "http://localhost:3000/#/overlay"
     : `file://${extractAsar()}#/overlay`;
 
-    overlayWindow.loadURL(overlayURL);
+  overlayWindow.loadURL(overlayURL);
   return overlayWindow;
 }

@@ -1,4 +1,4 @@
-import { Tray, Menu, app } from "electron";
+import { Menu, Tray, app } from "electron";
 import { setQuitting } from "../main.js";
 
 export function createTray(
@@ -24,6 +24,10 @@ export function createTray(
 
   tray.setContextMenu(trayMenu);
   tray.on("double-click", () => mainWindow.show());
+
+  app.on("before-quit", () => {
+    setQuitting(true);
+  });
 
   return tray;
 }

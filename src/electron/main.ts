@@ -56,22 +56,21 @@ app.on("ready", async () => {
       console.log("✅ Opening other windows from MAIN window");
       if (!wakeUpProcess) wakeUpProcess = createWakeUpProcess();
 
-      if(!sideBarWindow){ 
+      if (!sideBarWindow) {
         console.log("yes");
         sideBarWindow = createSideBarWindow(mainWindow, iconPath)!;
         overlayWindow = createOverlayWindow(mainWindow, iconPath)!;
 
-
-        if(overlayWindow){
+        if (overlayWindow) {
           console.log("overlay window created");
         }
 
         // Handle window events
-        sideBarWindow.on("blur" , async() => {
+        sideBarWindow.on("blur", async () => {
           await slideOut(sideBarWindow!);
           sideBarWindow!.hide();
         });
-      };
+      }
       // Global shortcuts
       keyBinding();
 
@@ -111,7 +110,6 @@ app.on("ready", async () => {
         overlayWindow = null; // Remove reference
       }
 
-
       wakeUpProcess?.kill(); // Kill the WakeUp process
 
       console.log("✅ wakeUpProcess killed successfully");
@@ -141,6 +139,11 @@ app.on("ready", async () => {
 app.on("before-quit", () => {
   wakeUpProcess?.kill();
   llmProcess.kill();
+  if (tray) tray.destroy();
+  if (sideBarWindow) sideBarWindow.destroy();
+  if (audioWindow) audioWindow.destroy();
+
+  ipcMain.removeAllListeners();
 });
 
 function cleanUpExtractedFiles() {
@@ -150,8 +153,12 @@ function cleanUpExtractedFiles() {
   }
 }
 
-app.on("window-all-closed", cleanUpExtractedFiles);
-
+// Cleanup before quit
+app.on("window-all-closed", () => {
+  cleanUpExtractedFiles();
+  ipcMain.removeAllListeners();
+  app.quit();
+});
 
 //KEY BINDING
 function keyBinding() {
@@ -161,8 +168,6 @@ function keyBinding() {
   globalShortcut.register("Alt+V", () => handleSideBarToggle());
 
   globalShortcut.register("Alt+B", () => handleOverlayToggle());
-
-
 }
 
 // Handle SideBar Toggle
@@ -183,12 +188,11 @@ async function handleSideBarToggle() {
 //Handle Overlay Toggle
 
 async function handleOverlayToggle() {
-    console.log("ALT+B is pressed")
-    if(overlayWindow){
-      overlayWindow.webContents.send("toggle-overlay");
-    }
+  console.log("ALT+B is pressed");
+  if (overlayWindow) {
+    overlayWindow.webContents.send("toggle-overlay");
+  }
 }
-
 
 //Handle quitting parameters
 
@@ -256,7 +260,6 @@ ipcMain.handle("stop-audio", () => {
 });
 
 ipcMain.on("text-input", async (_, text: string, window: string) => {
-
   let currentWindow = mainWindow;
 
   switch (window) {
@@ -272,7 +275,6 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
       break;
   }
 
-  
   llmProcess.process.stdin.write(text + "\n");
   console.log("Sent text to Python...");
 
@@ -280,13 +282,12 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
   let isFirstChunk = true;
   // Remove existing listeners to prevent duplication
   llmProcess.process.stdout.removeAllListeners("data");
-  llmProcess.process.stdout.setEncoding('utf-8');
+  llmProcess.process.stdout.setEncoding("utf-8");
 
   // Handle real-time streaming
   llmProcess.process.stdout.on("data", (chunk) => {
     let textChunk = chunk.toString();
     console.log("Received chunk:", textChunk);
-
 
     // **Send "stream-start" event only once when the first chunk arrives**
     if (isFirstChunk) {
@@ -301,7 +302,7 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
       console.log("end: ", fullResponse);
       currentWindow.webContents.send("stream-text", textChunk);
       currentWindow.webContents.send("stream-complete", fullResponse);
-  
+
       // Proceed to TTS
       processTTS(fullResponse);
     } else {
@@ -309,8 +310,6 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
       fullResponse += textChunk;
     }
   });
-
-  
 });
 
 ipcMain.handle(
@@ -336,10 +335,11 @@ ipcMain.handle(
 );
 
 async function processTTS(fullResponse: string) {
-   
   // Check if the response is an image or YouTube link
   const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(fullResponse);
-  const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(fullResponse);
+  const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(
+    fullResponse
+  );
 
   if (!isImage && !isYouTubeLink) {
     console.log("translating to audio...");
