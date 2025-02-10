@@ -76,6 +76,7 @@ app.on("ready", async () => {
       keyBinding();
 
       // WakeUp Process Listener
+      wakeUpProcess.process.stdout.removeAllListeners("data");
       wakeUpProcess.process.stdout.on("data", async (data: Buffer) => {
         console.log(data.toString().trim());
 
@@ -307,6 +308,7 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
     } else {
       currentWindow.webContents.send("stream-text", textChunk);
       fullResponse += textChunk;
+      
     }
   });
 
@@ -334,6 +336,11 @@ ipcMain.handle(
     return { inputTokens, outputTokens, totalCost: totalCost.toFixed(6) };
   }
 );
+
+ipcMain.handle("resume-wakeup", () => {
+  console.log("Resuming WakeUp Process...");
+  wakeUpProcess?.resume();
+});
 
 async function processTTS(fullResponse: string) {
    

@@ -15,6 +15,8 @@ const OverlayUI = () => {
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {}, []);
+
   // Scroll to the latest message
   useEffect(() => {
     if (chatEndRef.current) {
@@ -202,7 +204,7 @@ const OverlayUI = () => {
   };
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isAwake, setIsAwake] = useState<boolean>(true);
+  const [isAwake, setIsAwake] = useState<boolean>(false);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isThinking, setIsThinking] = useState<boolean>(false);
   const [isBlinking, setIsBlinking] = useState<boolean>(false);
@@ -211,6 +213,8 @@ const OverlayUI = () => {
   //Handle Thinking
   useEffect(() => {
     setIsThinking(isStreaming);
+
+    if (isStreaming === false) sleep();
   }, [isStreaming]);
 
   //Eye Movements
@@ -238,10 +242,12 @@ const OverlayUI = () => {
   const sleep = () => {
     setTimeout(() => {
       setIsAwake(false);
-    }, 3000);
+    }, 5000);
   };
 
   const startRecording = () => {
+    setIsRecording(true); // Explicitly set recording state to true
+    setIsAwake(true);
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then(async (stream) => {
@@ -250,35 +256,46 @@ const OverlayUI = () => {
         const audioContext = new AudioContext();
 
         // Ensure AudioContext is active
-        await audioContext.resume();
+        if (audioContext.state === "suspended") {
+          await audioContext.resume();
+          console.log("AudioContext resumed");
+        }
 
         const source = audioContext.createMediaStreamSource(stream);
         const analyser = audioContext.createAnalyser();
 
         source.connect(analyser);
-        analyser.connect(audioContext.destination);
 
-        analyser.fftSize = 2048; // Larger FFT size for better resolution
+        analyser.fftSize = 2048; // High resolution
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
 
-        analyser.getByteFrequencyData(dataArray);
-        console.log("Frequency Data:", Array.from(dataArray));
-
         let hasSound = false;
         let silenceTimeout: NodeJS.Timeout | null = null;
+        let recordingActive = true; // Local control variable
+
+        const stopRecording = () => {
+          recordingActive = false; // Stop silence detection loop
+          setIsRecording(false); // Update global recording state
+
+          recorder.stop();
+          stream.getTracks().forEach((track) => track.stop());
+          audioContext.close();
+          console.log("Recording stopped.");
+        };
 
         const checkSilence = () => {
-          analyser.getByteTimeDomainData(dataArray);
-          console.log("Data Array:", dataArray); // Debugging
+          if (!recordingActive) return; // Exit the loop if recording is inactive
 
-          // Compute volume
+          analyser.getByteFrequencyData(dataArray);
+
+          // Compute volume as average of frequency values
           const volume =
-            dataArray.reduce((sum, val) => sum + Math.abs(val - 128), 0) /
-            bufferLength;
+            dataArray.reduce((sum, val) => sum + val, 0) / bufferLength;
+
           console.log("Volume:", volume);
 
-          if (volume > 10) {
+          if (volume > 20) {
             hasSound = true;
             if (silenceTimeout) {
               clearTimeout(silenceTimeout);
@@ -288,18 +305,16 @@ const OverlayUI = () => {
             if (!silenceTimeout) {
               silenceTimeout = setTimeout(() => {
                 console.log("Silence Detected - Stopping Recording...");
+                //@ts-ignore
+                window.overlayManagerAPI.resumeWakeUp();
+                sleep();
                 stopRecording();
-              }, 5000);
+              }, 5000); // Stop after 5 seconds of silence
             }
           }
 
-          if (isRecording) {
-            requestAnimationFrame(checkSilence);
-          }
+          requestAnimationFrame(checkSilence); // Keep checking if recording is active
         };
-
-        //start monitoring silence
-        checkSilence();
 
         recorder.ondataavailable = (event) => {
           audioChunks.push(event.data);
@@ -314,58 +329,67 @@ const OverlayUI = () => {
           } else {
             console.log("No voice detected - Audio discarded.");
           }
-
-          stream.getTracks().forEach((track) => track.stop());
-          audioContext.close();
         };
 
         recorder.start();
-        mediaRecorder.current = recorder;
-        setIsRecording(true);
-        hasSound = false;
-        checkSilence();
+        console.log("Recording started...");
+        checkSilence(); // Start monitoring silence
+      })
+      .catch((err) => {
+        console.error("Microphone access error:", err);
+        setIsRecording(false); // Reset recording state if there's an error
       });
   };
 
-  const stopRecording = () => {
-    if (mediaRecorder.current) {
-      mediaRecorder.current.stop();
-      mediaRecorder.current.stream.getTracks().forEach((track) => track.stop());
-    }
-    setIsRecording(false);
-  };
+  useEffect(() => {
+    const overlayToggleHandler = () => {
+      setIsOpen((prev) => !prev);
+    };
+    const streamStartHandler = () => setIsStreaming(true);
 
-  //Electron API listeners
-  //@ts-ignore
-  window.overlayManagerAPI.removeToggleOverlayListener();
-  //@ts-ignore
-  window.overlayManagerAPI.onToggleOverlay(() => {
-    setIsOpen((prev) => !prev);
-  });
+    const streamCompleteHandler = () => {
+      setIsStreaming(false);
+      //@ts-ignore
+      window.overlayManagerAPI.resumeWakeUp();
+      sleep();
+    };
+    const wakeUpHandler = () => {
+      if (!isOpenRef.current) setIsOpen(true);
+      setIsAwake(true);
+      startRecording();
+    };
 
-  //@ts-ignore
-  window.llmAPI.removeStreamStartListener();
-  //@ts-ignore
-  window.llmAPI.onStreamStart(() => {
-    setIsStreaming(true);
-  });
+    // Add listeners
 
-  //@ts-ignore
-  window.llmAPI.removeStreamCompleteListener();
-  //@ts-ignore
-  window.llmAPI.onStreamComplete(() => {
-    setIsStreaming(false);
-    sleep();
-  });
+    //@ts-ignore
+    window.overlayManagerAPI.onToggleOverlay(overlayToggleHandler);
+    //@ts-ignore
+    window.llmAPI.onStreamStart(streamStartHandler);
+    //@ts-ignore
+    window.llmAPI.onStreamComplete(streamCompleteHandler);
+    //@ts-ignore
+    window.overlayManagerAPI.onWakeUpCommand(wakeUpHandler);
 
-  //@ts-ignore
-  window.overlayManagerAPI.removeWakeUpCommandListener();
-  //@ts-ignore
-  window.overlayManagerAPI.onWakeUpCommand(() => {
-    if (!isOpen) setIsOpen(true);
-    setIsAwake(true);
-    startRecording();
-  });
+    // Cleanup
+    return () => {
+      //@ts-ignore
+      window.overlayManagerAPI.removeWakeUpCommandListener(wakeUpHandler);
+      //@ts-ignore
+      window.overlayManagerAPI.removeToggleOverlayListener(
+        overlayToggleHandler
+      );
+      //@ts-ignore
+      window.llmAPI.removeStreamStartListener(streamStartHandler);
+      //@ts-ignore
+      window.llmAPI.removeStreamCompleteListener(streamCompleteHandler);
+    };
+  }, []);
+
+  // Add ref for latest state
+  const isOpenRef = useRef(isOpen);
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   return (
     <div className="flex flex-col h-screen text-white  text-sm gap-3 relative">
@@ -382,11 +406,12 @@ const OverlayUI = () => {
       >
         {/* AI Main Container with Smooth Scaling & Opacity */}
         <motion.div
-          className="w-16 h-16 flex items-center justify-center rounded-full shadow-lg border-white border-2"
+          className="w-16 h-16 flex items-center justify-center rounded-full shadow-lg border-2"
           animate={{
             scale: isAwake ? [1, 1.1, 1] : 1, // Heartbeat effect
             backgroundColor: "#212121",
             opacity: isAwake ? 1 : 0.1, // Fades out when not awake
+            borderColor: isRecording ? "#ff3a61" : "white",
           }}
           transition={{
             scale: isAwake
@@ -394,6 +419,7 @@ const OverlayUI = () => {
               : {},
             backgroundColor: { duration: 0.5, ease: "easeInOut" }, // Smooth color transition
             opacity: { duration: 0.5 }, // Fades smoothly
+            borderColor: { duration: 2, ease: "easeInOut" }, // Smooth border color transition
           }}
         >
           {/* Thinking Mode Animation */}
@@ -421,7 +447,7 @@ const OverlayUI = () => {
             transition={{ duration: 0.3 }} // Smooth transition effect
           >
             <motion.div
-              className="w-5 h-5 flex items-center justify-center bg-white rounded-full shadow-lg border"
+              className="w-5 h-5 flex items-center justify-center bg-white rounded-full shadow-lg border-2"
               animate={
                 isAwake ? { x: position.x, y: position.y } : { opacity: 0.8 }
               }
@@ -435,10 +461,10 @@ const OverlayUI = () => {
 
       {/* Chat Area (Only Shows Latest Assistant Response) */}
       <motion.div
-        className="overflow-y-auto w-[360px] max-h-[70vh] p-1 before:scrollbar-hide rounded-lg mt-[110px]"
+        className="overflow-y-auto w-[340px] max-h-[70vh] p-1 before:scrollbar-hide rounded-lg mt-[110px]"
         initial={false}
         animate={{
-          scale: isOpen ? 1 : 0,
+          scale: isOpen || isAwake ? 1 : 0,
         }}
         transition={{ delay: 0.2, duration: 0.6, ease: "easeInOut" }}
         style={{ originX: 1, originY: 0 }}
@@ -454,6 +480,7 @@ const OverlayUI = () => {
         <div ref={chatEndRef} />
       </motion.div>
       {/* Input Area */}
+
       <div className="pointer-events-auto w-[300px]">
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
@@ -483,9 +510,7 @@ const OverlayUI = () => {
             </button>
           </div>
 
-          {/* Toggleable Message Tags */}
           <div className="flex text-sm gap-2 ">
-            {/* Search Button */}
             <button
               onClick={() => setIsThinking((prev) => !prev)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300 ${
@@ -498,7 +523,6 @@ const OverlayUI = () => {
               Search
             </button>
 
-            {/* Image Button */}
             <button
               onClick={() => setIsOpen((prev) => !prev)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300  ${
@@ -511,7 +535,6 @@ const OverlayUI = () => {
               Image
             </button>
 
-            {/* Video Button */}
             <button
               onClick={() => setIsAwake((prev) => !prev)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300  ${

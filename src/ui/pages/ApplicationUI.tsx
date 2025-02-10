@@ -67,7 +67,9 @@ const ApplicationUI = () => {
     handleResize();
     window.addEventListener("resize", handleResize);
 
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   //------------------ Function to fetch Display name from session -------------------------

@@ -76,6 +76,8 @@ contextBridge.exposeInMainWorld("audioManagerAPI", {
 
 
 contextBridge.exposeInMainWorld("overlayManagerAPI",{
+
+  resumeWakeUp: () => ipcRenderer.invoke("resume-wakeup"),
   
   //Event listeners
   onToggleOverlay: (callback:()=>void)=>
