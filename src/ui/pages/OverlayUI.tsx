@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { IoIosSend } from "react-icons/io";
 import { FaMicrophone, FaYoutube } from "react-icons/fa";
 import { CiGlobe, CiImageOn } from "react-icons/ci";
+import { motion } from "motion/react";
+import { Scale } from "lucide-react";
 
 const OverlayUI = () => {
   const [messages, setMessages] = useState([
@@ -191,7 +193,7 @@ const OverlayUI = () => {
         className={`px-4 py-2 rounded-lg animate-pop-up ${
           role === "user"
             ? "bg-blue-600 text-white"
-            : "bg-gray-700 text-gray-200"
+            : "bg-[#212121] text-gray-200"
         }`}
       >
         {message}
@@ -199,26 +201,110 @@ const OverlayUI = () => {
     );
   };
 
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isAwake, setIsAwake] = useState<boolean>(true);
+  const [isOpen, setIsOpen] = useState<boolean>(true);
+  const [isThinking, setIsThinking] = useState<boolean>(false);
+  const [isBlinking, setIsBlinking] = useState<boolean>(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPosition({
+        x: (Math.random() - 0.5) * 20, // Random x movement
+        y: (Math.random() - 0.5) * 20, // Random y movement
+      });
+    }, 4000); // Moves every 2 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Blinking effect every 4 seconds
+  useEffect(() => {
+    const blinkInterval = setInterval(() => {
+      setIsBlinking(true);
+      setTimeout(() => setIsBlinking(false), 150); // Eye stays closed briefly
+    }, 4500);
+
+    return () => clearInterval(blinkInterval);
+  }, []);
+
   return (
-    <div className="flex flex-col h-screen items-center justify-center text-white text-sm gap-3">
+    <div className="flex flex-col h-screen text-white  text-sm gap-3 relative">
       {/* AI ICON */}
 
-      {/* Chat Area */}
-      <div className="flex-grow  overflow-y-auto w-[300px] space-y-4 max-h-[70vh] scrollbar-hide rounded-lg">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${
-              message.role === "user" ? "justify-end" : "justify-start"
-            }`}
+      {/* MAIN TAG FOR OPEN AND CLOSE */}
+      <motion.div
+        className="absolute top-10 right-10"
+        animate={{
+          scale: isOpen ? 1 : 0, // Open/close transition
+        }}
+        transition={{ duration: 0.5, ease: "easeInOut" }}
+      >
+        {/* AI Main Container with Smooth Scaling & Opacity */}
+        <motion.div
+          className="w-16 h-16 flex items-center justify-center rounded-full shadow-lg border-white border-2"
+          animate={{
+            scale: isAwake ? [1, 1.1, 1] : 1, // Heartbeat effect
+            backgroundColor: "#212121",
+            opacity: isAwake ? 1 : 0.1, // Fades out when not awake
+          }}
+          transition={{
+            scale: isAwake
+              ? { repeat: Infinity, duration: 1.5, ease: "easeInOut" }
+              : {},
+            backgroundColor: { duration: 0.5, ease: "easeInOut" }, // Smooth color transition
+            opacity: { duration: 0.5 }, // Fades smoothly
+          }}
+        >
+          {/* Thinking Mode Animation */}
+          <motion.div
+            animate={{
+              scale: isThinking ? 1 : 0, // Scales in and out smoothly
+              opacity: isThinking ? 1 : 0, // Fades in/out
+            }}
+            transition={{ duration: 0.4, ease: "easeInOut" }} // Smooth transition timing
+            className="absolute flex items-center justify-center"
           >
-            {handleLLMResponse(message.content, message.role)}
-          </div>
-        ))}
+            <img
+              src="./Interwind.svg"
+              alt="Thinking Animation"
+              className="w-14 h-14"
+            />
+          </motion.div>
 
+          {/* Eye Animation (Only Visible When Not Thinking) */}
+          <motion.div
+            animate={{
+              scaleY: isThinking ? 0 : isAwake ? (isBlinking ? 0 : 1) : 0.05, // Eye shrinks when thinking
+              scale: isThinking ? 0 : 1, // Slight shrink effect
+            }}
+            transition={{ duration: 0.3 }} // Smooth transition effect
+          >
+            <motion.div
+              className="w-5 h-5 flex items-center justify-center bg-white rounded-full shadow-lg border"
+              animate={
+                isAwake ? { x: position.x, y: position.y } : { opacity: 0.8 }
+              }
+              transition={
+                isAwake ? { type: "spring", stiffness: 50, damping: 5 } : {}
+              }
+            ></motion.div>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+
+      {/* Chat Area (Only Shows Latest Assistant Response) */}
+      <div className="flex-grow overflow-y-auto w-[320px] max-h-[70vh]  p-1 before:scrollbar-hide rounded-lg mt-[110px] ml-9">
+        {messages
+          .filter((msg) => msg.role === "assistant") // Filter only assistant messages
+          .slice(-1) // Keep only the latest one
+          .map((message, index) => (
+            <div key={index} className="flex justify-end">
+              {handleLLMResponse(message.content, message.role)}
+            </div>
+          ))}
         <div ref={chatEndRef} />
       </div>
-
       {/* Input Area */}
       <div className="pointer-events-auto w-[300px]">
         <div className="space-y-2">
@@ -253,11 +339,7 @@ const OverlayUI = () => {
           <div className="flex text-sm gap-2 ">
             {/* Search Button */}
             <button
-              onClick={() =>
-                setMessageTag((prev) =>
-                  prev === "websearch" ? null : "websearch"
-                )
-              }
+              onClick={() => setIsThinking((prev) => !prev)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300 ${
                 messageTag === "websearch"
                   ? "bg-blue-500 shadow-md shadow-blue-500"
@@ -270,11 +352,7 @@ const OverlayUI = () => {
 
             {/* Image Button */}
             <button
-              onClick={() =>
-                setMessageTag((prev) =>
-                  prev === "show me an image" ? null : "show me an image"
-                )
-              }
+              onClick={() => setIsOpen((prev) => !prev)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300  ${
                 messageTag === "show me an image"
                   ? "bg-purple-700 shadow-md shadow-purple-700"
@@ -287,11 +365,7 @@ const OverlayUI = () => {
 
             {/* Video Button */}
             <button
-              onClick={() =>
-                setMessageTag((prev) =>
-                  prev === "show me a video" ? null : "show me a video"
-                )
-              }
+              onClick={() => setIsAwake((prev) => !prev)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300  ${
                 messageTag === "show me a video"
                   ? "bg-red-500 shadow-md shadow-red-500"

@@ -271,6 +271,9 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
     case "main":
       currentWindow = mainWindow;
       break;
+    case "overlay":
+      currentWindow = overlayWindow!;
+      break;
     case "sidebar":
       currentWindow = sideBarWindow!;
     default:

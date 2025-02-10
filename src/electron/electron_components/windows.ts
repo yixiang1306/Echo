@@ -136,7 +136,7 @@ export function createOverlayWindow(
   overlayWindow.isAlwaysOnTop();
 
   // ✅ Make the window click-through (mouse ignores it)
-  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  //overlayWindow.setIgnoreMouseEvents(true, { forward: true });
 
   const overlayURL = isDev()
     ? "http://localhost:3000/#/overlay"
