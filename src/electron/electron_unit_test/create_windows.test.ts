@@ -130,7 +130,7 @@ describe("Window Creation Functions", () => {
       });
 
       expect(sideBarWindow.loadURL).toHaveBeenCalledWith(
-        "http://localhost:3000/#/overlay"
+        "http://localhost:3000/#/sidebar"
       );
     });
 

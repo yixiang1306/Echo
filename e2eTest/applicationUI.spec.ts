@@ -60,7 +60,6 @@ test.describe("Application UI", () => {
   });
 
   test.afterEach(async () => {
-    mainPage?.close();
     await electronApp?.close();
   });
 

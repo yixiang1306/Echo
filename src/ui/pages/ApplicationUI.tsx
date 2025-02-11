@@ -456,7 +456,7 @@ const ApplicationUI = () => {
         </ul>
         <button
           onClick={goToUpgrade}
-          className={`mt-auto ${
+          className={`test-go-to-upgrade-btn mt-auto ${
             isDarkMode
               ? "bg-purple-700 hover:bg-purple-800"
               : "bg-purple-600 hover:bg-purple-700"

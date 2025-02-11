@@ -77,7 +77,7 @@ const Feedback = () => {
           onClick={() => navigate("/settings")}
         />
 
-        <h2 className="text-2xl font-bold mb-6 text-center">
+        <h2 className="test-feedback-text text-2xl font-bold mb-6 text-center">
           We Value Your Feedback
         </h2>
         <form className="space-y-6" onSubmit={handleSubmitFeedback}>
@@ -90,12 +90,12 @@ const Feedback = () => {
                   type="button"
                   key={num}
                   onClick={() => setRating(num)}
-                  className="focus:outline-none"
+                  className="test-start-btn focus:outline-none"
                 >
                   <Star
                     fill={num <= (rating ?? 0) ? "#FFD700" : "none"}
                     stroke="currentColor"
-                    className="w-8 h-8 cursor-pointer"
+                    className="test-star w-8 h-8 cursor-pointer"
                   />
                 </button>
               ))}
@@ -130,7 +130,7 @@ const Feedback = () => {
           <div>
             <label className="block text-sm font-medium mb-2">Comment</label>
             <textarea
-              className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 ${
+              className={`test-textarea w-full p-3 border rounded-md focus:outline-none focus:ring-2 ${
                 isDarkMode
                   ? "bg-gray-700 border-gray-600 focus:ring-blue-400"
                   : "bg-gray-50 border-gray-300 focus:ring-blue-500"
@@ -146,7 +146,7 @@ const Feedback = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full py-3 px-4 rounded-md text-white font-medium transition-colors bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="test-submit-btn w-full py-3 px-4 rounded-md text-white font-medium transition-colors bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Submit Feedback
           </button>

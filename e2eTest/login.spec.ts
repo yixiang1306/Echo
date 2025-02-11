@@ -36,7 +36,6 @@ test.describe("Login Page", () => {
     await waitForPreloadScript();
   });
   test.afterEach(async () => {
-    mainPage?.close();
     await electronApp?.close();
   });
 
@@ -62,14 +61,18 @@ test.describe("Login Page", () => {
     if (!mainPage) throw new Error("Main page not initialized");
 
     // Navigate to Login page
-    await mainPage.click(".login-btn");
+    const loginBtn = mainPage.locator(".login-btn");
+    await expect(loginBtn).toBeVisible({ timeout: 10000 }); // Ensure button is visible
+    await loginBtn.click();
     await mainPage.waitForURL(/\/#\/login/);
 
     // Enter incorrect credentials
     await mainPage.fill('input[type="email"]', "wronguser@example.com");
     await mainPage.fill('input[type="password"]', "wrongpassword");
 
-    await mainPage.click(".login-button");
+    const submitBtn = mainPage.locator(".login-button");
+    await expect(submitBtn).toBeVisible({ timeout: 5000 }); // Ensure it's loaded
+    await submitBtn.click();
 
     // Verify that an error message appears
     await expect(mainPage.locator(".error-message")).toBeVisible();

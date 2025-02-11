@@ -37,7 +37,6 @@ test.describe("Start Page", () => {
   });
 
   test.afterEach(async () => {
-    mainPage?.close();
     await electronApp?.close();
   });
   test("should display Start screen and navigate to Login", async () => {

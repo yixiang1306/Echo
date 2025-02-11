@@ -55,23 +55,22 @@ test.describe("Settings Page", () => {
       // Ensure login is successful
       await mainPage.waitForURL(/\/#\/app/);
 
-      const profileIcon = ".profile-icon";
-      await mainPage.click(profileIcon);
-      await mainPage.click(".test-go-to-settings-btn");
-      await mainPage.waitForURL(/\/#\/settings/);
-
       console.log("Login successful and settings page loaded.");
     } else {
       console.log("Session exists. Skipping login.");
     }
   });
   test.afterEach(async () => {
-    mainPage?.close();
     await electronApp?.close();
   });
 
   test("should display settings page correctly", async () => {
     if (!mainPage) throw new Error("Main page not initialized");
+
+    const profileIcon = ".profile-icon";
+    await mainPage.click(profileIcon);
+    await mainPage.click(".test-go-to-settings-btn");
+    await mainPage.waitForURL(/\/#\/settings/);
 
     await expect(mainPage.locator(".test-setting-text")).toBeVisible();
     await expect(mainPage.locator(".test-update-acc-btn")).toBeVisible();
@@ -82,18 +81,33 @@ test.describe("Settings Page", () => {
 
   test("should navigate to Profile Settings", async () => {
     if (!mainPage) throw new Error("Main page not initialized");
+
+    const profileIcon = ".profile-icon";
+    await mainPage.click(profileIcon);
+    await mainPage.click(".test-go-to-settings-btn");
+    await mainPage.waitForURL(/\/#\/settings/);
     await mainPage.click(".test-update-acc-btn");
     await expect(mainPage).toHaveURL(/\/updateAcc/); // Check if redirected
   });
 
   test("should navigate to Feedback mainPage", async () => {
     if (!mainPage) throw new Error("Main page not initialized");
+
+    const profileIcon = ".profile-icon";
+    await mainPage.click(profileIcon);
+    await mainPage.click(".test-go-to-settings-btn");
+    await mainPage.waitForURL(/\/#\/settings/);
     await mainPage.click(".test-feedback-btn");
     await expect(mainPage).toHaveURL(/\/feedback/); // Check if redirected
   });
 
   test("should clear chat history", async () => {
     if (!mainPage) throw new Error("Main page not initialized");
+
+    const profileIcon = ".profile-icon";
+    await mainPage.click(profileIcon);
+    await mainPage.click(".test-go-to-settings-btn");
+    await mainPage.waitForURL(/\/#\/settings/);
     await mainPage.click(".test-clear-History-btn");
 
     // Validate that chat history is cleared (assumes a UI change happens)
@@ -103,6 +117,11 @@ test.describe("Settings Page", () => {
 
   test("should toggle dark mode", async () => {
     if (!mainPage) throw new Error("Main page not initialized");
+
+    const profileIcon = ".profile-icon";
+    await mainPage.click(profileIcon);
+    await mainPage.click(".test-go-to-settings-btn");
+    await mainPage.waitForURL(/\/#\/settings/);
     const themeButton = mainPage.locator(".test-darkmode_btn");
 
     // Check initial theme state
@@ -130,6 +149,11 @@ test.describe("Settings Page", () => {
 
   test("should close settings when clicking the close button", async () => {
     if (!mainPage) throw new Error("Main page not initialized");
+
+    const profileIcon = ".profile-icon";
+    await mainPage.click(profileIcon);
+    await mainPage.click(".test-go-to-settings-btn");
+    await mainPage.waitForURL(/\/#\/settings/);
     await mainPage.click(".test-close-btn"); // Click close button
     await expect(mainPage).not.toHaveURL(/\/settings/);
   });

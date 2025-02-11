@@ -10,18 +10,12 @@ const Upgrade: React.FC = () => {
   const { session } = useAuth();
   const navigate = useNavigate();
   const { isDarkMode } = useTheme(); // Get the current theme
-  const [currentSession, setCurrentSession] = useState<Session | null>(null);
 
   const [isSubscriptionActive, setIsSubscriptionActive] =
     useState<boolean>(false);
 
   useEffect(() => {
-    setCurrentSession(session);
     const fetchUserType = async () => {
-      if (!session) {
-        navigate("/");
-        return;
-      }
       let { data: User, error } = await supabase
         .from("User")
         .select("userType")
@@ -38,10 +32,6 @@ const Upgrade: React.FC = () => {
       }
     };
     fetchUserType();
-
-    return () => {
-      setCurrentSession(null);
-    };
   }, []);
 
   return (
@@ -62,7 +52,7 @@ const Upgrade: React.FC = () => {
       </div>
 
       {/* Header */}
-      <h1 className="text-4xl font-extrabold mb-12 text-center">
+      <h1 className="test-plan-choose-header text-4xl font-extrabold mb-12 text-center">
         Choose Your Plan
       </h1>
 
@@ -76,8 +66,8 @@ const Upgrade: React.FC = () => {
               : "bg-white border-gray-200"
           }`}
         >
-          <h2 className="text-2xl font-bold mb-3">Free Plan</h2>
-          <p className="text-4xl font-bold">$0</p>
+          <h2 className="test-free-plan text-2xl font-bold mb-3">Free Plan</h2>
+          <p className="test-free-plan-price text-4xl font-bold">$0</p>
           <ul className="text-sm mt-6 space-y-3 text-left">
             <li className="flex items-center gap-2">
               <Check /> <p>Auto-renew: $1 credit per day</p>
@@ -103,7 +93,7 @@ const Upgrade: React.FC = () => {
           </ul>
 
           <button
-            className={`mt-5 w-full py-3 px-6 rounded-full text-lg font-medium ${
+            className={`test-free-plan-btn mt-5 w-full py-3 px-6 rounded-full text-lg font-medium ${
               isDarkMode
                 ? "bg-gray-700 text-gray-400 cursor-not-allowed"
                 : "bg-gray-200 text-gray-600 cursor-not-allowed"
@@ -122,8 +112,10 @@ const Upgrade: React.FC = () => {
               : "bg-white border-gray-200"
           }`}
         >
-          <h2 className="text-2xl font-bold mb-3">Premium Plan</h2>
-          <p className="text-4xl font-bold">
+          <h2 className="test-premium-plan text-2xl font-bold mb-3">
+            Premium Plan
+          </h2>
+          <p className="test-premium-plan-price text-4xl font-bold">
             $25<span className="text-base font-normal">/month</span>
           </p>
           <ul className="text-sm mt-6 space-y-2 text-left">
@@ -138,7 +130,7 @@ const Upgrade: React.FC = () => {
             </li>
           </ul>
           <button
-            className={`mt-auto w-full py-3 px-6 rounded-full text-lg font-medium ${
+            className={`test-premium-plan-btn mt-auto w-full py-3 px-6 rounded-full text-lg font-medium ${
               isDarkMode
                 ? "bg-indigo-700 hover:bg-indigo-800 text-white"
                 : "bg-indigo-600 hover:bg-indigo-700 text-white"
@@ -164,8 +156,10 @@ const Upgrade: React.FC = () => {
               : "bg-white border-gray-200"
           }`}
         >
-          <h2 className="text-2xl font-bold mb-3">Pay Per Use</h2>
-          <p className="text-4xl font-bold">
+          <h2 className="test-payperuse-plan text-2xl font-bold mb-3">
+            Pay Per Use
+          </h2>
+          <p className="test-payperuse-plan-price text-4xl font-bold">
             $1<span className="text-base font-normal">/1 credit</span>
           </p>
           <ul className="text-sm mt-6 space-y-2 text-left">
@@ -194,7 +188,7 @@ const Upgrade: React.FC = () => {
 
           <button
             onClick={() => navigate("/pay_per_use_payment")}
-            className={`mt-auto w-full py-3 px-6 rounded-full text-lg font-medium ${
+            className={`test-payperuse-plan-btn mt-auto w-full py-3 px-6 rounded-full text-lg font-medium ${
               isDarkMode
                 ? "bg-teal-700 hover:bg-teal-800 text-white"
                 : "bg-teal-500 hover:bg-teal-600 text-white"

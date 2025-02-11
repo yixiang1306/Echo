@@ -16,7 +16,7 @@ export function createTray(
     {
       label: "Quit",
       click: () => {
-        setQuitting(true);
+        // setQuitting(true);
         app.quit();
       },
     },
@@ -24,10 +24,6 @@ export function createTray(
 
   tray.setContextMenu(trayMenu);
   tray.on("double-click", () => mainWindow.show());
-
-  app.on("before-quit", () => {
-    setQuitting(true);
-  });
 
   return tray;
 }
