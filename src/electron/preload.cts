@@ -25,7 +25,7 @@ contextBridge.exposeInMainWorld("llmAPI", {
   toggleRecording: (recording: boolean) =>
     ipcRenderer.send("toggle-recording", recording),
   sendText: (text: string, window: string) => ipcRenderer.send("text-input", text,window),
-  sendAudio: (base64Audio: string) =>
+  sendAudioToElectron: (base64Audio: string) =>
     ipcRenderer.invoke("send-audio", base64Audio),
 
   // Streaming Listeners
@@ -69,9 +69,13 @@ contextBridge.exposeInMainWorld("audioManagerAPI", {
   onStopAudio: (callback: () => void) =>
     ipcRenderer.on("stop-audio", () => callback()),
 
+  onFinishAudio: (callback: () => void) =>
+    ipcRenderer.on("finish-audio", () => callback()),
+
   // Remove listeners to prevent memory leaks
   removePlayAudioListener: () => ipcRenderer.removeAllListeners("play-audio"),
   removeStopAudioListener: () => ipcRenderer.removeAllListeners("stop-audio"),
+  removeOnFinishAudioListener: () => ipcRenderer.removeAllListeners("finish-audio"),
 });
 
 

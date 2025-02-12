@@ -3,7 +3,6 @@ import { IoIosSend } from "react-icons/io";
 import { FaMicrophone, FaYoutube } from "react-icons/fa";
 import { CiGlobe, CiImageOn } from "react-icons/ci";
 import { motion } from "motion/react";
-import { Scale } from "lucide-react";
 
 const OverlayUI = () => {
   const [messages, setMessages] = useState([
@@ -12,17 +11,15 @@ const OverlayUI = () => {
   const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [messageTag, setMessageTag] = useState<string | null>(null);
-  const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {}, []);
-
-  // Scroll to the latest message
-  useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isAwake, setIsAwake] = useState<boolean>(false);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isThinking, setIsThinking] = useState<boolean>(false);
+  const [isBlinking, setIsBlinking] = useState<boolean>(false);
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  let sleepTimeout: NodeJS.Timeout | null = null;
 
   // Handle text message submission
   const sendMessage = () => {
@@ -73,92 +70,6 @@ const OverlayUI = () => {
     setUserInput("");
   };
 
-  // Handle recording toggle
-  // const handleRecord = () => {
-  //   if (isRecording) {
-  //     if (mediaRecorder.current) {
-  //       mediaRecorder.current.stop();
-  //       mediaRecorder.current.stream
-  //         .getTracks()
-  //         .forEach((track) => track.stop());
-  //     }
-  //     setIsRecording(false);
-  //     return;
-  //   }
-
-  //   navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-  //     const recorder = new MediaRecorder(stream);
-  //     const audioChunks: Blob[] = [];
-
-  //     recorder.ondataavailable = (event) => {
-  //       audioChunks.push(event.data);
-  //     };
-
-  //     recorder.onstop = () => {
-  //       const blob = new Blob(audioChunks, { type: "audio/wav" });
-  //       sendAudio(blob);
-  //     };
-
-  //     recorder.start();
-  //     mediaRecorder.current = recorder;
-  //     setIsRecording(true);
-  //   });
-  // };
-
-  // Handle audio submission
-  const sendAudio = async (audioBlob: Blob) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(audioBlob);
-    reader.onloadend = async () => {
-      if (reader.result === null) return;
-
-      const base64Audio = (reader.result as string).split(",")[1]; // Extract base64 data
-
-      try {
-        //@ts-ignore
-        const response = await window.llmAPI.sendAudio(base64Audio);
-
-        setMessages((prev) => [...prev, { role: "user", content: response }]);
-
-        let aiResponse = "";
-
-        // Send the message via Electron API
-        //@ts-ignore
-        window.llmAPI.sendText(response, "overlay");
-
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "..." }, // Append new assistant message
-        ]);
-
-        // Listen for streamed text chunks
-        //@ts-ignore
-        window.llmAPI.onStreamText((textChunk) => {
-          aiResponse += textChunk;
-
-          // Update the last assistant message progressively
-          setMessages((prev) =>
-            prev.map((msg, index) =>
-              index === prev.length - 1 ? { ...msg, content: aiResponse } : msg
-            )
-          );
-        });
-
-        // Handle when streaming is complete
-        //@ts-ignore
-        window.llmAPI.onStreamComplete((fullText) => {
-          console.log("Streaming Complete:", fullText);
-        });
-      } catch (error) {
-        console.error("Error processing audio or sending message:", error);
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "Error processing your request." },
-        ]);
-      }
-    };
-  };
-
   const handleLLMResponse = (message: string, role: string): JSX.Element => {
     const imageRegex = /\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i;
     const youtubeRegex =
@@ -203,19 +114,172 @@ const OverlayUI = () => {
     );
   };
 
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isAwake, setIsAwake] = useState<boolean>(false);
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [isThinking, setIsThinking] = useState<boolean>(false);
-  const [isBlinking, setIsBlinking] = useState<boolean>(false);
-  const [isStreaming, setIsStreaming] = useState<boolean>(false);
+  const sleep = () => {
+    console.log("Sleeping...");
+    sleepTimeout = setTimeout(() => {
+      setIsAwake(false);
+    }, 10000);
+  };
 
-  //Handle Thinking
-  useEffect(() => {
-    setIsThinking(isStreaming);
+  // Handle audio submission
+  const sendAudio = async (audioBlob: Blob) => {
+    setIsThinking(true);
+    const reader = new FileReader();
+    reader.readAsDataURL(audioBlob);
+    reader.onloadend = async () => {
+      if (reader.result === null) return;
 
-    if (isStreaming === false) sleep();
-  }, [isStreaming]);
+      const base64Audio = (reader.result as string).split(",")[1]; // Extract base64 data
+
+      try {
+        //@ts-ignore
+        const response = await window.llmAPI.sendAudioToElectron(base64Audio);
+
+        setMessages((prev) => [...prev, { role: "user", content: response }]);
+
+        let aiResponse = "";
+
+        // Send the message via Electron API
+        //@ts-ignore
+        window.llmAPI.sendText(response, "overlay");
+
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "..." }, // Append new assistant message
+        ]);
+
+        // Listen for streamed text chunks
+        //@ts-ignore
+        window.llmAPI.onStreamText((textChunk) => {
+          aiResponse += textChunk;
+
+          // Update the last assistant message progressively
+          setMessages((prev) =>
+            prev.map((msg, index) =>
+              index === prev.length - 1 ? { ...msg, content: aiResponse } : msg
+            )
+          );
+        });
+
+        // Handle when streaming is complete
+        //@ts-ignore
+        window.llmAPI.onStreamComplete((fullText) => {
+          console.log("Streaming Complete:", fullText);
+        });
+      } catch (error) {
+        console.error("Error processing audio or sending message:", error);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "Error processing your request." },
+        ]);
+      }
+    };
+  };
+
+  const startRecording = () => {
+    navigator.mediaDevices
+      .getUserMedia({
+        audio: {
+          sampleRate: 48000,
+          channelCount: 1,
+          noiseSuppression: true,
+          echoCancellation: true,
+        },
+      })
+      .then(async (stream) => {
+        const recorder = new MediaRecorder(stream);
+        const audioChunks: Blob[] = [];
+        const audioContext = new AudioContext();
+
+        // Ensure AudioContext is active
+        if (audioContext.state === "suspended") {
+          await audioContext.resume();
+          console.log("AudioContext resumed");
+        }
+
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+
+        source.connect(analyser);
+
+        analyser.fftSize = 4096; // High resolution
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        let hasSound = false;
+        let silenceTimeout: NodeJS.Timeout | null = null;
+        let recordingActive = true; // Local control variable
+
+        const stopRecording = () => {
+          recordingActive = false; // Stop silence detection loop
+          setIsRecording(false); // Update global recording state
+          recorder.stop();
+          stream.getTracks().forEach((track) => track.stop());
+          audioContext.close();
+          console.log("Recording stopped.");
+        };
+
+        const checkSilence = () => {
+          if (!recordingActive) return; // Exit the loop if recording is inactive
+
+          analyser.getByteFrequencyData(dataArray);
+
+          // Compute volume as average of frequency values
+          const volume =
+            dataArray.reduce((sum, val) => sum + val, 0) / bufferLength;
+
+          if (volume > 20) {
+            hasSound = true;
+            if (silenceTimeout) {
+              console.log("Voice Detected - Resuming Recording...");
+              clearTimeout(silenceTimeout);
+
+              if (sleepTimeout) clearTimeout(sleepTimeout);
+              silenceTimeout = null;
+            }
+          } else {
+            if (!silenceTimeout) {
+              console.log("voice volume", volume);
+              silenceTimeout = setTimeout(() => {
+                console.log("Silence Detected - Stopping Recording...");
+                //@ts-ignore
+                //window.overlayManagerAPI.resumeWakeUp();
+                stopRecording();
+              }, 3000); // Stop after 3 seconds of silence
+            }
+          }
+
+          requestAnimationFrame(checkSilence); // Keep checking if recording is active
+        };
+
+        recorder.ondataavailable = (event) => {
+          audioChunks.push(event.data);
+        };
+
+        recorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: "audio/wav" });
+
+          if (hasSound) {
+            console.log("Sending audio...");
+            sendAudio(blob);
+          } else {
+            console.log("No voice detected - Audio discarded.");
+
+            //@ts-ignore
+            setTimeout(() => window.overlayManagerAPI.resumeWakeUp(), 3000);
+            sleep();
+          }
+        };
+
+        recorder.start();
+        console.log("Recording started...");
+        checkSilence(); // Start monitoring silence
+      })
+      .catch((err) => {
+        console.error("Microphone access error:", err);
+        setIsRecording(false); // Reset recording state if there's an error
+      });
+  };
 
   //Eye Movements
   useEffect(() => {
@@ -239,122 +303,29 @@ const OverlayUI = () => {
     return () => clearInterval(blinkInterval);
   }, []);
 
-  const sleep = () => {
-    setTimeout(() => {
-      setIsAwake(false);
-    }, 5000);
-  };
-
-  const startRecording = () => {
-    setIsRecording(true); // Explicitly set recording state to true
-    setIsAwake(true);
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then(async (stream) => {
-        const recorder = new MediaRecorder(stream);
-        const audioChunks: Blob[] = [];
-        const audioContext = new AudioContext();
-
-        // Ensure AudioContext is active
-        if (audioContext.state === "suspended") {
-          await audioContext.resume();
-          console.log("AudioContext resumed");
-        }
-
-        const source = audioContext.createMediaStreamSource(stream);
-        const analyser = audioContext.createAnalyser();
-
-        source.connect(analyser);
-
-        analyser.fftSize = 2048; // High resolution
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-
-        let hasSound = false;
-        let silenceTimeout: NodeJS.Timeout | null = null;
-        let recordingActive = true; // Local control variable
-
-        const stopRecording = () => {
-          recordingActive = false; // Stop silence detection loop
-          setIsRecording(false); // Update global recording state
-
-          recorder.stop();
-          stream.getTracks().forEach((track) => track.stop());
-          audioContext.close();
-          console.log("Recording stopped.");
-        };
-
-        const checkSilence = () => {
-          if (!recordingActive) return; // Exit the loop if recording is inactive
-
-          analyser.getByteFrequencyData(dataArray);
-
-          // Compute volume as average of frequency values
-          const volume =
-            dataArray.reduce((sum, val) => sum + val, 0) / bufferLength;
-
-          console.log("Volume:", volume);
-
-          if (volume > 20) {
-            hasSound = true;
-            if (silenceTimeout) {
-              clearTimeout(silenceTimeout);
-              silenceTimeout = null;
-            }
-          } else {
-            if (!silenceTimeout) {
-              silenceTimeout = setTimeout(() => {
-                console.log("Silence Detected - Stopping Recording...");
-                //@ts-ignore
-                window.overlayManagerAPI.resumeWakeUp();
-                sleep();
-                stopRecording();
-              }, 5000); // Stop after 5 seconds of silence
-            }
-          }
-
-          requestAnimationFrame(checkSilence); // Keep checking if recording is active
-        };
-
-        recorder.ondataavailable = (event) => {
-          audioChunks.push(event.data);
-        };
-
-        recorder.onstop = () => {
-          const blob = new Blob(audioChunks, { type: "audio/wav" });
-
-          if (hasSound) {
-            console.log("Sending audio...");
-            sendAudio(blob);
-          } else {
-            console.log("No voice detected - Audio discarded.");
-          }
-        };
-
-        recorder.start();
-        console.log("Recording started...");
-        checkSilence(); // Start monitoring silence
-      })
-      .catch((err) => {
-        console.error("Microphone access error:", err);
-        setIsRecording(false); // Reset recording state if there's an error
-      });
-  };
-
   useEffect(() => {
     const overlayToggleHandler = () => {
-      setIsOpen((prev) => !prev);
+      if (sleepTimeout) clearTimeout(sleepTimeout);
+      setIsOpen(true);
+      setIsRecording(true); // Explicitly set recording state to true
+      setIsAwake(true);
+      startRecording();
     };
-    const streamStartHandler = () => setIsStreaming(true);
+    const streamStartHandler = () => {
+      setIsThinking(true);
+    };
 
     const streamCompleteHandler = () => {
-      setIsStreaming(false);
+      console.log("stream completed - resuming wake up");
+      setIsThinking(false);
       //@ts-ignore
-      window.overlayManagerAPI.resumeWakeUp();
+      setTimeout(() => window.overlayManagerAPI.resumeWakeUp(), 3000);
       sleep();
     };
     const wakeUpHandler = () => {
-      if (!isOpenRef.current) setIsOpen(true);
+      if (sleepTimeout) clearTimeout(sleepTimeout);
+      setIsOpen(true);
+      setIsRecording(true); // Explicitly set recording state to true
       setIsAwake(true);
       startRecording();
     };
@@ -383,12 +354,6 @@ const OverlayUI = () => {
       //@ts-ignore
       window.llmAPI.removeStreamCompleteListener(streamCompleteHandler);
     };
-  }, []);
-
-  // Add ref for latest state
-  const isOpenRef = useRef(isOpen);
-  useEffect(() => {
-    isOpenRef.current = isOpen;
   }, [isOpen]);
 
   return (
@@ -411,7 +376,9 @@ const OverlayUI = () => {
             scale: isAwake ? [1, 1.1, 1] : 1, // Heartbeat effect
             backgroundColor: "#212121",
             opacity: isAwake ? 1 : 0.1, // Fades out when not awake
-            borderColor: isRecording ? "#ff3a61" : "white",
+            borderColor: isRecording
+              ? "rgba(255, 58, 97, 1)"
+              : "rgba(255, 255, 255, 1)",
           }}
           transition={{
             scale: isAwake
@@ -419,7 +386,7 @@ const OverlayUI = () => {
               : {},
             backgroundColor: { duration: 0.5, ease: "easeInOut" }, // Smooth color transition
             opacity: { duration: 0.5 }, // Fades smoothly
-            borderColor: { duration: 2, ease: "easeInOut" }, // Smooth border color transition
+            borderColor: { duration: 1, ease: "easeInOut" }, // Smooth border color transition
           }}
         >
           {/* Thinking Mode Animation */}
@@ -464,7 +431,7 @@ const OverlayUI = () => {
         className="overflow-y-auto w-[340px] max-h-[70vh] p-1 before:scrollbar-hide rounded-lg mt-[110px]"
         initial={false}
         animate={{
-          scale: isOpen || isAwake ? 1 : 0,
+          scale: isOpen ? 1 : 0,
         }}
         transition={{ delay: 0.2, duration: 0.6, ease: "easeInOut" }}
         style={{ originX: 1, originY: 0 }}
@@ -481,7 +448,7 @@ const OverlayUI = () => {
       </motion.div>
       {/* Input Area */}
 
-      <div className="pointer-events-auto w-[300px]">
+      {/* <div className="pointer-events-auto w-[300px]">
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
             <input
@@ -548,7 +515,7 @@ const OverlayUI = () => {
             </button>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

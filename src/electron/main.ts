@@ -214,6 +214,8 @@ ipcMain.handle("send-audio", async (_, base64Audio: string) => {
         encoding: "WEBM_OPUS", // Set the encoding to WEBM_OPUS
         sampleRateHertz: 48000, // Adjust sample rate to match your recording
         languageCode: "en-US", // Modify based on the language of the audio
+        alternativeLanguageCodes: ["en-GB", "en-AU", "en-IN","en-SG"],
+        
       },
       audio: {
         content: base64Audio, // Base64-encoded audio data
@@ -237,6 +239,8 @@ ipcMain.handle("send-audio", async (_, base64Audio: string) => {
         ?.map((result: any) => result.alternatives[0].transcript)
         .join("\n") || "No speech detected.";
 
+
+    console.log("Transcription Result:", transcription,"/n/n");    
     return transcription;
   } catch (error) {
     console.error("Error processing audio:", error);
@@ -299,7 +303,7 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
     if (textChunk.includes("<END>")) {
       textChunk = textChunk.replace("<END>", "").trim();
       fullResponse += textChunk;
-      console.log("end: ", fullResponse);
+      console.log("end response: ", fullResponse);
       currentWindow.webContents.send("stream-text", textChunk);
       currentWindow.webContents.send("stream-complete", fullResponse);
   

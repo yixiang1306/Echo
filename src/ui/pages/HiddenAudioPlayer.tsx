@@ -40,6 +40,17 @@ const HiddenAudioPlayer: React.FC = () => {
       }
     });
 
+    // Handle audio finish event
+    const handleAudioFinish = () => {
+      console.log("Audio playback finished.");
+      // You can add further actions here, like triggering another action or event.
+      // For example, you can call a function to notify other parts of the app.
+    };
+
+    if (audioRef.current) {
+      audioRef.current.addEventListener("ended", handleAudioFinish);
+    }
+
     // Cleanup listeners when the component is unmounted
     return () => {
       //@ts-ignore
