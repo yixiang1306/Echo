@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MoveLeft, Star } from "lucide-react";
+import { MoveLeft, Star, X } from "lucide-react";
 import { supabase } from "../utility/supabaseClient";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../utility/authprovider";
@@ -62,24 +62,31 @@ const Feedback = () => {
     }
   };
   return (
-    <div
-      className={`flex items-center justify-center w-full min-h-screen transition-colors ${
-        isDarkMode ? "bg-gray-900" : "bg-gray-100"
-      }`}
-    >
+    <div className="fixed top-0 left-0 w-full h-full bg-gray-100 dark:bg-primary text-gray-900 dark:text-white flex items-center justify-center transition-all duration-300">
+      {/* Logo */}
       <div
-        className={`max-w-lg w-full p-8 rounded-lg shadow-lg transition-colors ${
-          isDarkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"
-        }`}
+        className="absolute top-5 left-10 text-2xl font-bold cursor-pointer drop-shadow-[0_0_10px_rgba(0,150,255,0.8)]"
+        onClick={() => navigate("/app")}
       >
-        <MoveLeft
-          className="cursor-pointer"
-          onClick={() => navigate("/settings")}
-        />
+        <h1 className="dark:text-white text-gray-900 text-3xl">ECHO</h1>
+      </div>
 
-        <h2 className="test-feedback-text text-2xl font-bold mb-6 text-center">
-          We Value Your Feedback
-        </h2>
+      {/* Close Button */}
+      <div
+        className="absolute top-5 right-5 text-3xl cursor-pointer text-gray-900 dark:text-gray-300 hover:text-red-500 transition duration-300"
+        onClick={() => navigate("/app")}
+      >
+        <X className="size-10" />
+      </div>
+      <div className="relative flex flex-col items-center max-w-lg w-full p-8 space-y-4  bg-white dark:bg-secondary  rounded-3xl shadow-xl backdrop-blur-md border border-gray-300 dark:border-gray-700 transition-all duration-300">
+        {/* Glowing Border Effect */}
+        <div className="absolute inset-0 border-[2px] border-blue-500/40 rounded-3xl blur-sm pointer-events-none shadow-[0_0_20px_rgba(0,150,255,0.4)]"></div>
+
+        {/* Title */}
+        <h1 className="text-3xl font-extrabold tracking text-gray-900 dark:text-white drop-shadow-[0_0_15px_rgba(0,150,255,0.8)]">
+          Feedback
+        </h1>
+
         <form className="space-y-6" onSubmit={handleSubmitFeedback}>
           {/* Rating Input */}
           <div>

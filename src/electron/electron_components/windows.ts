@@ -24,11 +24,11 @@ export function createMainWindow(iconPath: string) {
   }));
 
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
-    minWidth: 800,
-    minHeight: 600,
-    show: true,
+    width: screen.getPrimaryDisplay().workAreaSize.width,
+    height: screen.getPrimaryDisplay().workAreaSize.height,
+    minWidth: 1000,
+    minHeight: 800,
+    show: false,
     icon: iconPath,
     webPreferences: {
       preload: getPreloadPath(),
@@ -42,6 +42,11 @@ export function createMainWindow(iconPath: string) {
     : `file://${extractAsar()}#/app`;
 
   mainWindow.loadURL(startURL);
+  // Show the window only when it's fully ready
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.maximize(); // Start maximized
+    mainWindow.show();
+  });
   return mainWindow;
 }
 

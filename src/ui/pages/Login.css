@@ -1,102 +1,118 @@
-/* General Page Layout */
-@import url('https://fonts.googleapis.com/css2?family=Lexend+Deca&display=swap');   /* For the font */
+@import url('https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@300;500;700&display=swap');
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Lexend Deca', sans-serif;
+  background-color: #121212;
+}
+
 .login-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: white;
-    font-family: 'Lexend Deca', sans-serif;
-  }
-  
-  /* Logo Styles */
-  .logo {
-    position: absolute; /* Position the logo absolutely */
-    top: 20px;          /* 20px from the top of the screen */
-    left: 40px;         /* 20px from the left of the screen */
-    cursor: pointer;
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin-bottom: 20px; /* Optional, can be removed */
-  }
-  
-  .ask {
-    color: black;
-  }
-  
-  .vox {
-    color: #6b5bff;
-  }
-  
-  /* Card Design */
-  .login-card {
-    display: flex;
-    flex-direction: column;
-    background-color: white;
-    padding: 40px 60px;
-    border-radius: 12px;
-  }
-  
-  .login-title {
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin-bottom: 20px;
-    text-align: center;
-  }
-  
-  /* Input Fields */
-  .input-field {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    outline: none;
-  }
-  
-  .input-field:focus {
-    border-color: #6b5bff;
-  }
-  
-  /* Buttons */
-  .login-button {
-    padding: 10px;
-    background-color: #6b5bff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1rem;
-    margin-top: 10px;
-  }
-  
-  .signup-button {
-    padding: 10px;
-    background-color: #4c4c4c;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1rem;
-    margin-top: 10px;
-  }
-  
-  .login-button:hover,
-  .signup-button:hover {
-    background-color: #5a4ae3;
-  }
-  
-  /* Error Message */
-  .error-message {
-    color: red;
-    margin-top: 10px;
-    font-size: 0.9rem;
-  }
-  
-  /* Divider */
-  .divider {
-    text-align: center;
-    margin: 10px 0;
-    color: #555;
-  }
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #121212;
+}
+
+.logo {
+  position: absolute;
+  top: 20px;
+  left: 40px;
+  cursor: pointer;
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 15px rgba(0, 150, 255, 0.8);
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  background: rgba(30, 30, 30, 0.95);
+  padding: 50px 70px;
+  border-radius: 15px;
+  border: 1px solid rgba(100, 100, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 150, 255, 0.3);
+  backdrop-filter: blur(10px);
+  text-align: center;
+  align-items: center; 
+
+}
+
+.login-card form{
+  display: flex;
+  flex-direction: column;
+}
+
+.login-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+.input-field {
+  width: 350px !important;
+  height: 50px;
+  box-sizing: border-box;
+  align-self: center; 
+  padding: 12px;
+  margin: 12px 0;
+  font-size: 1rem;
+  background: #181818;
+  border: 2px solid #444;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.3s ease-in-out;
+}
+
+.input-field:focus {
+  border-color: #6b5bff;
+  box-shadow: 0 0 10px rgba(107, 91, 255, 0.5);
+}
+
+.login-button,
+.signup-button {
+  width: 350px !important;
+  height: 50px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-button {
+  background: linear-gradient(90deg, #6b5bff, #4f46e5);
+  color: white;
+  border: none;
+  margin-top: 10px;
+}
+
+.signup-button {
+  background: linear-gradient(90deg, #3a3a3a, #2b2b2b);
+  color: white;
+  border: none;
+  margin-top: 10px;
+}
+
+.login-button:hover {
+  background: linear-gradient(90deg, #5a4ae3, #3f38c7);
+}
+
+.signup-button:hover {
+  background: linear-gradient(90deg, #4c4c4c, #3a3a3a);
+}
+
+.error-message {
+  color: red;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.divider {
+  margin: 20px 0;
+  color: #777;
+  font-size: 0.9rem;
+}

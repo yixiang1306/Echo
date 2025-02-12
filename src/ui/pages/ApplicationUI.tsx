@@ -1,4 +1,14 @@
-import { CircleCheckBig, CircleDollarSign, Wallet } from "lucide-react";
+import {
+  CircleCheckBig,
+  CircleDollarSign,
+  Coins,
+  DollarSign,
+  Gem,
+  PanelRightClose,
+  PanelRightOpen,
+  Settings2,
+  Wallet,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
@@ -14,6 +24,7 @@ import {
 import { FaMicrophone, FaYoutube } from "react-icons/fa";
 import { CiGlobe, CiImageOn } from "react-icons/ci";
 import { IoIosSend } from "react-icons/io";
+import { useLoading } from "../utility/loadingContext";
 
 export enum MODEL_TYPE {
   ASKVOX = "ASKVOX",
@@ -43,6 +54,7 @@ const ApplicationUI = () => {
     "How do I get to Abyssal Woods",
   ]);
   const { session } = useAuth();
+  const { setLoading } = useLoading();
 
   //------------------ Function the current session and resize handler -------------------------
 
@@ -72,6 +84,7 @@ const ApplicationUI = () => {
 
   //------------------ Function to fetch Display name from session -------------------------
   useEffect(() => {
+    setLoading(true);
     const fetchName = async () => {
       if (!currentSession) return;
       let { data: User, error } = await supabase
@@ -117,9 +130,15 @@ const ApplicationUI = () => {
         setWalletCoin(wallet!.amount as number);
       }
     };
-    fetchName();
-    fetchFreeCoin();
-    fetchWallet();
+    try {
+      fetchName();
+      fetchFreeCoin();
+      fetchWallet();
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
   }, [currentSession]);
 
   //------------------ Function   -------------------------
@@ -396,14 +415,14 @@ const ApplicationUI = () => {
 
     return (
       <p
-        className={`px-4 py-2 rounded-lg shadow-md animate-pop-up ${
+        className={`px-6 py-3 rounded-lg animate-pop-up ${
           role === "user"
             ? isDarkMode
-              ? "bg-blue-700 text-white"
-              : "bg-blue-500 text-white"
+              ? "bg-blue-600 text-white" // Deep blue in dark mode
+              : "bg-blue-500 text-white" // Vibrant blue in light mode
             : isDarkMode
-            ? "bg-gray-700 text-gray-200"
-            : "bg-gray-200 text-gray-800"
+            ? "bg-secondary text-white" // Darker gray for AI response in dark mode
+            : "bg-gray-300 text-gray-900" // Light gray for AI response in light mode
         }`}
       >
         {message}
@@ -413,150 +432,147 @@ const ApplicationUI = () => {
 
   return (
     <div
-      className={`flex h-screen  ${
-        isDarkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
+      className={`h-screen flex flex-row  ${
+        isDarkMode ? "bg-primary text-white" : "bg-lightBg text-black"
       } ${!isSidebarVisible ? "sidebar-hidden" : ""}`}
     >
-      {/* Sidebar Toggle Button */}
-      <button
-        className="sidebar-toggle-button fixed top-4 left-4 z-50 bg-transparent border-none cursor-pointer"
-        onClick={toggleSidebar}
-      >
-        <img
-          src={isSidebarVisible ? "./sidebar_open.png" : "./sidebar_close.png"}
-          alt={isSidebarVisible ? "Close Sidebar" : "Open Sidebar"}
-          className="w-8 h-8"
-        />
-      </button>
-
       {/* Sidebar */}
       <div
-        className={`sidebar-test flex flex-col justify-between ${
-          isDarkMode ? "bg-gray-800 text-white" : "bg-gray-900 text-white"
-        } p-4 transition-all duration-300 ${
-          isSidebarVisible ? "w-1/5" : "hidden"
-        }`}
+        className={`sidebar-test h-screen fixed lg:relative flex flex-col 
+    ${isDarkMode ? "bg-secondary text-white" : "bg-gray-900 text-white"} 
+    p-4 transition-all duration-300
+    ${isSidebarVisible ? "w-64 lg:w-1/5 lg:z-50" : "hidden lg:w-1/5"}
+  `}
       >
         {/* New Chat Button */}
         <button
-          className="self-end mt-1 mb-4 bg-transparent border-none cursor-pointer"
+          className="mt-1 mb-4 bg-transparent border-none cursor-pointer"
           onClick={startNewChat}
           title="Start New Chat"
         >
           <img src="./new_chat.png" alt="Start New Chat" className="w-6 h-6" />
         </button>
 
-        <h2 className="pt-12 mb-4">History</h2>
-        <ul className="space-y-4">
-          {chatHistory.length > 0 ? (
-            chatHistory.map((item, index) => <li key={index}>{item}</li>)
-          ) : (
-            <li>No history available</li>
-          )}
-        </ul>
+        <div>
+          <h2 className="pt-12 mb-4">History</h2>
+          <ul className="space-y-4">
+            {chatHistory.length > 0 ? (
+              chatHistory.map((item, index) => <li key={index}>{item}</li>)
+            ) : (
+              <li>No history available</li>
+            )}
+          </ul>
+        </div>
+
         <button
+          className="test-go-to-upgrade-btn mt-auto px-6 py-3 rounded-lg text-lg font-semibold border border-gray-400 dark:border-gray-500 text-gray-900 dark:text-gray-300 bg-gray-200 dark:bg-transparent
+            hover:bg-gray-300 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition duration-300 shadow-lg shadow-purple-500/30"
           onClick={goToUpgrade}
-          className={`test-go-to-upgrade-btn mt-auto ${
-            isDarkMode
-              ? "bg-purple-700 hover:bg-purple-800"
-              : "bg-purple-600 hover:bg-purple-700"
-          } text-white text-center py-2 px-4 rounded-lg`}
         >
           Upgrade Plan
         </button>
       </div>
 
       {/* Main Chat Area */}
-      <div
-        className={`flex-grow flex flex-col ${
-          isDarkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
-        } p-8 relative max-w-[500px] mx-auto`}
-      >
-        {/* Dropdown Menu */}
-        <div className="absolute top-4 right-0">
-          <div className="flex items-center gap-8">
-            <div className="flex gap-8">
-              {/* Token Balance Tooltip */}
-              <div className="relative group flex gap-2 items-center">
-                <CircleDollarSign className="free-coin text-yellow-400" />
-                <p className="">{freeCoin.toFixed(4)}</p>
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
-                  Daily Free Balance
-                </div>
-              </div>
-
-              {/* Wallet Balance Tooltip */}
-              <div className="relative group flex gap-2 items-center">
-                <Wallet className="wallet-coin text-blue-400" />
-                <p className="">{walletCoin.toFixed(4)}</p>
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
-                  Your Wallet Balance
-                </div>
-              </div>
-              {isSubscriptionActive && (
+      <div className={`flex flex-col p-4 w-full mx-auto`}>
+        {/* Top row */}
+        <div className="flex justify-between px-4 items-center">
+          {/* Sidebar Toggle Button left side */}
+          <button
+            className="sidebar-toggle-button z-50 border-none cursor-pointer"
+            onClick={toggleSidebar}
+          >
+            {isSidebarVisible ? (
+              <PanelRightOpen className="size-8" />
+            ) : (
+              <PanelRightClose className="size-8" />
+            )}
+          </button>
+          {/* Right Side top row */}
+          <div>
+            <div className="flex items-center gap-8">
+              <div className="flex gap-8">
+                {isSubscriptionActive && (
+                  <div className="relative group flex gap-2 items-center">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs md:text-sm bg-yellow-100 text-yellow-800 border border-yellow-300">
+                      <Gem className="w-5 h-5 text-yellow-600" />
+                      Premium User
+                    </div>
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg ">
+                      Your monthly Subscription is active
+                    </div>
+                  </div>
+                )}
+                {/* Token Balance Tooltip */}
                 <div className="relative group flex gap-2 items-center">
-                  <CircleCheckBig className=" text-green-600" />
-                  <p className=""></p>
-                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg ">
-                    Your monthly Subscription is active
+                  <Coins className="free-coin text-yellow-400 size-8" />
+                  <p className="text-md font-thin">{freeCoin.toFixed(2)}</p>
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
+                    Daily Free Balance
                   </div>
                 </div>
-              )}
-            </div>
 
-            <div className="relative">
-              <img
-                src="./user.png"
-                alt="Profile"
-                className="profile-icon w-8 h-8 rounded-full cursor-pointer"
-                onClick={toggleDropdown}
-              />
-              {dropdownOpen && (
-                <div
-                  className={`absolute right-0 mt-2 ${
-                    isDarkMode
-                      ? "bg-gray-800 border-gray-700"
-                      : "bg-white border-gray-300"
-                  } border rounded-lg shadow-lg w-36`}
-                >
-                  <ul
-                    className={`py-1 ${
-                      isDarkMode ? "text-gray-300" : "text-gray-700"
-                    }`}
-                  >
-                    <li
-                      className={`test-go-to-settings-btn px-4 py-2 cursor-pointer ${
-                        isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                      }`}
-                      onClick={goToSettings}
-                    >
-                      Settings
-                    </li>
-                    <li
-                      className={`px-4 py-2 cursor-pointer ${
-                        isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                      }`}
-                      onClick={goToUpgrade}
-                    >
-                      Upgrade Plan
-                    </li>
-                    <li
-                      className={`logout-option px-4 py-2 cursor-pointer ${
-                        isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                      }`}
-                      onClick={handleLogout}
-                    >
-                      Logout
-                    </li>
-                  </ul>
+                {/* Wallet Balance Tooltip */}
+                <div className="relative group flex gap-2 items-center">
+                  <DollarSign className="wallet-coin text-yellow-400 size-8" />
+                  <p className="text-md font-thin">{walletCoin.toFixed(2)}</p>
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:flex items-center justify-center px-2 py-1 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap">
+                    Your Wallet Balance
+                  </div>
                 </div>
-              )}
+              </div>
+
+              <div className="relative">
+                <Settings2
+                  className="profile-icon size-8 cursor-pointer"
+                  onClick={toggleDropdown}
+                />
+                {dropdownOpen && (
+                  <div
+                    className={`absolute right-0 mt-2 ${
+                      isDarkMode
+                        ? "bg-gray-800 border-gray-700"
+                        : "bg-white border-gray-300"
+                    } border rounded-lg shadow-lg w-36`}
+                  >
+                    <ul
+                      className={`py-1 ${
+                        isDarkMode ? "text-gray-300" : "text-gray-700"
+                      }`}
+                    >
+                      <li
+                        className={`test-go-to-settings-btn px-4 py-2 cursor-pointer ${
+                          isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                        }`}
+                        onClick={goToSettings}
+                      >
+                        Settings
+                      </li>
+                      <li
+                        className={`px-4 py-2 cursor-pointer ${
+                          isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                        }`}
+                        onClick={goToUpgrade}
+                      >
+                        Upgrade Plan
+                      </li>
+                      <li
+                        className={`logout-option px-4 py-2 cursor-pointer ${
+                          isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                        }`}
+                        onClick={handleLogout}
+                      >
+                        Logout
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-
         {/* Chat Messages */}
-        <div className="message-box flex-grow overflow-y-auto mt-20 scrollbar-hide text-sm ">
+        <div className="message-box flex-grow mx-auto w-full max-w-[800px] overflow-y-auto mt-10 scrollbar-hide font-light ">
           {messages.map((message, index) => (
             <div
               key={index}
@@ -573,16 +589,21 @@ const ApplicationUI = () => {
           <div ref={chatEndRef} />
         </div>
 
-        <div className="pointer-events-auto w-full">
-          <div className="space-y-2">
+        <div
+          className="pointer-events-auto mx-auto w-full max-w-[800px] mb-10 p-6 border rounded-2xl 
+  bg-secondary text-gray-900 border-secondary shadow-lg 
+  dark:bg-transparent dark:border-gray-500 dark:text-gray-300
+  shadow-purple-300/30 dark:shadow-purple-500/40"
+        >
+          <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <input
                 type="text"
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                className="chat-input flex-grow p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Type a message..."
+                className="chat-input h-12 flex-grow p-4 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Message Echo"
               />
               <button
                 onClick={sendMessage}
@@ -611,7 +632,7 @@ const ApplicationUI = () => {
                     prev === "websearch" ? null : "websearch"
                   )
                 }
-                className={`web-search-btn flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300 ${
+                className={`web-search-btn flex items-center gap-2 px-4 py-2 rounded-lg transition-transform duration-300 ${
                   messageTag === "websearch"
                     ? "bg-blue-500 shadow-md shadow-blue-500"
                     : "bg-blue-500 hover:scale-110 hover:shadow-md hover:shadow-blue-500"
@@ -628,7 +649,7 @@ const ApplicationUI = () => {
                     prev === "show me an image" ? null : "show me an image"
                   )
                 }
-                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300  ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-transform duration-300  ${
                   messageTag === "show me an image"
                     ? "bg-purple-700 shadow-md shadow-purple-700"
                     : "bg-purple-700 hover:scale-110 hover:shadow-md hover:shadow-purple-700"
@@ -645,7 +666,7 @@ const ApplicationUI = () => {
                     prev === "show me a video" ? null : "show me a video"
                   )
                 }
-                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-transform duration-300  ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-transform duration-300  ${
                   messageTag === "show me a video"
                     ? "bg-red-500 shadow-md shadow-red-500"
                     : "bg-red-500 hover:scale-110 hover:shadow-md hover:shadow-red-500"

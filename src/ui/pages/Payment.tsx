@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { supabase } from "../utility/supabaseClient";
 import { useAuth } from "../utility/authprovider";
 import { Session } from "@supabase/supabase-js";
+import { X } from "lucide-react";
 
 const Payment: React.FC = () => {
   const { session } = useAuth();
@@ -32,12 +33,6 @@ const Payment: React.FC = () => {
     // Extract last 4 digits safely (fallback to empty string if input is too short)
     const lastFourDigits = cardNumber.length >= 4 ? cardNumber.slice(-4) : "";
 
-    // const expiryDate = (
-    //   document.getElementById("expiryDate") as HTMLInputElement
-    // )?.value.trim();
-    // const cvc = (
-    //   document.getElementById("cvc") as HTMLInputElement
-    // )?.value.trim();
     const cardHolderName = (
       document.getElementById("cardHolderName") as HTMLInputElement
     )?.value.trim();
@@ -107,14 +102,25 @@ const Payment: React.FC = () => {
   };
 
   return (
-    <div
-      className={`flex flex-col items-center justify-center min-h-screen ${
-        isDarkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-black"
-      } p-4`}
-    >
+    <div className="fixed top-0 left-0 w-full h-full bg-gray-100 dark:bg-primary text-gray-900 dark:text-white flex items-center justify-center transition-all duration-300">
+      {/* Logo */}
+      <div
+        className="absolute top-5 left-10 text-2xl font-bold cursor-pointer drop-shadow-[0_0_10px_rgba(0,150,255,0.8)]"
+        onClick={() => navigate("/app")}
+      >
+        <h1 className="dark:text-white text-gray-900 text-3xl">ECHO</h1>
+      </div>
+
+      {/* Close Button */}
+      <div
+        className="absolute top-5 right-5 text-3xl cursor-pointer text-gray-900 dark:text-gray-300 hover:text-red-500 transition duration-300"
+        onClick={() => navigate("/app")}
+      >
+        <X className="size-10" />
+      </div>
       <div
         className={`w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8 ${
-          isDarkMode ? "bg-gray-800 text-white" : "bg-white text-black"
+          isDarkMode ? "bg-secondary text-white" : "bg-white text-black"
         } p-8 rounded-lg shadow-lg`}
       >
         {/* Left Section: Subscription Details */}
@@ -136,7 +142,7 @@ const Payment: React.FC = () => {
               }`}
               onClick={() => navigate("/upgrade")}
             >
-              Ask<span className="text-indigo-500">Vox</span>
+              ECHO
             </span>
           </div>
           <h1

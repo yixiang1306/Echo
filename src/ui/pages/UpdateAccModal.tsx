@@ -39,10 +39,12 @@ const UpdateAccModal: React.FC<UpdateAccModalProps> = ({
           {/* Confirm Button */}
           <button
             onClick={onConfirm}
-            className={`px-4 py-2 rounded hover:${
+            className={`test-comfirm-btn px-4 py-2 rounded hover:${
               isDarkMode ? "bg-indigo-700" : "bg-indigo-700"
             } ${
-              isDarkMode ? "bg-indigo-600 text-white" : "bg-indigo-600 text-white"
+              isDarkMode
+                ? "bg-indigo-600 text-white"
+                : "bg-indigo-600 text-white"
             }`}
           >
             Yes
