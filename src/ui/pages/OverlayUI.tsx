@@ -1,75 +1,76 @@
 import { useEffect, useRef, useState } from "react";
-import { IoIosSend } from "react-icons/io";
-import { FaMicrophone, FaYoutube } from "react-icons/fa";
-import { CiGlobe, CiImageOn } from "react-icons/ci";
+// import { IoIosSend } from "react-icons/io";
+// import { FaMicrophone, FaYoutube } from "react-icons/fa";
+// import { CiGlobe, CiImageOn } from "react-icons/ci";
 import { motion } from "motion/react";
 
 const OverlayUI = () => {
   const [messages, setMessages] = useState([
     { role: "assistant", content: "Hello! How can I assist you today?" },
   ]);
-  const [userInput, setUserInput] = useState("");
+  // const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [messageTag, setMessageTag] = useState<string | null>(null);
+  // const [messageTag, setMessageTag] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isAwake, setIsAwake] = useState<boolean>(false);
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [isThinking, setIsThinking] = useState<boolean>(false);
-  const [isBlinking, setIsBlinking] = useState<boolean>(false);
-  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 }); // for eye position
+  const [isAwake, setIsAwake] = useState<boolean>(false); // for wake up animation
+  const [isOpen, setIsOpen] = useState<boolean>(false); // for overlay open an close
+  const [isThinking, setIsThinking] = useState<boolean>(false); // for thinking animation - streaming llm
+  const [isBlinking, setIsBlinking] = useState<boolean>(false); // for eye blinking
+  const [showChatBox, setShowChatBox] = useState<boolean>(false); // for chat visibility
   let sleepTimeout: NodeJS.Timeout | null = null;
 
-  // Handle text message submission
-  const sendMessage = () => {
-    if (userInput.trim() === "") return;
+  // Handle text message submission for testing
+  // const sendMessage = () => {
+  //   if (userInput.trim() === "") return;
 
-    const taggedMessage = messageTag ? `${userInput} ${messageTag}` : userInput;
+  //   const taggedMessage = messageTag ? `${userInput} ${messageTag}` : userInput;
 
-    setMessages((prev) => [...prev, { role: "user", content: userInput }]);
+  //   setMessages((prev) => [...prev, { role: "user", content: userInput }]);
 
-    try {
-      let aiResponse = "";
+  //   try {
+  //     let aiResponse = "";
 
-      // Send the message via Electron API
-      //@ts-ignore
-      window.llmAPI.sendText(taggedMessage, "overlay");
+  //     // Send the message via Electron API
+  //     //@ts-ignore
+  //     window.llmAPI.sendText(taggedMessage, "overlay");
 
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "..." }, // Append new assistant message
-      ]);
+  //     setMessages((prev) => [
+  //       ...prev,
+  //       { role: "assistant", content: "..." }, // Append new assistant message
+  //     ]);
 
-      // Listen for streamed text chunks
-      //@ts-ignore
-      window.llmAPI.onStreamText((textChunk) => {
-        aiResponse += textChunk;
+  //     // Listen for streamed text chunks
+  //     //@ts-ignore
+  //     window.llmAPI.onStreamText((textChunk) => {
+  //       aiResponse += textChunk;
 
-        // Update the last assistant message progressively
-        setMessages((prev) =>
-          prev.map((msg, index) =>
-            index === prev.length - 1 ? { ...msg, content: aiResponse } : msg
-          )
-        );
-      });
+  //       // Update the last assistant message progressively
+  //       setMessages((prev) =>
+  //         prev.map((msg, index) =>
+  //           index === prev.length - 1 ? { ...msg, content: aiResponse } : msg
+  //         )
+  //       );
+  //     });
 
-      // Handle when streaming is complete
-      //@ts-ignore
-      window.llmAPI.onStreamComplete((fullText) => {
-        console.log("Streaming Complete:", fullText);
-      });
-    } catch (error) {
-      console.error("Error sending message:", error);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Error processing your request." },
-      ]);
-    }
+  //     // Handle when streaming is complete
+  //     //@ts-ignore
+  //     window.llmAPI.onStreamComplete((fullText) => {
+  //       console.log("Streaming Complete:", fullText);
+  //     });
+  //   } catch (error) {
+  //     console.error("Error sending message:", error);
+  //     setMessages((prev) => [
+  //       ...prev,
+  //       { role: "assistant", content: "Error processing your request." },
+  //     ]);
+  //   }
 
-    setUserInput("");
-  };
+  //   setUserInput("");
+  // };
 
+  //To handle LLM response and return component -> img,txt,video
   const handleLLMResponse = (message: string, role: string): JSX.Element => {
     const imageRegex = /\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i;
     const youtubeRegex =
@@ -118,7 +119,13 @@ const OverlayUI = () => {
     console.log("Sleeping...");
     sleepTimeout = setTimeout(() => {
       setIsAwake(false);
-    }, 10000);
+    }, 1000);
+  };
+
+  const closeChatBox = (time: number = 800) => {
+    setTimeout(() => {
+      setShowChatBox(false);
+    }, time);
   };
 
   // Handle audio submission
@@ -176,6 +183,7 @@ const OverlayUI = () => {
     };
   };
 
+  // Start recording
   const startRecording = () => {
     navigator.mediaDevices
       .getUserMedia({
@@ -233,8 +241,6 @@ const OverlayUI = () => {
             if (silenceTimeout) {
               console.log("Voice Detected - Resuming Recording...");
               clearTimeout(silenceTimeout);
-
-              if (sleepTimeout) clearTimeout(sleepTimeout);
               silenceTimeout = null;
             }
           } else {
@@ -242,8 +248,6 @@ const OverlayUI = () => {
               console.log("voice volume", volume);
               silenceTimeout = setTimeout(() => {
                 console.log("Silence Detected - Stopping Recording...");
-                //@ts-ignore
-                //window.overlayManagerAPI.resumeWakeUp();
                 stopRecording();
               }, 3000); // Stop after 3 seconds of silence
             }
@@ -264,9 +268,8 @@ const OverlayUI = () => {
             sendAudio(blob);
           } else {
             console.log("No voice detected - Audio discarded.");
-
             //@ts-ignore
-            setTimeout(() => window.overlayManagerAPI.resumeWakeUp(), 3000);
+            window.overlayManagerAPI.resumeWakeUp();
             sleep();
           }
         };
@@ -303,31 +306,48 @@ const OverlayUI = () => {
     return () => clearInterval(blinkInterval);
   }, []);
 
+  // HANDLE ALL LISTENERS HERE
   useEffect(() => {
     const overlayToggleHandler = () => {
-      if (sleepTimeout) clearTimeout(sleepTimeout);
-      setIsOpen(true);
-      setIsRecording(true); // Explicitly set recording state to true
+      setIsOpen((prev) => !prev);
       setIsAwake(true);
-      startRecording();
+      sleep();
     };
     const streamStartHandler = () => {
       setIsThinking(true);
+      setShowChatBox(true);
     };
 
     const streamCompleteHandler = () => {
       console.log("stream completed - resuming wake up");
       setIsThinking(false);
-      //@ts-ignore
-      setTimeout(() => window.overlayManagerAPI.resumeWakeUp(), 3000);
-      sleep();
+
+      if (!showChatBox) {
+        setShowChatBox(true);
+      }
     };
     const wakeUpHandler = () => {
-      if (sleepTimeout) clearTimeout(sleepTimeout);
+      if (sleepTimeout) {
+        // alert("clearing sleep timeout");
+        clearTimeout(sleepTimeout);
+      }
       setIsOpen(true);
       setIsRecording(true); // Explicitly set recording state to true
       setIsAwake(true);
       startRecording();
+    };
+
+    const endAudioHandler = () => {
+      //@ts-ignore
+      window.overlayManagerAPI.resumeWakeUp();
+      sleep();
+      closeChatBox();
+    };
+
+    const notTextHandler = () => {
+      //@ts-ignore
+      window.overlayManagerAPI.resumeWakeUp();
+      sleep();
     };
 
     // Add listeners
@@ -335,11 +355,16 @@ const OverlayUI = () => {
     //@ts-ignore
     window.overlayManagerAPI.onToggleOverlay(overlayToggleHandler);
     //@ts-ignore
+    window.overlayManagerAPI.onWakeUpCommand(wakeUpHandler);
+    //@ts-ignore
     window.llmAPI.onStreamStart(streamStartHandler);
     //@ts-ignore
     window.llmAPI.onStreamComplete(streamCompleteHandler);
     //@ts-ignore
-    window.overlayManagerAPI.onWakeUpCommand(wakeUpHandler);
+    window.llmAPI.notTextListener(notTextHandler);
+
+    //@ts-ignore
+    window.audioManagerAPI.onEndAudio(endAudioHandler);
 
     // Cleanup
     return () => {
@@ -353,14 +378,16 @@ const OverlayUI = () => {
       window.llmAPI.removeStreamStartListener(streamStartHandler);
       //@ts-ignore
       window.llmAPI.removeStreamCompleteListener(streamCompleteHandler);
+      //@ts-ignore
+      window.llmAPI.removeNotTextListener(notTextHandler);
+      //@ts-ignore
+      window.audioManagerAPI.removeEndAudioListener(endAudioHandler);
     };
   }, [isOpen]);
 
   return (
     <div className="flex flex-col h-screen text-white  text-sm gap-3 relative">
-      {/* AI ICON */}
-
-      {/* MAIN TAG FOR OPEN AND CLOSE */}
+      {/* AI creature */}
       <motion.div
         className="absolute top-10 right-10"
         initial={false}
@@ -431,7 +458,7 @@ const OverlayUI = () => {
         className="overflow-y-auto w-[340px] max-h-[70vh] p-1 before:scrollbar-hide rounded-lg mt-[110px]"
         initial={false}
         animate={{
-          scale: isOpen ? 1 : 0,
+          scale: showChatBox ? 1 : 0,
         }}
         transition={{ delay: 0.2, duration: 0.6, ease: "easeInOut" }}
         style={{ originX: 1, originY: 0 }}
@@ -446,8 +473,8 @@ const OverlayUI = () => {
           ))}
         <div ref={chatEndRef} />
       </motion.div>
-      {/* Input Area */}
 
+      {/* TOOLS FOR TESTING UI */}
       {/* <div className="pointer-events-auto w-[300px]">
         <div className="space-y-2">
           <div className="flex items-center space-x-2">

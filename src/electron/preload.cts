@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron/renderer";
+import { finished } from "node:stream";
 
 enum MODEL_TYPE {
   ASKVOX = "ASKVOX",
@@ -27,8 +28,9 @@ contextBridge.exposeInMainWorld("llmAPI", {
   sendText: (text: string, window: string) => ipcRenderer.send("text-input", text,window),
   sendAudioToElectron: (base64Audio: string) =>
     ipcRenderer.invoke("send-audio", base64Audio),
+  
 
-  // Streaming Listeners
+  //Listeners
 
   onStreamStart: (callback:()=>void)=>
     ipcRenderer.on("stream-start",()=> callback()),
@@ -43,6 +45,8 @@ contextBridge.exposeInMainWorld("llmAPI", {
   onPlayAudio: (callback: (audioBase64: string) => void) =>
     ipcRenderer.on("play-audio", (_, audioBase64) => callback(audioBase64)),
 
+  notTextListener: (callback: () => void) =>
+    ipcRenderer.on("not-text", () => callback()),
 
    // Remove listeners to prevent memory leaks
    removeStreamStartListener: () =>
@@ -53,6 +57,9 @@ contextBridge.exposeInMainWorld("llmAPI", {
     ipcRenderer.removeAllListeners("stream-complete"),
   removePlayAudioListener: () =>
     ipcRenderer.removeAllListeners("play-audio"),
+  removeNotTextListener: () =>
+    ipcRenderer.removeAllListeners("not-text"),
+  
 
 
 
@@ -63,19 +70,25 @@ contextBridge.exposeInMainWorld("audioManagerAPI", {
   playAudio: (audioBase64: string) =>
     ipcRenderer.send("play-audio", audioBase64),
   stopAudio: () => ipcRenderer.send("stop-audio"),
+
+  endAudio:() => {console.log("🚀 finishAudio() called in preload!");ipcRenderer.send("end-audio")},
+
+
   // Event listeners for play and stop audio
   onPlayAudio: (callback: (audioBase64: string) => void) =>
     ipcRenderer.on("play-audio", (_, audioBase64) => callback(audioBase64)),
   onStopAudio: (callback: () => void) =>
     ipcRenderer.on("stop-audio", () => callback()),
+  onEndAudio: (callback: () => void) =>
+    ipcRenderer.on("end-audio", () => callback()),
 
-  onFinishAudio: (callback: () => void) =>
-    ipcRenderer.on("finish-audio", () => callback()),
+
 
   // Remove listeners to prevent memory leaks
   removePlayAudioListener: () => ipcRenderer.removeAllListeners("play-audio"),
   removeStopAudioListener: () => ipcRenderer.removeAllListeners("stop-audio"),
-  removeOnFinishAudioListener: () => ipcRenderer.removeAllListeners("finish-audio"),
+  removeEndAudioListener: () => ipcRenderer.removeAllListeners("end-audio"),
+
 });
 
 

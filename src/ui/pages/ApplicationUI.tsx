@@ -188,129 +188,92 @@ const ApplicationUI = () => {
     setUserInput("");
   };
 
-  //------------------ Function   -------------------------
+  // ------------------ Function   -------------------------
 
-  // // Handle recording toggle
-  // const handleRecord = () => {
-  //   //@ts-ignore
-  //   window.llmAPI.toggleRecording(!isRecording);
-
-  //   if (!isRecording) {
-  //     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-  //       const recorder = new MediaRecorder(stream);
-  //       const audioChunks: Blob[] = [];
-
-  //       recorder.ondataavailable = (event) => {
-  //         audioChunks.push(event.data);
-  //       };
-
-  //       recorder.onstop = () => {
-  //         const blob = new Blob(audioChunks, { type: "audio/wav" });
-  //         sendAudio(blob);
-  //       };
-
-  //       recorder.start();
-  //       mediaRecorder.current = recorder;
-  //     });
-  //   } else if (mediaRecorder.current) {
-  //     mediaRecorder.current.stop();
-  //     mediaRecorder.current.stream.getTracks().forEach((track) => track.stop());
-  //   }
-
-  //   setIsRecording((prev) => !prev);
-  // };
-
-  // //------------------ Function   -------------------------
-
-  // // Handle audio submission
-  // const sendAudio = async (audioBlob: Blob) => {
-  //   const reader = new FileReader();
-  //   reader.readAsDataURL(audioBlob);
-  //   reader.onloadend = async () => {
-  //     if (reader.result === null) return;
-
-  //     const base64Audio = (reader.result as string).split(",")[1]; // Extract base64 data
-
-  //     try {
-  //       //@ts-ignore
-  //       const response = await window.llmAPI.sendAudio(base64Audio);
-
-  //       setMessages((prev) => [...prev, { role: "user", content: response }]);
-
-  //       let aiResponse = "";
-
-  //       // Send the message via Electron API
-  //       //@ts-ignore
-  //       window.llmAPI.sendText(response, "main");
-
-  //       setMessages((prev) => [
-  //         ...prev,
-  //         { role: "assistant", content: "..." }, // Append new assistant message
-  //       ]);
-
-  //       // Listen for streamed text chunks
-  //       //@ts-ignore
-  //       window.llmAPI.onStreamText((textChunk) => {
-  //         aiResponse += textChunk;
-
-  //         // Update the last assistant message progressively
-  //         setMessages((prev) =>
-  //           prev.map((msg, index) =>
-  //             index === prev.length - 1 ? { ...msg, content: aiResponse } : msg
-  //           )
-  //         );
-  //       });
-
-  //       // Handle when streaming is complete
-  //       //@ts-ignore
-  //       window.llmAPI.onStreamComplete((fullText) => {
-  //         console.log("Streaming Complete:", fullText);
-  //       });
-  //     } catch (error) {
-  //       console.error("Error processing audio or sending message:", error);
-  //       setMessages((prev) => [
-  //         ...prev,
-  //         { role: "assistant", content: "Error processing your request." },
-  //       ]);
-  //     }
-  //   };
-  // };
-
-  const handleRecord = async () => {
+  // Handle recording toggle
+  const handleRecord = () => {
     //@ts-ignore
     window.llmAPI.toggleRecording(!isRecording);
 
     if (!isRecording) {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioContext = new AudioContext({ sampleRate: 16000 }); // Set 16kHz
-      const source = audioContext.createMediaStreamSource(stream);
-      const recorder = audioContext.createScriptProcessor(4096, 1, 1);
+      navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+        const recorder = new MediaRecorder(stream);
+        const audioChunks: Blob[] = [];
 
-      let audioData: Float32Array[] = [];
+        recorder.ondataavailable = (event) => {
+          audioChunks.push(event.data);
+        };
 
-      recorder.onaudioprocess = (event) => {
-        audioData.push(event.inputBuffer.getChannelData(0));
-      };
+        recorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: "audio/wav" });
+          sendAudio(blob);
+        };
 
-      source.connect(recorder);
-      recorder.connect(audioContext.destination);
-      //@ts-ignore
-      mediaRecorder.current = { stream, recorder, audioContext, audioData };
+        recorder.start();
+        mediaRecorder.current = recorder;
+      });
     } else if (mediaRecorder.current) {
-      //@ts-ignore
-      mediaRecorder.current.recorder.disconnect();
-      //@ts-ignore
-      mediaRecorder.current.audioContext.close();
-
-      //@ts-ignore
-      const wavBlob = encodeWAV(mediaRecorder.current.audioData, 16000);
-      //@ts-ignore
-      sendAudio(wavBlob);
-
+      mediaRecorder.current.stop();
       mediaRecorder.current.stream.getTracks().forEach((track) => track.stop());
     }
 
     setIsRecording((prev) => !prev);
+  };
+
+  //------------------ Function   -------------------------
+
+  // Handle audio submission
+  const sendAudio = async (audioBlob: Blob) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(audioBlob);
+    reader.onloadend = async () => {
+      if (reader.result === null) return;
+
+      const base64Audio = (reader.result as string).split(",")[1]; // Extract base64 data
+
+      try {
+        //@ts-ignore
+        const response = await window.llmAPI.sendAudioToElectron(base64Audio);
+
+        setMessages((prev) => [...prev, { role: "user", content: response }]);
+
+        let aiResponse = "";
+
+        // Send the message via Electron API
+        //@ts-ignore
+        window.llmAPI.sendText(response, "main");
+
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "..." }, // Append new assistant message
+        ]);
+
+        // Listen for streamed text chunks
+        //@ts-ignore
+        window.llmAPI.onStreamText((textChunk) => {
+          aiResponse += textChunk;
+
+          // Update the last assistant message progressively
+          setMessages((prev) =>
+            prev.map((msg, index) =>
+              index === prev.length - 1 ? { ...msg, content: aiResponse } : msg
+            )
+          );
+        });
+
+        // Handle when streaming is complete
+        //@ts-ignore
+        window.llmAPI.onStreamComplete((fullText) => {
+          console.log("Streaming Complete:", fullText);
+        });
+      } catch (error) {
+        console.error("Error processing audio or sending message:", error);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "Error processing your request." },
+        ]);
+      }
+    };
   };
 
   //------------------ Function Sign out   ------------------------

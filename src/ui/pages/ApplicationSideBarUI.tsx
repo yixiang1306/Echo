@@ -112,7 +112,7 @@ const ApplicationSideBarUI = () => {
 
       try {
         //@ts-ignore
-        const response = await window.llmAPI.sendAudio(base64Audio);
+        const response = await window.llmAPI.sendAudioToElectron(base64Audio);
 
         setMessages((prev) => [...prev, { role: "user", content: response }]);
 
@@ -120,7 +120,7 @@ const ApplicationSideBarUI = () => {
 
         // Send the message via Electron API
         //@ts-ignore
-        window.llmAPI.sendText(response, "overlay");
+        window.llmAPI.sendText(response, "sidebar");
 
         setMessages((prev) => [
           ...prev,

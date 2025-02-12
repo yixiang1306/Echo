@@ -42,9 +42,9 @@ const HiddenAudioPlayer: React.FC = () => {
 
     // Handle audio finish event
     const handleAudioFinish = () => {
+      //@ts-ignore
+      window.audioManagerAPI.endAudio();
       console.log("Audio playback finished.");
-      // You can add further actions here, like triggering another action or event.
-      // For example, you can call a function to notify other parts of the app.
     };
 
     if (audioRef.current) {
@@ -57,6 +57,10 @@ const HiddenAudioPlayer: React.FC = () => {
       window.audioManagerAPI.removePlayAudioListener();
       //@ts-ignore
       window.audioManagerAPI.removeStopAudioListener();
+
+      if (audioRef.current) {
+        audioRef.current.removeEventListener("ended", handleAudioFinish);
+      }
     };
   }, []);
 

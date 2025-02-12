@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { app, globalShortcut, ipcMain, Tray } from "electron";
+import { app, globalShortcut, ipcMain, Tray, BrowserWindow } from "electron";
 import log from "electron-log";
 import fs from "fs";
 import os from "node:os";
@@ -14,7 +14,7 @@ import {
   createOverlayWindow,
   createSideBarWindow,
 } from "./electron_components/windows.js";
-import { isDev, MODEL_TYPE } from "./util.js";
+import { isDev, MODEL_TYPE } from "./util.js";  
 import axios from "axios";
 // Set the correct .env file path
 const envPath = isDev()
@@ -240,7 +240,7 @@ ipcMain.handle("send-audio", async (_, base64Audio: string) => {
         .join("\n") || "No speech detected.";
 
 
-    console.log("Transcription Result:", transcription,"/n/n");    
+    console.log("Transcription Result:", transcription);    
     return transcription;
   } catch (error) {
     console.error("Error processing audio:", error);
@@ -308,7 +308,7 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
       currentWindow.webContents.send("stream-complete", fullResponse);
   
       // Proceed to TTS
-      processTTS(fullResponse);
+      processTTS(fullResponse,window);
     } else {
       currentWindow.webContents.send("stream-text", textChunk);
       fullResponse += textChunk;
@@ -346,7 +346,17 @@ ipcMain.handle("resume-wakeup", () => {
   wakeUpProcess?.resume();
 });
 
-async function processTTS(fullResponse: string) {
+
+ipcMain.on("end-audio", () => {
+  console.log("Received 'end-audio' event in main process!");
+
+  // Send the event to all open windows
+  BrowserWindow.getAllWindows().forEach((win) => {
+    win.webContents.send("end-audio"); // Send to all windows
+  });
+});
+
+async function processTTS(fullResponse: string, window: string) {
    
   // Check if the response is an image or YouTube link
   const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(fullResponse);
@@ -378,6 +388,10 @@ async function processTTS(fullResponse: string) {
       console.error("TTS Error:", ttsError);
     }
   } else {
+    if (window === "overlay") {
+      overlayWindow!.webContents.send("not-text");
+    }
     console.log("Response is an image or YouTube link, skipping TTS.");
+    
   }
 }
