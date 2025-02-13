@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { app, BrowserWindow, globalShortcut, ipcMain, Tray } from "electron";
+import { app, globalShortcut, ipcMain, Tray, BrowserWindow } from "electron";
 import log from "electron-log";
 import fs from "fs";
 import os from "node:os";
@@ -75,6 +75,7 @@ app.on("ready", async () => {
       keyBinding();
 
       // WakeUp Process Listener
+      wakeUpProcess.process.stdout.removeAllListeners("data");
       wakeUpProcess.process.stdout.on("data", async (data: Buffer) => {
         console.log(data.toString().trim());
 
@@ -228,6 +229,7 @@ ipcMain.handle("send-audio", async (_, base64Audio: string) => {
         encoding: "WEBM_OPUS", // Set the encoding to WEBM_OPUS
         sampleRateHertz: 48000, // Adjust sample rate to match your recording
         languageCode: "en-US", // Modify based on the language of the audio
+        alternativeLanguageCodes: ["en-GB", "en-AU", "en-IN", "en-SG"],
       },
       audio: {
         content: base64Audio, // Base64-encoded audio data
@@ -251,6 +253,7 @@ ipcMain.handle("send-audio", async (_, base64Audio: string) => {
         ?.map((result: any) => result.alternatives[0].transcript)
         .join("\n") || "No speech detected.";
 
+    console.log("Transcription Result:", transcription);
     return transcription;
   } catch (error) {
     console.error("Error processing audio:", error);
@@ -315,7 +318,7 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
       currentWindow?.webContents.send("stream-complete", fullResponse);
 
       // Proceed to TTS
-      processTTS(fullResponse);
+      processTTS(fullResponse, window);
     } else {
       currentWindow?.webContents.send("stream-text", textChunk);
       fullResponse += textChunk;
@@ -345,7 +348,21 @@ ipcMain.handle(
   }
 );
 
-async function processTTS(fullResponse: string) {
+ipcMain.handle("resume-wakeup", () => {
+  console.log("Resuming WakeUp Process...");
+  wakeUpProcess?.resume();
+});
+
+ipcMain.on("end-audio", () => {
+  console.log("Received 'end-audio' event in main process!");
+
+  // Send the event to all open windows
+  BrowserWindow.getAllWindows().forEach((win) => {
+    win.webContents.send("end-audio"); // Send to all windows
+  });
+});
+
+async function processTTS(fullResponse: string, window: string) {
   // Check if the response is an image or YouTube link
   const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(fullResponse);
   const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(
@@ -378,6 +395,9 @@ async function processTTS(fullResponse: string) {
       console.error("TTS Error:", ttsError);
     }
   } else {
+    if (window === "overlay") {
+      overlayWindow!.webContents.send("not-text");
+    }
     console.log("Response is an image or YouTube link, skipping TTS.");
   }
 }

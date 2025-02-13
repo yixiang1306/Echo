@@ -122,7 +122,7 @@ export function createOverlayWindow(
     width: 450,
     height,
     transparent: true, // Transparent background
-    frame: true,
+    frame: false,
     show: true,
     x: width - 450,
     y: 0,
@@ -139,8 +139,8 @@ export function createOverlayWindow(
 
   overlayWindow.isAlwaysOnTop();
 
-  // ✅ Make the window click-through (mouse ignores it)
-  //overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  // Make the window click-through (mouse ignores it)
+  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
 
   const overlayURL = isDev()
     ? "http://localhost:3000/#/overlay"

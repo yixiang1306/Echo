@@ -287,6 +287,9 @@ def get_response(user_input: str):
             #this will output the full response of the LLM
             print(chunk_content, end="", flush=True)
 
+        # Add assistant response to conversation history
+        chat_history.append({"role": "assistant", "content": full_response})
+
     else:
         # Extract tool calls
         tool_calls = response_stream.choices[0].message.tool_calls
@@ -301,8 +304,10 @@ def get_response(user_input: str):
                 #this will output the full response of the tool
                 print(full_response, end="", flush=True) 
 
-    # Add assistant response to conversation history
-    chat_history.append({"role": "assistant", "content": full_response})
+                # Add assistant response to conversation history
+                chat_history.append({"role": "assistant", "content": "sure, here is your requested answers that I got with the help of the tool: " + full_response})
+
+    
 
     print("<END>", flush=True)
  

@@ -89,7 +89,9 @@ const ApplicationUI = () => {
     handleResize();
     window.addEventListener("resize", handleResize);
 
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   //------------------ Function to fetch Display name from session -------------------------
@@ -331,7 +333,7 @@ const ApplicationUI = () => {
 
       try {
         //@ts-ignore
-        const response = await window.llmAPI.sendAudio(base64Audio);
+        const response = await window.llmAPI.sendAudioToElectron(base64Audio);
 
         setMessages((prev) => [
           ...prev,

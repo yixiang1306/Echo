@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron/renderer";
+import { finished } from "node:stream";
 
 enum MODEL_TYPE {
   ASKVOX = "ASKVOX",
@@ -26,10 +27,10 @@ contextBridge.exposeInMainWorld("llmAPI", {
     ipcRenderer.send("toggle-recording", recording),
   sendText: (text: string, window: string) =>
     ipcRenderer.send("text-input", text, window),
-  sendAudio: (base64Audio: string) =>
+  sendAudioToElectron: (base64Audio: string) =>
     ipcRenderer.invoke("send-audio", base64Audio),
 
-  // Streaming Listeners
+  //Listeners
 
   onStreamStart: (callback: () => void) =>
     ipcRenderer.on("stream-start", () => callback()),
@@ -43,6 +44,9 @@ contextBridge.exposeInMainWorld("llmAPI", {
   onPlayAudio: (callback: (audioBase64: string) => void) =>
     ipcRenderer.on("play-audio", (_, audioBase64) => callback(audioBase64)),
 
+  notTextListener: (callback: () => void) =>
+    ipcRenderer.on("not-text", () => callback()),
+
   // Remove listeners to prevent memory leaks
   removeStreamStartListener: () =>
     ipcRenderer.removeAllListeners("stream-start"),
@@ -50,6 +54,7 @@ contextBridge.exposeInMainWorld("llmAPI", {
   removeStreamCompleteListener: () =>
     ipcRenderer.removeAllListeners("stream-complete"),
   removePlayAudioListener: () => ipcRenderer.removeAllListeners("play-audio"),
+  removeNotTextListener: () => ipcRenderer.removeAllListeners("not-text"),
 });
 
 // Expose a new audioManagerAPI
@@ -57,18 +62,29 @@ contextBridge.exposeInMainWorld("audioManagerAPI", {
   playAudio: (audioBase64: string) =>
     ipcRenderer.send("play-audio", audioBase64),
   stopAudio: () => ipcRenderer.send("stop-audio"),
+
+  endAudio: () => {
+    console.log("🚀 finishAudio() called in preload!");
+    ipcRenderer.send("end-audio");
+  },
+
   // Event listeners for play and stop audio
   onPlayAudio: (callback: (audioBase64: string) => void) =>
     ipcRenderer.on("play-audio", (_, audioBase64) => callback(audioBase64)),
   onStopAudio: (callback: () => void) =>
     ipcRenderer.on("stop-audio", () => callback()),
+  onEndAudio: (callback: () => void) =>
+    ipcRenderer.on("end-audio", () => callback()),
 
   // Remove listeners to prevent memory leaks
   removePlayAudioListener: () => ipcRenderer.removeAllListeners("play-audio"),
   removeStopAudioListener: () => ipcRenderer.removeAllListeners("stop-audio"),
+  removeEndAudioListener: () => ipcRenderer.removeAllListeners("end-audio"),
 });
 
 contextBridge.exposeInMainWorld("overlayManagerAPI", {
+  resumeWakeUp: () => ipcRenderer.invoke("resume-wakeup"),
+
   //Event listeners
   onToggleOverlay: (callback: () => void) =>
     ipcRenderer.on("toggle-overlay", () => callback()),

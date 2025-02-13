@@ -40,12 +40,27 @@ const HiddenAudioPlayer: React.FC = () => {
       }
     });
 
+    // Handle audio finish event
+    const handleAudioFinish = () => {
+      //@ts-ignore
+      window.audioManagerAPI.endAudio();
+      console.log("Audio playback finished.");
+    };
+
+    if (audioRef.current) {
+      audioRef.current.addEventListener("ended", handleAudioFinish);
+    }
+
     // Cleanup listeners when the component is unmounted
     return () => {
       //@ts-ignore
       window.audioManagerAPI.removePlayAudioListener();
       //@ts-ignore
       window.audioManagerAPI.removeStopAudioListener();
+
+      if (audioRef.current) {
+        audioRef.current.removeEventListener("ended", handleAudioFinish);
+      }
     };
   }, []);
 
