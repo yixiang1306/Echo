@@ -36,7 +36,7 @@ Your name is Echo.
 You are friendly and intelligent. 
 You are a helpful game assistant with tool calling capabilities. 
 Maintain context from the conversation and only call tools when necessary. 
-avoid using special characters and emojis.
+avoid using special characters and emojis. avoid using tools if user question is not related to the tools.
 '''
 #FOR SUMMARIZATION
 summerize_system_prompt = '''
@@ -60,7 +60,7 @@ def search_wallhaven_image(search_param: str):
     """Fetch an image from the first three pages of Wallhaven, sorted by views"""
     all_images = []
 
-    for i in range(1, 4):  # Loop through pages 1, 2, and 3
+    for i in range(1, 3):  # Loop through pages 1, 2, and 3
         params = {
             "q": search_param,  # Search query
             "sorting": "views",  # Sorting by most viewed images
@@ -87,7 +87,7 @@ def search_youtube_video(search_param: str):
         "part": "snippet",
         "q": search_param,
         "type": "video",
-        "maxResults": 5,
+        "maxResults": 3,
         "key": YOUTUBE_API_KEY,
     }
     response = requests.get(YOUTUBE_SEARCH_URL, params=params)
@@ -257,7 +257,7 @@ def get_response(user_input: str):
         return search_web(user_input.replace("web search", "").strip())
     
     # **Detect if the user wants a tool call**
-    if any(word in lower_input for word in ["video", "trailer", "clip", "youtube", "image","img", "wallpaper", "photo", "pic"]):
+    if any(word in lower_input for word in ["video", "trailer", "clip", "youtube", "image","img", "wallpaper", "photo", "pic", "picture"]):
         tool_name = "auto"
         streamConfig = False 
     else:

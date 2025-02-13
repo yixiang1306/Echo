@@ -200,7 +200,7 @@ const ApplicationSideBarUI = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen items-center justify-center text-white text-sm gap-3">
+    <div className="flex flex-col h-screen items-center justify-center text-white font-thin text-sm gap-3">
       {/* Chat Area */}
       <div className="flex-grow  overflow-y-auto w-[300px] space-y-4 max-h-[70vh] scrollbar-hide rounded-lg">
         {messages.map((message, index) => (

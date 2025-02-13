@@ -175,7 +175,7 @@ app.on("window-all-closed", () => {
 //KEY BINDING
 function keyBinding() {
   globalShortcut.register("Alt+C", () =>
-    audioWindow.webContents.send("stop-audio")
+    handleAudioStop()
   );
   globalShortcut.register("Alt+V", () => handleSideBarToggle());
 
@@ -204,6 +204,14 @@ async function handleOverlayToggle() {
   if (overlayWindow) {
     overlayWindow.webContents.send("toggle-overlay");
   }
+}
+
+async function handleAudioStop() {
+  audioWindow.webContents.send("stop-audio");
+  // Send the event to all open windows
+  BrowserWindow.getAllWindows().forEach((win) => {
+    win.webContents.send("end-audio"); // Send to all windows
+  });
 }
 
 //Handle quitting parameters
