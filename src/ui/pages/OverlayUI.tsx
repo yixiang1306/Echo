@@ -107,7 +107,7 @@ const OverlayUI = () => {
         className={`px-4 py-2 rounded-lg animate-pop-up ${
           role === "user"
             ? "bg-blue-600 text-white"
-            : "bg-[#212121] text-gray-200"
+            : "bg-secondary text-gray-200"
         }`}
       >
         {message}
@@ -386,7 +386,7 @@ const OverlayUI = () => {
   }, [isOpen]);
 
   return (
-    <div className="flex flex-col h-screen text-white  text-sm gap-3 relative">
+    <div className="flex flex-col h-screen text-white font-thin text-sm gap-3 relative">
       {/* AI creature */}
       <motion.div
         className="absolute top-10 right-10"
@@ -458,7 +458,7 @@ const OverlayUI = () => {
         className="overflow-y-auto w-[340px] max-h-[70vh] p-1 before:scrollbar-hide rounded-lg mt-[110px]"
         initial={false}
         animate={{
-          scale: showChatBox ? 1 : 0,
+          scale: showChatBox && isOpen ? 1 : 0,
         }}
         transition={{ delay: 0.2, duration: 0.6, ease: "easeInOut" }}
         style={{ originX: 1, originY: 0 }}
