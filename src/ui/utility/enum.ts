@@ -1,0 +1,15 @@
+export enum MODEL_TYPE {
+  ASKVOX = "ASKVOX",
+  GPT_4o = "GPT_4o",
+}
+
+export enum CHAT_ROLE {
+  USER = "USER",
+  ASSISTANT = "ASSISTANT",
+}
+
+export enum USER_TYPE {
+  FREE = "FREE",
+  MONTHLY_SUBSCRIPTION = "MONTHLY_SUBSCRIPTION",
+  PAY_PER_USER = "PAY_PER_USE",
+}
