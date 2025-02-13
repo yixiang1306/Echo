@@ -42,25 +42,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     initializeSession();
-
-    // ✅ Listen for authentication state changes (session refresh)
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        console.log("🔄 Auth event:", _event, session);
+      async (_event, newSession) => {
+        console.log(" Auth event:", _event);
 
-        if (_event === "SIGNED_IN" && session) {
-          console.log("User signed in:", session.user.id);
-          setSession(session);
-        } else if (_event === "SIGNED_OUT") {
-          console.log("User signed out, redirecting...");
+        if (_event === "SIGNED_OUT") {
+          console.log("🚪 User signed out, redirecting...");
+
           setSession(null);
           navigate("/");
-        } else if (_event === "TOKEN_REFRESHED" && session) {
-          console.log("Session refreshed:", session);
-          setSession(session);
-        } else if (_event === "USER_UPDATED" && session) {
-          console.log("User updated:", session);
-          setSession(session);
+        } else {
+          // Avoid unnecessary updates if session remains the same
+          setSession((prevSession) => {
+            if (JSON.stringify(prevSession) === JSON.stringify(newSession)) {
+              return prevSession; // No need to update state
+            }
+            return newSession; // Only update if different
+          });
         }
       }
     );

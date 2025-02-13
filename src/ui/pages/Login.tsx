@@ -22,30 +22,13 @@ function Login() {
     setMessage("");
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
         setMessage("Error signing in: " + error.message);
-        setIsProcessing(false);
-        return;
-      }
-
-      console.log("User signed in:", data);
-      const userId = data.user.id;
-
-      const isMarkedOnline = await markUserAsOnline(userId);
-      if (!isMarkedOnline) {
-        setMessage("Failed to mark user as online.");
-        setIsProcessing(false);
-        return;
-      }
-
-      const isSynced = await syncCoinsAndSubscriptions(userId);
-      if (!isSynced) {
-        setMessage("Failed to sync user data.");
         setIsProcessing(false);
         return;
       }
