@@ -1,10 +1,10 @@
 /* Signup Page Styling */
-@import url('https://fonts.googleapis.com/css2?family=Lexend+Deca&display=swap');   /* For the font */
+@import url('https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@300;500;700&display=swap');   /* For the font */
 body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Lexend Deca', sans-serif;
-    background-color: #f8f8f8;
+  margin: 0;
+  padding: 0;
+  font-family: 'Lexend Deca', sans-serif;
+  background-color: #121212;
   }
   
   .signup-container {
@@ -13,52 +13,58 @@ body {
     align-items: center;
     justify-content: center;
     height: 100vh;
-    background-color: #ffffff;
+    background-color: #121212;
   }
   
   .logo {
-    position: absolute; /* Position the logo absolutely */
-    top: 20px;          /* 20px from the top of the screen */
-    left: 40px;         /* 20px from the left of the screen */
-    cursor: pointer;
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin-bottom: 20px; /* Optional, can be removed */
+    position: absolute;
+  top: 20px;
+  left: 40px;
+  cursor: pointer;
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 15px rgba(0, 150, 255, 0.8);
   }
-  
-  .ask {
-    color: #000000;
-  }
-  
-  .vox {
-    color: #4b4efc;
-  }
-  
-  .signup-box {
+    
+  .signup-box{
     display: flex;
     flex-direction: column;
-    align-items: center;
-    background-color: #ffffff;
-    padding: 2rem;
-    border-radius: 10px;
-    width: 350px;
+    background: rgba(30, 30, 30, 0.95);
+    padding: 50px 70px;
+    border-radius: 15px;
+    border: 1px solid rgba(100, 100, 255, 0.3);
+    box-shadow: 0 0 15px rgba(0, 150, 255, 0.3);
+    backdrop-filter: blur(10px);
+    text-align: center;
+    align-items: center; 
+  }
+  .signup-box form{
+    display: flex;
+    flex-direction: column;
   }
   
   .signup-box h2 {
-    margin-bottom: 1.5rem;
-    font-size: 1.5rem;
-    color: #000000;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #fff;
   }
   
   .input-field {
-    width: 100%;
-    padding: 0.75rem;
-    margin-bottom: 1rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
+    width: 350px !important;
+    height: 50px;
+    box-sizing: border-box;
+    align-self: center; 
+    padding: 12px;
+    margin: 12px 0;
     font-size: 1rem;
+    background: #181818;
+    border: 2px solid #444;
+    border-radius: 8px;
     outline: none;
-    background-color: #f6f6f6;
+    transition: border-color 0.3s ease-in-out;
+    color: white;
   }
   
   .input-field::placeholder {
@@ -66,16 +72,13 @@ body {
   }
   
   .signup-button {
-    width: 100%;
-    padding: 0.75rem;
-    background-color: #000000;
-    border: none;
-    border-radius: 5px;
-    color: #ffffff;
-    font-weight: bold;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
+    width: 350px !important;
+  height: 50px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
   }
   
   .signup-button:hover {
@@ -83,8 +86,8 @@ body {
   }
   
   .error-message {
-    color: #e74c3c;
-    margin-bottom: 1rem;
+    color: red;
+    margin-top: 10px;
     font-size: 0.9rem;
   }
 

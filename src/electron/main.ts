@@ -14,7 +14,7 @@ import {
   createOverlayWindow,
   createSideBarWindow,
 } from "./electron_components/windows.js";
-import { isDev, MODEL_TYPE } from "./util.js";  
+import { isDev, MODEL_TYPE } from "./util.js";
 import axios from "axios";
 // Set the correct .env file path
 const envPath = isDev()
@@ -25,7 +25,7 @@ const envPath = isDev()
 dotenv.config({ path: envPath });
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
-let mainWindow: Electron.BrowserWindow;
+let mainWindow: Electron.BrowserWindow | null = null;
 let sideBarWindow: Electron.BrowserWindow | null = null;
 let overlayWindow: Electron.BrowserWindow | null = null;
 let audioWindow: Electron.BrowserWindow;
@@ -56,22 +56,21 @@ app.on("ready", async () => {
       console.log("✅ Opening other windows from MAIN window");
       if (!wakeUpProcess) wakeUpProcess = createWakeUpProcess();
 
-      if(!sideBarWindow){ 
+      if (!sideBarWindow) {
         console.log("yes");
         sideBarWindow = createSideBarWindow(mainWindow, iconPath)!;
         overlayWindow = createOverlayWindow(mainWindow, iconPath)!;
 
-
-        if(overlayWindow){
+        if (overlayWindow) {
           console.log("overlay window created");
         }
 
         // Handle window events
-        sideBarWindow.on("blur" , async() => {
+        sideBarWindow.on("blur", async () => {
           await slideOut(sideBarWindow!);
           sideBarWindow!.hide();
         });
-      };
+      }
       // Global shortcuts
       keyBinding();
 
@@ -112,7 +111,6 @@ app.on("ready", async () => {
         overlayWindow = null; // Remove reference
       }
 
-
       wakeUpProcess?.kill(); // Kill the WakeUp process
 
       console.log("✅ wakeUpProcess killed successfully");
@@ -133,15 +131,32 @@ app.on("ready", async () => {
   mainWindow.on("close", (event) => {
     if (!isQuitting) {
       event.preventDefault();
-      mainWindow.hide();
+      mainWindow!.hide();
+    } else {
+      mainWindow = null; // Ensure no references to the window
     }
   });
 });
 
 // Cleanup before quit
 app.on("before-quit", () => {
+  console.log(process.eventNames()); // Lists active event listeners
+  console.log(app.eventNames()); // Check Electron-specific listeners
+  globalShortcut.unregisterAll();
   wakeUpProcess?.kill();
+  wakeUpProcess = null;
   llmProcess.kill();
+  // Remove all event listeners
+  ipcMain.removeAllListeners();
+  app.removeAllListeners();
+
+  // Destroy all windows
+  BrowserWindow.getAllWindows().forEach((win) => win.destroy());
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+  app.exit(0);
 });
 
 function cleanUpExtractedFiles() {
@@ -151,8 +166,11 @@ function cleanUpExtractedFiles() {
   }
 }
 
-app.on("window-all-closed", cleanUpExtractedFiles);
-
+// Cleanup before quit
+app.on("window-all-closed", () => {
+  cleanUpExtractedFiles();
+  ipcMain.removeAllListeners();
+});
 
 //KEY BINDING
 function keyBinding() {
@@ -162,8 +180,6 @@ function keyBinding() {
   globalShortcut.register("Alt+V", () => handleSideBarToggle());
 
   globalShortcut.register("Alt+B", () => handleOverlayToggle());
-
-
 }
 
 // Handle SideBar Toggle
@@ -184,12 +200,11 @@ async function handleSideBarToggle() {
 //Handle Overlay Toggle
 
 async function handleOverlayToggle() {
-    console.log("ALT+B is pressed")
-    if(overlayWindow){
-      overlayWindow.webContents.send("toggle-overlay");
-    }
+  console.log("ALT+B is pressed");
+  if (overlayWindow) {
+    overlayWindow.webContents.send("toggle-overlay");
+  }
 }
-
 
 //Handle quitting parameters
 
@@ -214,8 +229,7 @@ ipcMain.handle("send-audio", async (_, base64Audio: string) => {
         encoding: "WEBM_OPUS", // Set the encoding to WEBM_OPUS
         sampleRateHertz: 48000, // Adjust sample rate to match your recording
         languageCode: "en-US", // Modify based on the language of the audio
-        alternativeLanguageCodes: ["en-GB", "en-AU", "en-IN","en-SG"],
-        
+        alternativeLanguageCodes: ["en-GB", "en-AU", "en-IN", "en-SG"],
       },
       audio: {
         content: base64Audio, // Base64-encoded audio data
@@ -239,8 +253,7 @@ ipcMain.handle("send-audio", async (_, base64Audio: string) => {
         ?.map((result: any) => result.alternatives[0].transcript)
         .join("\n") || "No speech detected.";
 
-
-    console.log("Transcription Result:", transcription);    
+    console.log("Transcription Result:", transcription);
     return transcription;
   } catch (error) {
     console.error("Error processing audio:", error);
@@ -261,7 +274,6 @@ ipcMain.handle("stop-audio", () => {
 });
 
 ipcMain.on("text-input", async (_, text: string, window: string) => {
-
   let currentWindow = mainWindow;
 
   switch (window) {
@@ -277,7 +289,6 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
       break;
   }
 
-  
   llmProcess.process.stdin.write(text + "\n");
   console.log("Sent text to Python...");
 
@@ -285,17 +296,16 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
   let isFirstChunk = true;
   // Remove existing listeners to prevent duplication
   llmProcess.process.stdout.removeAllListeners("data");
-  llmProcess.process.stdout.setEncoding('utf-8');
+  llmProcess.process.stdout.setEncoding("utf-8");
 
   // Handle real-time streaming
   llmProcess.process.stdout.on("data", (chunk) => {
     let textChunk = chunk.toString();
     console.log("Received chunk:", textChunk);
 
-
     // **Send "stream-start" event only once when the first chunk arrives**
     if (isFirstChunk) {
-      currentWindow.webContents.send("stream-start");
+      currentWindow?.webContents.send("stream-start");
       console.log("stream-started");
       isFirstChunk = false;
     }
@@ -303,20 +313,17 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
     if (textChunk.includes("<END>")) {
       textChunk = textChunk.replace("<END>", "").trim();
       fullResponse += textChunk;
-      console.log("end response: ", fullResponse);
-      currentWindow.webContents.send("stream-text", textChunk);
-      currentWindow.webContents.send("stream-complete", fullResponse);
-  
+      console.log("end: ", fullResponse);
+      currentWindow?.webContents.send("stream-text", textChunk);
+      currentWindow?.webContents.send("stream-complete", fullResponse);
+
       // Proceed to TTS
-      processTTS(fullResponse,window);
+      processTTS(fullResponse, window);
     } else {
-      currentWindow.webContents.send("stream-text", textChunk);
+      currentWindow?.webContents.send("stream-text", textChunk);
       fullResponse += textChunk;
-      
     }
   });
-
-  
 });
 
 ipcMain.handle(
@@ -346,7 +353,6 @@ ipcMain.handle("resume-wakeup", () => {
   wakeUpProcess?.resume();
 });
 
-
 ipcMain.on("end-audio", () => {
   console.log("Received 'end-audio' event in main process!");
 
@@ -357,10 +363,11 @@ ipcMain.on("end-audio", () => {
 });
 
 async function processTTS(fullResponse: string, window: string) {
-   
   // Check if the response is an image or YouTube link
   const isImage = /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(fullResponse);
-  const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(fullResponse);
+  const isYouTubeLink = /(?:youtube\.com\/embed\/|youtu\.be\/)/i.test(
+    fullResponse
+  );
 
   if (!isImage && !isYouTubeLink) {
     console.log("translating to audio...");
@@ -392,6 +399,5 @@ async function processTTS(fullResponse: string, window: string) {
       overlayWindow!.webContents.send("not-text");
     }
     console.log("Response is an image or YouTube link, skipping TTS.");
-    
   }
 }

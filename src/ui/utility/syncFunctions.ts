@@ -78,7 +78,10 @@ export async function syncCoinsAndSubscriptions(userId: string) {
     .eq("accountId", userId)
     .single();
 
-  if (error) return false;
+  if (error) {
+    console.log(" error", error);
+    return false;
+  }
 
   const lastUpdate = data.updatedAt.split("T")[0];
 
@@ -91,7 +94,10 @@ export async function syncCoinsAndSubscriptions(userId: string) {
       })
       .eq("id", data.id);
 
-    if (updateError) return false;
+    if (updateError) {
+      console.log("update error", updateError);
+      return false;
+    }
   }
 
   const { data: userTypeData, error: userTypeError } = await supabase
@@ -100,7 +106,10 @@ export async function syncCoinsAndSubscriptions(userId: string) {
     .eq("accountId", userId)
     .single();
 
-  if (userTypeError) return false;
+  if (userTypeError) {
+    console.log("userTypeError error", userTypeError);
+    return false;
+  }
 
   if (userTypeData.userType !== "MONTHLY_SUBSCRIPTION") return true;
 
@@ -110,7 +119,10 @@ export async function syncCoinsAndSubscriptions(userId: string) {
     .eq("accountId", userId)
     .single();
 
-  if (subscriptionError) return false;
+  if (subscriptionError) {
+    console.log("subscriptionError error", subscriptionError);
+    return false;
+  }
 
   const expiredDate = subscriptionData.expiredAt.split("T")[0];
 
@@ -121,7 +133,10 @@ export async function syncCoinsAndSubscriptions(userId: string) {
       .eq("accountId", userId)
       .single();
 
-    if (walletError) return false;
+    if (walletError) {
+      console.log(walletError);
+      return false;
+    }
 
     const newType = walletData.amount <= 0 ? "FREE" : "PAY_PER_USE";
 

@@ -12,13 +12,12 @@ function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [message, setMessage] = useState(""); // For error or info messages
-  const [isProcessing, setIsProcessing] = useState(false); // Prevent multiple clicks
+  const [message, setMessage] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  //----------------------- Handle sign-in form submission---------------------------------
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isProcessing) return; // Prevent duplicate clicks
+    if (isProcessing) return;
     setIsProcessing(true);
     setMessage("");
 
@@ -35,10 +34,8 @@ function Login() {
       }
 
       console.log("User signed in:", data);
-
       const userId = data.user.id;
 
-      // 🔹 Mark user as online
       const isMarkedOnline = await markUserAsOnline(userId);
       if (!isMarkedOnline) {
         setMessage("Failed to mark user as online.");
@@ -46,18 +43,17 @@ function Login() {
         return;
       }
 
-      // 🔹 Sync coins and subscriptions
       const isSynced = await syncCoinsAndSubscriptions(userId);
       if (!isSynced) {
         setMessage("Failed to sync user data.");
         setIsProcessing(false);
         return;
       }
-      //  Redirect to app
+
       navigate("/app");
     } catch (error) {
       console.error("Login error:", error);
-      setMessage(" An unexpected error occurred.");
+      setMessage("An unexpected error occurred.");
     } finally {
       setIsProcessing(false);
     }
@@ -66,40 +62,45 @@ function Login() {
   return (
     <div className="login-container">
       <div className="logo" onClick={() => navigate("/")}>
-        <span className="ask">Ask</span>
-        <span className="vox">Vox</span>
+        <h1>ECHO</h1>
       </div>
 
       <div className="login-card">
-        <h1 className="login-title">Login Here</h1>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          className="input-field"
-          disabled={isProcessing}
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          className="input-field"
-          disabled={isProcessing}
-        />
-        {message && <div className="error-message">{message}</div>}{" "}
-        {/* Show error message if any */}
-        <button
-          onClick={handleSignIn}
-          className="login-button"
-          disabled={isProcessing}
-        >
-          {isProcessing ? "Logging in..." : "Login"}
-        </button>
-        <div className="divider">
-          <span>------------ Or ------------</span>
-        </div>
+        <h1 className="login-title">Welcome Back</h1>
+
+        {/* Updated: Use a form element for proper structure */}
+        <form onSubmit={handleSignIn} className="login-form">
+          <input
+            required
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+            className="input-field"
+            disabled={isProcessing}
+          />
+          <input
+            required
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
+            className="input-field"
+            disabled={isProcessing}
+          />
+          {message && <div className="error-message">{message}</div>}
+
+          {/* Use type="submit" to handle form submission */}
+          <button
+            type="submit"
+            className="login-button"
+            disabled={isProcessing}
+          >
+            {isProcessing ? "Logging in..." : "Login"}
+          </button>
+        </form>
+
+        <div className="divider">Or continue with</div>
         <button onClick={() => navigate("/signup")} className="signup-button">
           Sign Up
         </button>

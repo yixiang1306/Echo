@@ -2,7 +2,6 @@ import { Session } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
-import { useLoading } from "./loadingContext";
 
 type AuthContextType = {
   session: Session | null;
@@ -17,14 +16,13 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(true); // ✅ Track loading state
-  const { setLoading } = useLoading();
+
   const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
 
     const initializeSession = async () => {
-      setLoading(true);
       try {
         // ✅ Get current session (also retrieves refresh token)
         const { data, error } = await supabase.auth.getSession();
@@ -38,7 +36,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error("Error retrieving session:", error);
       } finally {
         if (isMounted) {
-          setLoading(false);
           setIsSessionLoading(false);
         }
       }

@@ -20,6 +20,7 @@ import Upgrade from "./pages/Upgrade";
 import { AuthProvider } from "./utility/authprovider";
 import ProtectedRoute from "./utility/protectedroute";
 import { LoadingProvider } from "./utility/loadingContext";
+import Maintenance from "./pages/Maintenance";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -32,6 +33,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/" element={<Start />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/maintenance" element={<Maintenance />} />
               {/* Protected Routes */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/app" element={<ApplicationUI />} />
@@ -39,10 +41,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/sidebar" element={<ApplicationSideBarUI />} />
                 <Route path="/audio" element={<HiddenAudioPlayer />} />
                 <Route path="/upgrade" element={<Upgrade />} />
-                <Route
-                  path="/settings"
-                  element={<Settings clearChatHistory={() => {}} />}
-                />
+                <Route path="/settings" element={<Settings />} />
                 <Route path="/updateAcc" element={<UpdateAcc />} />
                 <Route path="/payment" element={<Payment />} />
                 <Route

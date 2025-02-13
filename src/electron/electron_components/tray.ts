@@ -1,4 +1,4 @@
-import { Tray, Menu, app } from "electron";
+import { Menu, Tray, app } from "electron";
 import { setQuitting } from "../main.js";
 
 export function createTray(
@@ -16,7 +16,7 @@ export function createTray(
     {
       label: "Quit",
       click: () => {
-        setQuitting(true);
+        // setQuitting(true);
         app.quit();
       },
     },
