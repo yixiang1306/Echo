@@ -4,6 +4,7 @@ import {
   Coins,
   DollarSign,
   Gem,
+  ListPlus,
   PanelRightClose,
   PanelRightOpen,
   Settings2,
@@ -25,10 +26,16 @@ import { FaMicrophone, FaYoutube } from "react-icons/fa";
 import { CiGlobe, CiImageOn } from "react-icons/ci";
 import { IoIosSend } from "react-icons/io";
 import { useLoading } from "../utility/loadingContext";
+import { v4 as uuidv4 } from "uuid";
 
 export enum MODEL_TYPE {
   ASKVOX = "ASKVOX",
   GPT_4o = "GPT_4o",
+}
+
+export enum CHAT_ROLE {
+  USER = "USER",
+  ASSISTANT = "ASSISTANT",
 }
 
 const ApplicationUI = () => {
@@ -48,14 +55,17 @@ const ApplicationUI = () => {
   const [freeCoin, setFreeCoin] = useState(5.0);
   const [walletCoin, setWalletCoin] = useState(5.0);
   const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
-  const [chatHistory] = useState<string[]>([
-    "Composite bow stats",
-    "How do I beat Battlemage",
-    "How do I get to Abyssal Woods",
-  ]);
   const { session } = useAuth();
   const { setLoading } = useLoading();
+  const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
+  interface ChatHistoryItem {
+    id: string;
+    title: string;
+    createdAt: string;
+    preview: string;
+  }
   //------------------ Function the current session and resize handler -------------------------
 
   useEffect(() => {
@@ -130,10 +140,54 @@ const ApplicationUI = () => {
         setWalletCoin(wallet!.amount as number);
       }
     };
+
+    const fetchChatHistory = async () => {
+      if (!currentSession) return;
+      try {
+        // Fetch all chats for the current user
+        const { data: chats, error: chatsError } = await supabase
+          .from("ChatHistory")
+          .select("id, title, createdAt")
+          .eq("accountId", currentSession.user.id)
+          .order("createdAt", { ascending: false });
+
+        if (chatsError) {
+          console.error("Error fetching chat history:", chatsError.message);
+          return;
+        }
+
+        // For each chat, fetch the latest message preview
+        const chatsWithPreview = await Promise.all(
+          chats.map(async (chat) => {
+            const { data: messages, error: messagesError } = await supabase
+              .from("Conversation")
+              .select("content")
+              .eq("chatHistoryId", chat.id)
+              .order("createdAt", { ascending: false })
+              .limit(1);
+
+            if (messagesError) {
+              console.error(
+                "Error fetching chat messages:",
+                messagesError.message
+              );
+              return { ...chat, preview: "No messages" };
+            }
+
+            return { ...chat, preview: messages[0]?.content || "No messages" };
+          })
+        );
+        setChatHistory(chatsWithPreview);
+      } catch (error) {
+        console.error("Error fetching chat history:", error);
+      }
+    };
+
     try {
       fetchName();
       fetchFreeCoin();
       fetchWallet();
+      fetchChatHistory();
     } catch (error) {
       console.log(error);
     } finally {
@@ -157,14 +211,19 @@ const ApplicationUI = () => {
 
   //------------------ Function   -------------------------
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (userInput.trim() === "") return;
 
     const taggedMessage = messageTag ? `${userInput} ${messageTag}` : userInput;
 
-    setMessages((prev) => [...prev, { role: "user", content: userInput }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: CHAT_ROLE.USER, content: userInput },
+    ]);
 
     try {
+      // Insert user message into Supabase
+      await saveMessagesToSupabase(userInput, CHAT_ROLE.USER);
       let aiResponse = "";
 
       // Send the message via Electron API
@@ -173,7 +232,7 @@ const ApplicationUI = () => {
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "..." }, // Append new assistant message
+        { role: CHAT_ROLE.ASSISTANT, content: "..." }, // Append new assistant message
       ]);
 
       // Listen for streamed text chunks
@@ -191,18 +250,40 @@ const ApplicationUI = () => {
 
       // Handle when streaming is complete
       //@ts-ignore
-      window.llmAPI.onStreamComplete((fullText) => {
+      window.llmAPI.onStreamComplete(async (fullText) => {
         console.log("Streaming Complete:", fullText);
+        // Insert assistant message into Supabase
+        await saveMessagesToSupabase(fullText, CHAT_ROLE.ASSISTANT);
       });
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Error processing your request." },
+        {
+          role: CHAT_ROLE.ASSISTANT,
+          content: "Error processing your request.",
+        },
       ]);
     }
 
     setUserInput("");
+  };
+
+  const saveMessagesToSupabase = async (content: string, role: CHAT_ROLE) => {
+    if (!currentSession || !activeChatId) return;
+
+    try {
+      await supabase.from("Conversation").insert([
+        {
+          chatHistoryId: activeChatId,
+          role,
+          content,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    } catch (error) {
+      console.error("Error saving message to Supabase:", error);
+    }
   };
 
   //------------------ Function   -------------------------
@@ -252,7 +333,10 @@ const ApplicationUI = () => {
         //@ts-ignore
         const response = await window.llmAPI.sendAudio(base64Audio);
 
-        setMessages((prev) => [...prev, { role: "user", content: response }]);
+        setMessages((prev) => [
+          ...prev,
+          { role: CHAT_ROLE.USER, content: response },
+        ]);
 
         let aiResponse = "";
 
@@ -262,7 +346,7 @@ const ApplicationUI = () => {
 
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "..." }, // Append new assistant message
+          { role: CHAT_ROLE.ASSISTANT, content: "..." }, // Append new assistant message
         ]);
 
         // Listen for streamed text chunks
@@ -287,7 +371,10 @@ const ApplicationUI = () => {
         console.error("Error processing audio or sending message:", error);
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "Error processing your request." },
+          {
+            role: CHAT_ROLE.ASSISTANT,
+            content: "Error processing your request.",
+          },
         ]);
       }
     };
@@ -326,15 +413,93 @@ const ApplicationUI = () => {
     navigate("/settings");
   };
 
-  const startNewChat = () => {
-    setMessages([
-      { role: "Vox", content: "Hello! How can I assist you today?" },
-    ]);
-  };
-
   // const clearChatHistory = () => {
   //   setChatHistory([]);
   // };
+  const startNewChat = async () => {
+    if (!currentSession) return;
+
+    try {
+      const { data: newChat, error } = await supabase
+        .from("ChatHistory")
+        .insert([
+          {
+            accountId: currentSession.user.id,
+            title: "New Chat",
+            createdAt: new Date().toISOString(),
+          },
+        ])
+        .select();
+
+      if (error) {
+        console.error("Error creating new chat:", error.message);
+        return;
+      }
+
+      setMessages([
+        {
+          role: CHAT_ROLE.ASSISTANT,
+          content: "Hello! How can I assist you today?",
+        },
+      ]);
+      setActiveChatId(newChat[0].id); // Set the new chat as active
+      setChatHistory((prev) => [
+        {
+          id: newChat[0].id,
+          title: newChat[0].title,
+          preview: "No messages",
+          createdAt: newChat[0].createdAt,
+        },
+        ...prev,
+      ]);
+    } catch (error) {
+      console.error("Error starting new chat:", error);
+    }
+  };
+
+  // const clearChatHistory = async () => {
+  //   if (!currentSession) return;
+  //   try {
+  //     // Delete all chats for the current user
+  //     const { error } = await supabase
+  //       .from("ChatHistory")
+  //       .delete()
+  //       .eq("accountId", currentSession.user.id);
+
+  //     if (error) {
+  //       console.error("Error clearing chat history:", error.message);
+  //       return;
+  //     }
+
+  //     // Reset local state
+  //     setChatHistory([]);
+  //     setMessages([
+  //       { role: "Vox", content: "Hello! How can I assist you today?" },
+  //     ]);
+  //   } catch (error) {
+  //     console.error("Error clearing chat history:", error);
+  //   }
+  // };
+
+  const loadChat = async (chatId: string) => {
+    try {
+      const { data: messages, error } = await supabase
+        .from("Conversation")
+        .select("role, content")
+        .eq("chatHistoryId", chatId)
+        .order("createdAt", { ascending: true });
+
+      if (error) {
+        console.error("Error loading chat messages:", error.message);
+        return;
+      }
+
+      setMessages(messages);
+      setActiveChatId(chatId); // Set the active chat ID
+    } catch (error) {
+      console.error("Error loading chat:", error);
+    }
+  };
 
   //--------------------Calculate Cost --------------------------
   const calculateCost = async (
@@ -416,7 +581,7 @@ const ApplicationUI = () => {
     return (
       <p
         className={`px-6 py-3 rounded-lg animate-pop-up ${
-          role === "user"
+          role === CHAT_ROLE.USER
             ? isDarkMode
               ? "bg-blue-600 text-white" // Deep blue in dark mode
               : "bg-blue-500 text-white" // Vibrant blue in light mode
@@ -444,24 +609,37 @@ const ApplicationUI = () => {
     ${isSidebarVisible ? "w-64 lg:w-1/5 lg:z-50" : "hidden lg:w-1/5"}
   `}
       >
-        {/* New Chat Button */}
-        <button
-          className="mt-1 mb-4 bg-transparent border-none cursor-pointer"
-          onClick={startNewChat}
-          title="Start New Chat"
-        >
-          <img src="./new_chat.png" alt="Start New Chat" className="w-6 h-6" />
-        </button>
+        <div className="flex justify-end">
+          {/* New Chat Button */}
+          <button
+            className="p-2 rounded-lg bg-primary hover:bg-opacity-80 transition-all duration-200"
+            onClick={startNewChat}
+          >
+            <ListPlus className="size-7" />
+          </button>
+        </div>
 
-        <div>
-          <h2 className="pt-12 mb-4">History</h2>
-          <ul className="space-y-4">
+        {/* Chat History Section */}
+        <div className="flex flex-col mt-4 flex-grow overflow-hidden font-thin">
+          <h3 className="text-md font-semibold pb-2 border-b border-gray-700 ">
+            Recent Chats
+          </h3>
+
+          <div className="overflow-y-auto flex-grow mt-2 space-y-2">
             {chatHistory.length > 0 ? (
-              chatHistory.map((item, index) => <li key={index}>{item}</li>)
+              chatHistory.map((chat, index) => (
+                <div
+                  key={index}
+                  className="py-2 px-3 rounded-lg cursor-pointer text-gray-300 hover:bg-gray-700 hover:text-white transition-all duration-200"
+                  onClick={() => loadChat(chat.id)}
+                >
+                  <strong className="block truncate">{chat.title}</strong>
+                </div>
+              ))
             ) : (
-              <li>No history available</li>
+              <p className="text-gray-500 text-sm mt-2">No history available</p>
             )}
-          </ul>
+          </div>
         </div>
 
         <button
@@ -476,7 +654,7 @@ const ApplicationUI = () => {
       {/* Main Chat Area */}
       <div className={`flex flex-col p-4 w-full mx-auto`}>
         {/* Top row */}
-        <div className="flex justify-between px-4 items-center">
+        <div className="flex justify-between px-4 py-2 items-center">
           {/* Sidebar Toggle Button left side */}
           <button
             className="sidebar-toggle-button z-50 border-none cursor-pointer"
@@ -577,7 +755,7 @@ const ApplicationUI = () => {
             <div
               key={index}
               className={`flex ${
-                message.role === "user"
+                message.role === CHAT_ROLE.USER
                   ? "user-message justify-end"
                   : "system-message justify-start"
               } my-4`}
