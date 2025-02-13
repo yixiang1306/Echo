@@ -2,12 +2,18 @@ import { useEffect, useRef, useState } from "react";
 // import { IoIosSend } from "react-icons/io";
 // import { FaMicrophone, FaYoutube } from "react-icons/fa";
 // import { CiGlobe, CiImageOn } from "react-icons/ci";
+import { Session } from "@supabase/supabase-js";
 import { motion } from "motion/react";
+import { useAuth } from "../utility/authprovider";
+import { fetchChatHistory } from "../utility/chatFunctions";
+import { CHAT_ROLE, MODEL_TYPE, USER_TYPE } from "../utility/enum";
+import { supabase } from "../utility/supabaseClient";
+import { fetchFreeCoin, fetchWallet } from "../utility/transcationFunctions";
+import { fetchUserType } from "../utility/userFunctions";
+import { defaultWelcomeChat } from "./ApplicationUI";
 
 const OverlayUI = () => {
-  const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hello! How can I assist you today?" },
-  ]);
+  const [messages, setMessages] = useState(defaultWelcomeChat);
   // const [userInput, setUserInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   // const [messageTag, setMessageTag] = useState<string | null>(null);
@@ -20,6 +26,143 @@ const OverlayUI = () => {
   const [isBlinking, setIsBlinking] = useState<boolean>(false); // for eye blinking
   const [showChatBox, setShowChatBox] = useState<boolean>(false); // for chat visibility
   let sleepTimeout: NodeJS.Timeout | null = null;
+  const [freeCoin, setFreeCoin] = useState(0.0);
+  const [walletCoin, setWalletCoin] = useState(0.0);
+  const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
+  const { session } = useAuth();
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+
+  const checkSubscriptionStatus = async (session: Session) => {
+    const userType = await fetchUserType(session);
+    if (userType) {
+      if (userType === USER_TYPE.MONTHLY_SUBSCRIPTION) {
+        setIsSubscriptionActive(true);
+      } else {
+        setIsSubscriptionActive(false);
+      }
+    }
+  };
+  const checkUserMoney = async (session: Session) => {
+    setFreeCoin((await fetchFreeCoin(session)) || 0);
+    setWalletCoin((await fetchWallet(session)) || 0);
+  };
+
+  const checkChatHistory = async (session: Session) => {
+    if (!session) return;
+    const chats = await fetchChatHistory(session);
+    if (chats?.length === 0 || !chats) {
+      setMessages(defaultWelcomeChat);
+      setActiveChatId(null);
+    } else {
+      setActiveChatId(chats[0].id);
+    }
+  };
+
+  useEffect(() => {
+    if (!session) return;
+    checkSubscriptionStatus(session);
+    checkUserMoney(session);
+    checkChatHistory(session);
+  }, [session]);
+
+  const saveMessagesToSupabase = async (
+    chatId: string, // ✅ Pass chatId as an argument
+    content: string,
+    role: CHAT_ROLE
+  ) => {
+    if (!chatId) {
+      console.error("Error: No active chat ID found!");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("Conversation").insert([
+        {
+          chatHistoryId: chatId,
+          role,
+          content,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error saving message to Supabase:", error);
+    }
+  };
+  const startNewChat = async (): Promise<string | null> => {
+    if (!session) return null;
+    console.log("active fron start", activeChatId);
+
+    try {
+      console.log("creating chat");
+      const { data: newChat, error } = await supabase
+        .from("ChatHistory")
+        .insert([
+          {
+            accountId: session.user.id,
+            title: "New Chat",
+            createdAt: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single(); // Ensure single object is returned
+
+      if (error) {
+        console.error("Error creating new chat:", error.message);
+        return null;
+      }
+      console.log("chatid", newChat.id);
+      setActiveChatId(newChat.id);
+
+      console.log("active fron start", newChat.id);
+      return newChat.id; // Return new chat ID
+    } catch (error) {
+      console.error("Error starting new chat:", error);
+      return null;
+    }
+  };
+
+  //--------------------Calculate Cost --------------------------
+  const calculateCost = async (
+    text: { input: string; output: string },
+    model: MODEL_TYPE
+  ) => {
+    //@ts-ignore
+    const costData = await window.tokenManagerApi.calculateCost(text, model);
+
+    if (isSubscriptionActive) {
+      return;
+    } else if (freeCoin > 0) {
+      const newAmount = freeCoin - parseFloat(costData.totalCost);
+      setFreeCoin(newAmount);
+      const { error } = await supabase
+        .from("FreeCoin")
+        .update({
+          amount: newAmount,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq("accountId", session!.user.id);
+
+      if (error) {
+        console.error("Error updating free coin amount:", error.message);
+      }
+    } else if (walletCoin > 0) {
+      const newAmount = walletCoin - parseFloat(costData.totalCost);
+      console.log("updated amount from Wallet", newAmount);
+      setWalletCoin(newAmount);
+      const { error } = await supabase
+        .from("Wallet")
+        .update({
+          amount: newAmount,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq("accountId", session!.user.id);
+
+      if (error) {
+        console.error("Error updating free coin amount:", error.message);
+      }
+    }
+  };
 
   // Handle text message submission for testing
   // const sendMessage = () => {
@@ -130,7 +273,28 @@ const OverlayUI = () => {
 
   // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
+    if (freeCoin <= 0 && walletCoin <= 0) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: CHAT_ROLE.ASSISTANT,
+          content: "Not enough credits to chat. Please top up !",
+        },
+      ]);
+      return;
+    }
     setIsThinking(true);
+    let chatId = activeChatId;
+    if (!chatId) {
+      console.log("No active chat, creating one...");
+      chatId = await startNewChat(); // ✅ Wait for chat creation
+      if (!chatId) {
+        console.error("Failed to create a new chat session.");
+        return;
+      }
+      setActiveChatId(chatId);
+    }
+
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
@@ -142,7 +306,11 @@ const OverlayUI = () => {
         //@ts-ignore
         const response = await window.llmAPI.sendAudioToElectron(base64Audio);
 
-        setMessages((prev) => [...prev, { role: "user", content: response }]);
+        setMessages((prev) => [
+          ...prev,
+          { role: CHAT_ROLE.USER, content: response },
+        ]);
+        await saveMessagesToSupabase(chatId, response, CHAT_ROLE.USER);
 
         let aiResponse = "";
 
@@ -152,7 +320,7 @@ const OverlayUI = () => {
 
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "..." }, // Append new assistant message
+          { role: CHAT_ROLE.ASSISTANT, content: "..." }, // Append new assistant message
         ]);
 
         // Listen for streamed text chunks
@@ -170,14 +338,24 @@ const OverlayUI = () => {
 
         // Handle when streaming is complete
         //@ts-ignore
-        window.llmAPI.onStreamComplete((fullText) => {
+        window.llmAPI.onStreamComplete(async (fullText) => {
           console.log("Streaming Complete:", fullText);
+          await saveMessagesToSupabase(chatId, fullText, CHAT_ROLE.ASSISTANT);
+          await calculateCost(
+            { input: response, output: fullText },
+            MODEL_TYPE.ASKVOX
+          );
+          //@ts-ignore
+          window.llmAPI.removeStreamCompleteListener();
         });
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "Error processing your request." },
+          {
+            role: CHAT_ROLE.ASSISTANT,
+            content: "Error processing your request.",
+          },
         ]);
       }
     };
@@ -464,7 +642,7 @@ const OverlayUI = () => {
         style={{ originX: 1, originY: 0 }}
       >
         {messages
-          .filter((msg) => msg.role === "assistant") // Filter only assistant messages
+          .filter((msg) => msg.role === CHAT_ROLE.ASSISTANT) // Filter only assistant messages
           .slice(-1) // Keep only the latest one
           .map((message, index) => (
             <div key={index} className="flex justify-end">
