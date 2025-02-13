@@ -289,6 +289,10 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
       break;
   }
 
+  // Replace newlines with spaces
+  text = text.replace(/\n/g, "");
+  console.log("Sanitized text:", text);
+
   llmProcess.process.stdin.write(text + "\n");
   console.log("Sent text to Python...");
 
