@@ -47,8 +47,8 @@ const OverlayUI = () => {
     const wallet = await fetchWallet(session);
     console.log("freeCoin", freeCoin);
     console.log("walletCoin", wallet);
-    setFreeCoin(freeCoin || 0);
-    setWalletCoin(wallet || 0);
+    setFreeCoin(freeCoin);
+    setWalletCoin(wallet);
   };
 
   const checkChatHistory = async (session: Session) => {
@@ -61,6 +61,22 @@ const OverlayUI = () => {
       setActiveChatId(chats[0].id);
     }
   };
+
+  useEffect(() => {
+    // @ts-ignore
+    window.llmAPI.syncLLMDataListener(() => {
+      if (session) {
+        checkSubscriptionStatus(session);
+        checkUserMoney(session);
+        checkChatHistory(session);
+      }
+    });
+
+    return () => {
+      // @ts-ignore
+      window.llmAPI.removesyncLLMDataListener();
+    };
+  }, []);
 
   useEffect(() => {
     if (!session) return;
@@ -133,7 +149,11 @@ const OverlayUI = () => {
   ) => {
     //@ts-ignore
     const costData = await window.tokenManagerApi.calculateCost(text, model);
-
+    console.log({
+      sub: isSubscriptionActive,
+      freeCoin: freeCoin,
+      walletCoin: walletCoin,
+    });
     if (isSubscriptionActive) {
       return;
     } else if (freeCoin > 0) {
@@ -364,6 +384,8 @@ const OverlayUI = () => {
             { input: response, output: fullText },
             MODEL_TYPE.ASKVOX
           );
+          // @ts-ignore
+          window.electron.startSync("overlay");
         });
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
