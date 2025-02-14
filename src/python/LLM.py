@@ -60,7 +60,7 @@ def search_wallhaven_image(search_param: str):
     """Fetch an image from the first three pages of Wallhaven, sorted by views"""
     all_images = []
 
-    for i in range(1, 3):  # Loop through pages 1, 2, and 3
+    for i in range(1, 2):  # Loop through pages 1, 2, and 3
         params = {
             "q": search_param,  # Search query
             "sorting": "views",  # Sorting by most viewed images

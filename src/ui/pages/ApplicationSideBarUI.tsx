@@ -139,12 +139,6 @@ const ApplicationSideBarUI = () => {
             )
           );
         });
-
-        // Handle when streaming is complete
-        //@ts-ignore
-        window.llmAPI.onStreamComplete((fullText) => {
-          console.log("Streaming Complete:", fullText);
-        });
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
         setMessages((prev) => [
