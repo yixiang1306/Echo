@@ -13,7 +13,7 @@
         "filter": ["**/*"]
       },
       {
-        "from": ".venv/",
+        "from": "python_env/",
         "to": "python_env/",
         "filter": ["**/*"]
       },
@@ -24,7 +24,15 @@
         "from": "assets/",
         "to": "assets/",
         "filter": ["**/*"]
-      }
+      }, {
+        "from": "python_installer/",
+        "to": "python_installer/",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "python_requirement.txt",
+        "to": "python_requirement.txt"
+      }      
     ],
     "mac": {
       "target": "dmg",
