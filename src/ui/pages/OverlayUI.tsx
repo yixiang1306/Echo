@@ -43,8 +43,12 @@ const OverlayUI = () => {
     }
   };
   const checkUserMoney = async (session: Session) => {
-    setFreeCoin((await fetchFreeCoin(session)) || 0);
-    setWalletCoin((await fetchWallet(session)) || 0);
+    const freeCoin = await fetchFreeCoin(session);
+    const wallet = await fetchWallet(session);
+    console.log("freeCoin", freeCoin);
+    console.log("walletCoin", wallet);
+    setFreeCoin(freeCoin || 0);
+    setWalletCoin(wallet || 0);
   };
 
   const checkChatHistory = async (session: Session) => {
@@ -248,7 +252,7 @@ const OverlayUI = () => {
     return (
       <p
         className={`px-4 py-2 rounded-lg animate-pop-up ${
-          role === "user"
+          role === CHAT_ROLE.USER
             ? "bg-blue-600 text-white"
             : "bg-secondary text-gray-200"
         }`}
@@ -273,7 +277,11 @@ const OverlayUI = () => {
 
   // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
-    if (freeCoin <= 0 && walletCoin <= 0) {
+    const LfreeCoin = await fetchFreeCoin(session!);
+    const Lwallet = await fetchWallet(session!);
+
+    if (LfreeCoin! <= 0 && Lwallet! <= 0) {
+      console.log("I do not have money");
       setMessages((prev) => [
         ...prev,
         {
@@ -283,6 +291,7 @@ const OverlayUI = () => {
       ]);
       return;
     }
+    console.log("i have money");
     setIsThinking(true);
     let chatId = activeChatId;
     if (!chatId) {
