@@ -186,6 +186,8 @@ const OverlayUI = () => {
         console.error("Error updating free coin amount:", error.message);
       }
     }
+    // @ts-ignore
+    window.electron.startSync("overlay");
   };
 
   // Handle text message submission for testing
@@ -384,8 +386,6 @@ const OverlayUI = () => {
             { input: response, output: fullText },
             MODEL_TYPE.ASKVOX
           );
-          // @ts-ignore
-          window.electron.startSync("overlay");
         });
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
