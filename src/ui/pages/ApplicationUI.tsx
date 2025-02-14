@@ -204,8 +204,7 @@ const ApplicationUI = () => {
           { input: userInput, output: fullText },
           MODEL_TYPE.ASKVOX
         );
-        // @ts-ignore
-        window.electron.startSync("main");
+
         //@ts-ignore
         window.llmAPI.removeStreamCompleteListener();
       });
@@ -485,9 +484,13 @@ const ApplicationUI = () => {
     }
   };
 
-  const loadChat = async (chatId: string) => {
+  const handleCreateNewChat = async () => {
     // @ts-ignore
     window.electron.startSync("main");
+    await startNewChat();
+  };
+
+  const loadChat = async (chatId: string) => {
     console.log("crrent active one", chatId);
     try {
       const { data: messages, error } = await supabase
@@ -552,6 +555,8 @@ const ApplicationUI = () => {
         console.error("Error updating free coin amount:", error.message);
       }
     }
+    // @ts-ignore
+    window.electron.startSync("main");
   };
 
   //--------------------Get theme context --------------------------
@@ -624,7 +629,7 @@ const ApplicationUI = () => {
           {/* New Chat Button */}
           <button
             className="p-2 rounded-lg hover:bg-gray-500 transition-all duration-200"
-            onClick={startNewChat}
+            onClick={handleCreateNewChat}
           >
             <ListPlus className="size-8" />
           </button>

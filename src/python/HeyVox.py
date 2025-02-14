@@ -6,7 +6,9 @@ import pyaudio
 import threading
 
 # Path to the Vosk model directory
-MODEL_PATH = "src/python/vosk-model"
+# MODEL_PATH = "src/python/vosk-model"
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "vosk-model")
+
 
 def verify_model_path():
     """Check if the Vosk model directory exists."""
