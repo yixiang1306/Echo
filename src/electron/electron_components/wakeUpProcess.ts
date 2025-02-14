@@ -14,7 +14,7 @@ export function createWakeUpProcess() {
   const pythonInterpreterPath = isDev()
     ? path.join(
         app.getAppPath(),
-        ".venv",
+        "python_env",
         os.platform() === "win32" ? "Scripts/python.exe" : "bin/python"
       ) // Development
     : path.join(
