@@ -57,7 +57,7 @@ class SpeechRecognition:
                    
                     if text:
                         # Trigger the wake-up action
-                        if "echo" in text.lower():
+                        if "hello" in text.lower():
                             
                             print("wake-up", flush=True)
 
