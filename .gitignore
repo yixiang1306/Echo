@@ -36,18 +36,5 @@ serviceAccount.json
 /blob-report/
 /playwright/.cache/
 
-# Ignore all Python cache files globally
-**/__pycache__/
-**/*.pyc
-**/*.pyo
-**/*.pyd
-
-# Ignore only cache files inside embedded Python
-python_installer/python_windows/**/__pycache__/
-python_installer/python_windows/**/*.pyc
-python_installer/python_windows/**/*.pyo
-python_installer/python_windows/**/*.pyd
-
-# Do NOT ignore the full 'lib' and 'Scripts' folders!
-!python_installer/python_windows/lib/
-!python_installer/python_windows/Scripts/
+# Ignore python installer
+python_installer
