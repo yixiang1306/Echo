@@ -279,6 +279,30 @@ ipcMain.handle("stop-audio", () => {
   }
 });
 
+ipcMain.on("start-sync", async (_, window: string) => {
+  let currentWindow = mainWindow;
+
+  console.log("start sync is running");
+  switch (window) {
+    case "main":
+      currentWindow = mainWindow;
+      break;
+    case "overlay":
+      currentWindow = overlayWindow!;
+      break;
+    case "sidebar":
+      currentWindow = sideBarWindow!;
+    default:
+      break;
+  }
+  BrowserWindow.getAllWindows().forEach((win) => {
+    if (win !== currentWindow) {
+      console.log("sync event send to", currentWindow);
+      win.webContents.send("sync-llm-data");
+    }
+  });
+});
+
 ipcMain.on("text-input", async (_, text: string, window: string) => {
   let currentWindow = mainWindow;
 
@@ -326,13 +350,6 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
       console.log("end: ", fullResponse);
       currentWindow?.webContents.send("stream-text", textChunk);
       currentWindow?.webContents.send("stream-complete", fullResponse);
-
-      // if (currentWindow === mainWindow) {
-      //   sideBarWindow?.webContents.send("sync-llm-data");
-      // } else if (currentWindow === sideBarWindow) {
-      //   mainWindow?.webContents.send("sync-llm-data");
-      // }
-
       processTTS(fullResponse, window);
     } else {
       currentWindow?.webContents.send("stream-text", textChunk);

@@ -37,6 +37,23 @@ const ApplicationSideBarUI = () => {
   };
 
   useEffect(() => {
+    // @ts-ignore
+    window.llmAPI.syncLLMDataListener(() => {
+      if (session) {
+        console.log("side bar is syncingggggggggggg");
+        checkSubscriptionStatus(session);
+        checkUserMoney(session);
+        checkChatHistory(session);
+      }
+    });
+
+    return () => {
+      // @ts-ignore
+      window.llmAPI.removesyncLLMDataListener();
+    };
+  }, []);
+
+  useEffect(() => {
     if (!session) return;
 
     checkSubscriptionStatus(session);
@@ -258,6 +275,8 @@ const ApplicationSideBarUI = () => {
           { input: userInput, output: fullText },
           MODEL_TYPE.ASKVOX
         );
+        // @ts-ignore
+        window.electron.startSync("sidebar");
         //@ts-ignore
         window.llmAPI.removeStreamCompleteListener();
       });
