@@ -16,6 +16,7 @@ import {
 } from "./electron_components/windows.js";
 import { isDev, MODEL_TYPE } from "./util.js";
 import axios from "axios";
+import { setupPython } from "./python-installer.js";
 // Set the correct .env file path
 const envPath = isDev()
   ? path.resolve(process.cwd(), ".env") // Development: Use .env in root folder
@@ -40,6 +41,15 @@ const iconPath = isDev()
   : path.join(process.resourcesPath, "assets", "icons", "echo-win.ico"); // Use process.resourcesPath for prod
 
 app.on("ready", async () => {
+  try {
+    console.log("Setting up Python...");
+    await setupPython(); // ✅ Wait until Python is fully set up
+    console.log("Python setup complete.");
+  } catch (error) {
+    console.error("Failed to setup Python:", error);
+    app.quit(); // 🚨 Exit if Python setup fails
+    return;
+  }
   // Create windows
   mainWindow = createMainWindow(iconPath);
   tray = createTray(iconPath, mainWindow);
@@ -53,7 +63,7 @@ app.on("ready", async () => {
 
     // Check if the sender is the main window before proceeding
     if (mainWindow && senderWebContents === mainWindow.webContents) {
-      console.log("✅ Opening other windows from MAIN window");
+      console.log(" Opening other windows from MAIN window");
       if (!wakeUpProcess) wakeUpProcess = createWakeUpProcess();
 
       if (!sideBarWindow) {
