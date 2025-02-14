@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./Signup.css"; // Import the CSS file
 import { supabase } from "../utility/supabaseClient";
 import { v4 as uuidv4 } from "uuid";
+import { USER_TYPE } from "../utility/enum";
 
 function Signup() {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const checkServiceStatus = async () => {
@@ -31,7 +33,10 @@ function Signup() {
   }, [navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
+    setMessage("");
     e.preventDefault();
+    if (isProcessing) return;
+    setIsProcessing(true);
 
     if (password !== confirmPassword) {
       setMessage("Passwords do not match!");
@@ -54,9 +59,9 @@ function Signup() {
         firstName,
         lastName,
         createdAt: signupData?.user?.created_at,
-        updatedAt: new Date(),
+        updatedAt: new Date().toISOString(),
         status: "ACTIVE",
-        userType: "FREE",
+        userType: USER_TYPE.FREE,
       },
     ]);
     await supabase.from("FreeCoin").insert([
@@ -136,8 +141,12 @@ function Signup() {
             className="input-field"
           />
           {message && <div className="error-message">{message}</div>}
-          <button type="submit" className="signup-button">
-            Sign Up
+          <button
+            type="submit"
+            className="signup-button"
+            disabled={isProcessing}
+          >
+            {isProcessing ? "Signing up..." : "Signup"}
           </button>
         </form>
       </div>

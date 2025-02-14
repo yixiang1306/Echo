@@ -174,9 +174,7 @@ app.on("window-all-closed", () => {
 
 //KEY BINDING
 function keyBinding() {
-  globalShortcut.register("Alt+C", () =>
-    handleAudioStop()
-  );
+  globalShortcut.register("Alt+C", () => handleAudioStop());
   globalShortcut.register("Alt+V", () => handleSideBarToggle());
 
   globalShortcut.register("Alt+B", () => handleOverlayToggle());
@@ -329,7 +327,12 @@ ipcMain.on("text-input", async (_, text: string, window: string) => {
       currentWindow?.webContents.send("stream-text", textChunk);
       currentWindow?.webContents.send("stream-complete", fullResponse);
 
-      // Proceed to TTS
+      // if (currentWindow === mainWindow) {
+      //   sideBarWindow?.webContents.send("sync-llm-data");
+      // } else if (currentWindow === sideBarWindow) {
+      //   mainWindow?.webContents.send("sync-llm-data");
+      // }
+
       processTTS(fullResponse, window);
     } else {
       currentWindow?.webContents.send("stream-text", textChunk);

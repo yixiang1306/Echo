@@ -33,7 +33,7 @@ export interface ChatHistoryItem {
   title: string;
   createdAt: string;
 }
-const defaultWelcomeChat = [
+export const defaultWelcomeChat = [
   {
     role: CHAT_ROLE.ASSISTANT,
     content: "Hello! How can I assist you today?",
@@ -51,8 +51,8 @@ const ApplicationUI = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [freeCoin, setFreeCoin] = useState(5.0);
-  const [walletCoin, setWalletCoin] = useState(5.0);
+  const [freeCoin, setFreeCoin] = useState(0.0);
+  const [walletCoin, setWalletCoin] = useState(0.0);
   const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
   const { session } = useAuth();
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
@@ -72,23 +72,19 @@ const ApplicationUI = () => {
     }
   };
   const checkUserMoney = async (session: Session) => {
-    setFreeCoin((await fetchWallet(session)) || 0);
-    setWalletCoin((await fetchFreeCoin(session)) || 0);
+    setFreeCoin((await fetchFreeCoin(session)) || 0);
+    setWalletCoin((await fetchWallet(session)) || 0);
   };
 
   const checkChatHistory = async (session: Session) => {
     if (!session) return;
-    console.log("refrehsing");
     const chats = await fetchChatHistory(session);
-
-    console.log("fetching chat now");
     setChatHistory(chats || []);
-    if (chats?.length === 0) {
-      console.log("no chats");
+    if (chats?.length === 0 || !chats) {
       setMessages(defaultWelcomeChat);
       setActiveChatId(null);
     } else {
-      await loadChat(chatHistory[0].id);
+      await loadChat(chats[0].id);
     }
   };
 
@@ -126,6 +122,17 @@ const ApplicationUI = () => {
   //------------------ Function   -------------------------
 
   const sendMessage = async () => {
+    if (freeCoin <= 0 && walletCoin <= 0) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: CHAT_ROLE.ASSISTANT,
+          content: "Not enough credits to chat. Please top up !",
+        },
+      ]);
+      return;
+    }
+
     let chatId = activeChatId;
     if (!chatId) {
       console.log("No active chat, creating one...");
@@ -177,6 +184,10 @@ const ApplicationUI = () => {
         console.log("Streaming Complete:", fullText);
         await saveMessagesToSupabase(chatId, fullText, CHAT_ROLE.ASSISTANT);
         // Insert assistant message into Supabase
+        await calculateCost(
+          { input: userInput, output: fullText },
+          MODEL_TYPE.ASKVOX
+        );
         //@ts-ignore
         window.llmAPI.removeStreamCompleteListener();
       });
@@ -255,6 +266,26 @@ const ApplicationUI = () => {
 
   // Handle audio submission
   const sendAudio = async (audioBlob: Blob) => {
+    if (freeCoin <= 0 && walletCoin <= 0) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: CHAT_ROLE.ASSISTANT,
+          content: "Not enough credits to chat. Please top up !",
+        },
+      ]);
+      return;
+    }
+    let chatId = activeChatId;
+    if (!chatId) {
+      console.log("No active chat, creating one...");
+      chatId = await startNewChat(); // ✅ Wait for chat creation
+      if (!chatId) {
+        console.error("Failed to create a new chat session.");
+        return;
+      }
+      setActiveChatId(chatId);
+    }
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
@@ -270,7 +301,7 @@ const ApplicationUI = () => {
           ...prev,
           { role: CHAT_ROLE.USER, content: response },
         ]);
-
+        await saveMessagesToSupabase(chatId, response, CHAT_ROLE.USER);
         let aiResponse = "";
 
         // Send the message via Electron API
@@ -297,8 +328,15 @@ const ApplicationUI = () => {
 
         // Handle when streaming is complete
         //@ts-ignore
-        window.llmAPI.onStreamComplete((fullText) => {
+        window.llmAPI.onStreamComplete(async (fullText) => {
           console.log("Streaming Complete:", fullText);
+          await saveMessagesToSupabase(chatId, fullText, CHAT_ROLE.ASSISTANT);
+          await calculateCost(
+            { input: response, output: fullText },
+            MODEL_TYPE.ASKVOX
+          );
+          //@ts-ignore
+          window.llmAPI.removeStreamCompleteListener();
         });
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
@@ -323,7 +361,10 @@ const ApplicationUI = () => {
     await window.electron.killWindows();
     await markUserAsOffline(session.user.id);
     const { error } = await supabase.auth.signOut();
-    console.error("error sign out", error);
+    if (error) {
+      console.error("error sign out", error);
+    }
+
     setIsModalVisible(false);
   };
 
@@ -528,7 +569,7 @@ const ApplicationUI = () => {
 
     return (
       <p
-        className={`px-6 py-3 rounded-lg animate-pop-up ${
+        className={`px-6 py-4 rounded-lg animate-pop-up ${
           role === CHAT_ROLE.USER
             ? isDarkMode
               ? "bg-blue-600 text-white" // Deep blue in dark mode
@@ -554,16 +595,16 @@ const ApplicationUI = () => {
         className={`sidebar-test h-screen fixed lg:relative flex flex-col 
     ${isDarkMode ? "bg-secondary text-white" : "bg-gray-900 text-white"} 
     p-4 transition-all duration-300
-    ${isSidebarVisible ? "w-64 lg:w-1/5 lg:z-10" : "hidden lg:w-1/5"}
+    ${isSidebarVisible ? "w-64 lg:w-1/5 z-10" : "hidden lg:w-1/5"}
   `}
       >
         <div className="flex justify-end">
           {/* New Chat Button */}
           <button
-            className="p-2 rounded-lg bg-primary hover:bg-opacity-80 transition-all duration-200"
+            className="p-2 rounded-lg hover:bg-gray-500 transition-all duration-200"
             onClick={startNewChat}
           >
-            <ListPlus className="size-7" />
+            <ListPlus className="size-8" />
           </button>
         </div>
 
@@ -609,10 +650,10 @@ const ApplicationUI = () => {
       {/* Main Chat Area */}
       <div className={`flex flex-col p-4 w-full mx-auto`}>
         {/* Top row */}
-        <div className="flex justify-between px-4 py-2 items-center">
+        <div className="flex justify-between px-4  items-center">
           {/* Sidebar Toggle Button left side */}
           <button
-            className="sidebar-toggle-button z-20 border-none cursor-pointer"
+            className="sidebar-toggle-button z-20 p-2 rounded-lg hover:bg-gray-500  hover:bg-opacity-80 transition-all duration-200"
             onClick={toggleSidebar}
           >
             {isSidebarVisible ? (
@@ -656,10 +697,13 @@ const ApplicationUI = () => {
               </div>
 
               <div className="relative">
-                <Settings2
-                  className="profile-icon size-8 cursor-pointer"
+                <button
+                  className="profile-icon p-2 rounded-lg hover:bg-gray-500  hover:bg-opacity-80 transition-all duration-200"
                   onClick={toggleDropdown}
-                />
+                >
+                  <Settings2 className="size-8" />
+                </button>
+
                 {dropdownOpen && (
                   <div
                     className={`absolute right-0 mt-2 ${
@@ -713,7 +757,7 @@ const ApplicationUI = () => {
                 message.role === CHAT_ROLE.USER
                   ? "user-message justify-end"
                   : "system-message justify-start"
-              } my-4`}
+              } my-6`}
             >
               {handleLLMResponse(message.content, message.role)}
             </div>
@@ -724,9 +768,9 @@ const ApplicationUI = () => {
 
         <div
           className="pointer-events-auto mx-auto w-full max-w-[800px] mb-10 p-6 border rounded-2xl 
-  bg-secondary text-gray-900 border-secondary shadow-lg 
+  bg-secondary text-gray-900 border-secondary shadow-md
   dark:bg-transparent dark:border-gray-500 dark:text-gray-300
-  shadow-purple-300/30 dark:shadow-purple-500/40"
+  shadow-blue-300/30 dark:shadow-blue-500/40"
         >
           <div className="space-y-3">
             <div className="flex items-center space-x-2">

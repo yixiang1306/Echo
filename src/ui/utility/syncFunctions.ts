@@ -86,17 +86,20 @@ export async function syncCoinsAndSubscriptions(userId: string) {
   const lastUpdate = data.updatedAt.split("T")[0];
 
   if (lastUpdate !== today) {
-    const { error: updateError } = await supabase
-      .from("FreeCoin")
-      .update({
-        amount: data.amount + 1,
-        updatedAt: new Date().toISOString(),
-      })
-      .eq("id", data.id);
+    const newAmount = Math.min(data.amount + 1, 1);
+    if (newAmount !== data.amount) {
+      const { error: updateError } = await supabase
+        .from("FreeCoin")
+        .update({
+          amount: newAmount,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq("id", data.id);
 
-    if (updateError) {
-      console.log("update error", updateError);
-      return false;
+      if (updateError) {
+        console.log("update error", updateError);
+        return false;
+      }
     }
   }
 
