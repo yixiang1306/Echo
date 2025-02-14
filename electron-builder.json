@@ -41,7 +41,7 @@
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "win": {
-    "target": "nsis",
+    "target": "portable",
     "icon": "assets/icons/echo-win.ico",
      "requestedExecutionLevel": "requireAdministrator"
     },
