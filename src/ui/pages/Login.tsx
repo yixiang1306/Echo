@@ -2,10 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../utility/supabaseClient";
 
-import {
-  markUserAsOnline,
-  syncCoinsAndSubscriptions,
-} from "../utility/syncFunctions";
 import "./Login.css";
 
 function Login() {

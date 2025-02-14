@@ -47,6 +47,9 @@ contextBridge.exposeInMainWorld("llmAPI", {
   notTextListener: (callback: () => void) =>
     ipcRenderer.on("not-text", () => callback()),
 
+  // syncLLMDataListener: (callback: () => void) =>
+  //   ipcRenderer.on("sync-llm-data", () => callback()),
+
   // Remove listeners to prevent memory leaks
   removeStreamStartListener: () =>
     ipcRenderer.removeAllListeners("stream-start"),
@@ -55,6 +58,8 @@ contextBridge.exposeInMainWorld("llmAPI", {
     ipcRenderer.removeAllListeners("stream-complete"),
   removePlayAudioListener: () => ipcRenderer.removeAllListeners("play-audio"),
   removeNotTextListener: () => ipcRenderer.removeAllListeners("not-text"),
+  // removesyncLLMDataListener: () =>
+  //   ipcRenderer.removeAllListeners("sync-llm-data"),
 });
 
 // Expose a new audioManagerAPI
