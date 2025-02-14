@@ -61,6 +61,22 @@ const ApplicationUI = () => {
 
   //------------------ Function to fetch Display name from session -------------------------
 
+  useEffect(() => {
+    // @ts-ignore
+    window.llmAPI.syncLLMDataListener(() => {
+      if (session) {
+        checkSubscriptionStatus(session);
+        checkUserMoney(session);
+        checkChatHistory(session);
+      }
+    });
+
+    return () => {
+      // @ts-ignore
+      window.llmAPI.removesyncLLMDataListener();
+    };
+  }, []);
+
   const checkSubscriptionStatus = async (session: Session) => {
     const userType = await fetchUserType(session);
     if (userType) {
@@ -188,6 +204,8 @@ const ApplicationUI = () => {
           { input: userInput, output: fullText },
           MODEL_TYPE.ASKVOX
         );
+        // @ts-ignore
+        window.electron.startSync("main");
         //@ts-ignore
         window.llmAPI.removeStreamCompleteListener();
       });
@@ -460,12 +478,16 @@ const ApplicationUI = () => {
 
       // Reset local state
       await checkChatHistory(session);
+      // @ts-ignore
+      window.electron.startSync("main");
     } catch (error) {
       console.error("Error clearing chat history:", error);
     }
   };
 
   const loadChat = async (chatId: string) => {
+    // @ts-ignore
+    window.electron.startSync("main");
     console.log("crrent active one", chatId);
     try {
       const { data: messages, error } = await supabase

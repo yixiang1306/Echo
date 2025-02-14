@@ -33,11 +33,11 @@
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "win": {
-      "target": "msi", 
-      "icon": "assets/icons/echo-win.ico",
-      "requestedExecutionLevel": "requireAdministrator"
-
+    "target": "nsis",
+    "icon": "assets/icons/echo-win.ico",
+     "requestedExecutionLevel": "requireAdministrator"
     },
+
     "linux": {
       "target": "AppImage",
       "category": "Utility",

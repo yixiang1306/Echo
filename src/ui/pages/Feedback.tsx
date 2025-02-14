@@ -1,10 +1,10 @@
+import { Star, X } from "lucide-react";
 import { useState } from "react";
-import { MoveLeft, Star, X } from "lucide-react";
-import { supabase } from "../utility/supabaseClient";
-import { useTheme } from "../context/ThemeContext";
-import { useAuth } from "../utility/authprovider";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
+import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../utility/authprovider";
+import { supabase } from "../utility/supabaseClient";
 
 enum FEEDBACK_CATEGORY {
   UI = "UI",

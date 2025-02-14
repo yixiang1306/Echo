@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld("electron", {
   openWindows: () => ipcRenderer.send("open-windows"),
   killWindows: () => ipcRenderer.send("kill-windows"),
   quitApp: () => ipcRenderer.send("quit-app"),
+  startSync: (window: string) => ipcRenderer.send("start-sync", window),
 });
 
 contextBridge.exposeInMainWorld("tokenManagerApi", {
@@ -47,8 +48,8 @@ contextBridge.exposeInMainWorld("llmAPI", {
   notTextListener: (callback: () => void) =>
     ipcRenderer.on("not-text", () => callback()),
 
-  // syncLLMDataListener: (callback: () => void) =>
-  //   ipcRenderer.on("sync-llm-data", () => callback()),
+  syncLLMDataListener: (callback: () => void) =>
+    ipcRenderer.on("sync-llm-data", () => callback()),
 
   // Remove listeners to prevent memory leaks
   removeStreamStartListener: () =>
@@ -58,8 +59,8 @@ contextBridge.exposeInMainWorld("llmAPI", {
     ipcRenderer.removeAllListeners("stream-complete"),
   removePlayAudioListener: () => ipcRenderer.removeAllListeners("play-audio"),
   removeNotTextListener: () => ipcRenderer.removeAllListeners("not-text"),
-  // removesyncLLMDataListener: () =>
-  //   ipcRenderer.removeAllListeners("sync-llm-data"),
+  removesyncLLMDataListener: () =>
+    ipcRenderer.removeAllListeners("sync-llm-data"),
 });
 
 // Expose a new audioManagerAPI

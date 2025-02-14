@@ -1,10 +1,9 @@
 import { Check, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext"; // Import the useTheme hook
-import { useState, useEffect } from "react";
 import { useAuth } from "../utility/authprovider";
 import { supabase } from "../utility/supabaseClient";
-import { Session } from "@supabase/supabase-js";
 
 const Upgrade: React.FC = () => {
   const { session } = useAuth();
