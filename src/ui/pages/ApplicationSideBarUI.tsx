@@ -205,6 +205,8 @@ const ApplicationSideBarUI = () => {
         console.error("Error updating free coin amount:", error.message);
       }
     }
+    // @ts-ignore
+    window.electron.startSync("main");
   };
 
   // Handle text message submission
@@ -275,8 +277,6 @@ const ApplicationSideBarUI = () => {
           { input: userInput, output: fullText },
           MODEL_TYPE.ASKVOX
         );
-        // @ts-ignore
-        window.electron.startSync("sidebar");
         //@ts-ignore
         window.llmAPI.removeStreamCompleteListener();
       });

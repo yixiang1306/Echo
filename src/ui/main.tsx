@@ -30,6 +30,7 @@ createRoot(document.getElementById("root")!).render(
           <AuthProvider>
             <Routes>
               {/* Public Routes */}
+              <Route path="/audio" element={<HiddenAudioPlayer />} />
               <Route path="/" element={<Start />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
@@ -39,7 +40,6 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/app" element={<ApplicationUI />} />
                 <Route path="/overlay" element={<OverlayUI />} />
                 <Route path="/sidebar" element={<ApplicationSideBarUI />} />
-                <Route path="/audio" element={<HiddenAudioPlayer />} />
                 <Route path="/upgrade" element={<Upgrade />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/updateAcc" element={<UpdateAcc />} />
