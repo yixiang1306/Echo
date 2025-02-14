@@ -218,6 +218,7 @@ const OverlayUI = () => {
   // };
 
   //To handle LLM response and return component -> img,txt,video
+
   const handleLLMResponse = (message: string, role: string): JSX.Element => {
     const imageRegex = /\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i;
     const youtubeRegex =
@@ -262,11 +263,13 @@ const OverlayUI = () => {
     );
   };
 
-  const sleep = () => {
+  const sleep = (time: number = 1000) => {
     console.log("Sleeping...");
     sleepTimeout = setTimeout(() => {
       setIsAwake(false);
-    }, 1000);
+      // @ts-ignore
+      window.overlayManagerAPI.resumeWakeUp();
+    }, time);
   };
 
   const closeChatBox = (time: number = 800) => {
@@ -289,6 +292,13 @@ const OverlayUI = () => {
           content: "Not enough credits to chat. Please top up !",
         },
       ]);
+
+      setShowChatBox(true);
+
+      //@ts-ignore
+
+      closeChatBox(2000);
+      sleep(2500);
       return;
     }
     console.log("i have money");
@@ -354,8 +364,6 @@ const OverlayUI = () => {
             { input: response, output: fullText },
             MODEL_TYPE.ASKVOX
           );
-          //@ts-ignore
-          window.llmAPI.removeStreamCompleteListener();
         });
       } catch (error) {
         console.error("Error processing audio or sending message:", error);
@@ -456,7 +464,7 @@ const OverlayUI = () => {
           } else {
             console.log("No voice detected - Audio discarded.");
             //@ts-ignore
-            window.overlayManagerAPI.resumeWakeUp();
+
             sleep();
           }
         };
@@ -508,6 +516,7 @@ const OverlayUI = () => {
     const streamCompleteHandler = () => {
       console.log("stream completed - resuming wake up");
       setIsThinking(false);
+      console.log("thinking stopped");
 
       if (!showChatBox) {
         setShowChatBox(true);
@@ -526,14 +535,12 @@ const OverlayUI = () => {
 
     const endAudioHandler = () => {
       //@ts-ignore
-      window.overlayManagerAPI.resumeWakeUp();
       sleep();
       closeChatBox();
     };
 
     const notTextHandler = () => {
       //@ts-ignore
-      window.overlayManagerAPI.resumeWakeUp();
       sleep();
     };
 
