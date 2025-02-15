@@ -16,6 +16,7 @@ const PayPerUsePayment: React.FC = () => {
   const creditPrice = 1; // Each credit costs $1
   const [credits, setCredits] = useState(1); // Default to 1 credit
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
 
   useEffect(() => {
     setCurrentSession(session);
@@ -71,13 +72,14 @@ const PayPerUsePayment: React.FC = () => {
 
       if (CreditError) {
         console.error("Failed to add credits:", CreditError.message);
+        setFeedbackMessage("Failed to add credits.");
       }
+      setFeedbackMessage("Payment successful!");
 
-      alert(`Payment successful! You have added ${credits} credits.`);
       navigate("/app");
     } catch (error) {
       console.error("Payment error:", error);
-      alert("Payment failed. Please try again.");
+      setFeedbackMessage("An unexpected error occurred.");
     }
   };
 
@@ -98,6 +100,7 @@ const PayPerUsePayment: React.FC = () => {
       >
         <X className="size-10" />
       </div>
+
       <div
         className={`w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8 ${
           isDarkMode ? "bg-secondary text-white" : "bg-white text-black"
@@ -105,6 +108,26 @@ const PayPerUsePayment: React.FC = () => {
       >
         {/* Left Section: Subscription Details */}
         <div>
+          {/* Feedback Message */}
+          {feedbackMessage && (
+            <div
+              className={`test-response-message ${
+                isDarkMode
+                  ? "bg-gray-800 text-gray-200"
+                  : "bg-green-100 text-green-700"
+              } px-4 py-3 rounded-lg mb-4 w-full max-w-md`}
+            >
+              {feedbackMessage}
+              <button
+                onClick={() => setFeedbackMessage("")}
+                className={`ml-4 ${
+                  isDarkMode ? "text-gray-400" : "text-green-500"
+                } hover:${isDarkMode ? "text-gray-200" : "text-green-700"}`}
+              >
+                &times;
+              </button>
+            </div>
+          )}
           <div
             className={`flex items-center cursor-pointer mb-5 ${
               isDarkMode ? "text-gray-300" : "text-gray-700"

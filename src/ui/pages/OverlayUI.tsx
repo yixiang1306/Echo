@@ -546,7 +546,6 @@ const OverlayUI = () => {
     };
     const wakeUpHandler = () => {
       if (sleepTimeout) {
-        // alert("clearing sleep timeout");
         clearTimeout(sleepTimeout);
       }
       setIsOpen(true);

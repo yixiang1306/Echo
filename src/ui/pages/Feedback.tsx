@@ -31,7 +31,7 @@ const Feedback = () => {
   const [rating, setRating] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [category, setCategory] = useState<FEEDBACK_CATEGORY | "">("");
-
+  const [feedbackMessage, setFeedbackMessage] = useState("");
   const handleSubmitFeedback = async (
     event: React.FormEvent<HTMLFormElement>
   ) => {
@@ -51,11 +51,11 @@ const Feedback = () => {
     ]);
 
     if (error) {
-      alert("Error Submitting Feedback");
       console.error("Error Feedback submission " + error.message);
+      setFeedbackMessage("Error Feedback submission");
     } else {
-      alert("Successfully Submitted");
       console.log("Feedback submitted successfully!");
+      setFeedbackMessage("Feedback submitted successfully!");
       setRating(null);
       setComment("");
       setCategory("");
@@ -78,9 +78,30 @@ const Feedback = () => {
       >
         <X className="size-10" />
       </div>
+
       <div className="relative flex flex-col items-center max-w-lg w-full p-8 space-y-4  bg-white dark:bg-secondary  rounded-3xl shadow-xl backdrop-blur-md border border-gray-300 dark:border-gray-700 transition-all duration-300">
         {/* Glowing Border Effect */}
         <div className="absolute inset-0 border-[2px] border-blue-500/40 rounded-3xl blur-sm pointer-events-none shadow-[0_0_20px_rgba(0,150,255,0.4)]"></div>
+        {/* Feedback Message */}
+        {feedbackMessage && (
+          <div
+            className={`test-response-message ${
+              isDarkMode
+                ? "bg-gray-800 text-gray-200"
+                : "bg-green-100 text-green-700"
+            } px-4 py-3 rounded-lg mb-4 w-full max-w-md`}
+          >
+            {feedbackMessage}
+            <button
+              onClick={() => setFeedbackMessage("")}
+              className={`ml-4 ${
+                isDarkMode ? "text-gray-400" : "text-green-500"
+              } hover:${isDarkMode ? "text-gray-200" : "text-green-700"}`}
+            >
+              &times;
+            </button>
+          </div>
+        )}
 
         {/* Title */}
         <h1 className="text-3xl font-extrabold tracking text-gray-900 dark:text-white drop-shadow-[0_0_15px_rgba(0,150,255,0.8)]">
