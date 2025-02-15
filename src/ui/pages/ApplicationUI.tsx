@@ -653,7 +653,7 @@ const ApplicationUI = () => {
                   </div>
                   <button
                     className="py-2 px-3  rounded-lg  hover:bg-gray-700 hover:text-white transition-all duration-200"
-                    onClick={async () => await clearChatHistory(chat.id)}
+                    onClick={() => clearChatHistory(chat.id)}
                   >
                     <Trash2 />
                   </button>
@@ -804,6 +804,7 @@ const ApplicationUI = () => {
               <input
                 type="text"
                 value={userInput}
+                autoFocus
                 onChange={(e) => setUserInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                 className="chat-input h-12 flex-grow p-4 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
