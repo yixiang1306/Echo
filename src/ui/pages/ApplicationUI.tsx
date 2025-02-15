@@ -373,14 +373,15 @@ const ApplicationUI = () => {
   const handleCleanupSession = async () => {
     if (!session) return;
     //@ts-ignore
-    console.log("sign out session", session.user.id);
-    // @ts-ignore
-    await window.electron.killWindows();
+
     await markUserAsOffline(session.user.id);
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("error sign out", error);
     }
+    // @ts-ignore
+    await window.electron.killWindows();
+    navigate("/");
 
     setIsModalVisible(false);
   };
