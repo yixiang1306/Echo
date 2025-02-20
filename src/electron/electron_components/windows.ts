@@ -78,7 +78,8 @@ export function createSideBarWindow(
     },
   });
 
-  sideBarWindow.isAlwaysOnTop();
+   //@ts-ignore
+  sideBarWindow.isAlwaysOnTop(true,"screen-saver");
 
   const sidebarURL = isDev()
     ? "http://localhost:3000/#/sidebar"
@@ -137,7 +138,8 @@ export function createOverlayWindow(
     },
   });
 
-  overlayWindow.isAlwaysOnTop();
+  //@ts-ignore
+  overlayWindow.isAlwaysOnTop(true,"screen-saver");
 
   // Make the window click-through (mouse ignores it)
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });

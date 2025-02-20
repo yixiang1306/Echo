@@ -76,10 +76,10 @@ app.on("ready", async () => {
         }
 
         // Handle window events
-        sideBarWindow.on("blur", async () => {
-          await slideOut(sideBarWindow!);
-          sideBarWindow!.hide();
-        });
+        // sideBarWindow.on("blur", async () => {
+        //   await slideOut(sideBarWindow!);
+        //   sideBarWindow!.hide();
+        // });
       }
       // Global shortcuts
       keyBinding();
